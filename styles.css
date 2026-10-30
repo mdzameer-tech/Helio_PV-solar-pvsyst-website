@@ -514,168 +514,217 @@ body {
 /* ─────────────────────────────────────────────────────────────
    MOBILE & CAPACITOR TOUCH ADAPTATIONS
    ───────────────────────────────────────────────────────────── */
-@media (max-width: 768px) {
-  /* 1. Mobile Fit-to-Screen Overview (Contained in Screen, No Overflow) */
-  .string-array-row.mobile-fit-screen {
-    display: flex !important;
-    width: 100% !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    overflow-x: hidden !important;
-    padding: 0.5rem 0.2rem !important;
-    gap: 3px !important;
-  }
+/* Floating View Mode Dropdown Tab (Hover / Float on Laptop, Click on Mobile & Laptop) */
+.schematic-popover-tab {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-  .string-array-row.mobile-fit-screen .iot-cell {
-    width: auto !important;
-    flex: 1 1 0 !important;
-    max-width: 22.5% !important;
-    min-width: 0 !important;
-    min-height: 110px !important;
-    padding: 0.45rem 0.2rem !important;
-    border-radius: 0.6rem !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+/* Float on View (Hover on PC/Laptop) */
+@media (hover: hover) and (pointer: fine) {
+  #schematic-view-dropdown-wrap:hover .schematic-popover-tab {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
   }
-
-  .string-array-row.mobile-fit-screen .iot-cell.cell-pressed {
-    transform: scale(0.92) !important;
-    opacity: 0.85 !important;
+  #schematic-view-dropdown-wrap:hover #schematic-view-chevron {
+    transform: rotate(180deg);
   }
+}
 
-  .string-array-row.mobile-fit-screen .cell-title-full {
-    display: none !important;
-  }
+/* Clicked / Active toggle on Mobile & Laptop */
+#schematic-view-dropdown-wrap.menu-open .schematic-popover-tab {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
 
-  .string-array-row.mobile-fit-screen .cell-title-compact {
-    display: block !important;
-    font-size: 0.72rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.02em !important;
-    margin: 0 0 0.2rem 0 !important;
-    color: #F0F6FC !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
+#schematic-view-dropdown-wrap.menu-open #schematic-view-chevron {
+  transform: rotate(180deg);
+}
 
-  .string-array-row.mobile-fit-screen .iot-badge {
-    font-size: 0.52rem !important;
-    padding: 0.12rem 0.25rem !important;
-    letter-spacing: 0 !important;
-    border-radius: 0.25rem !important;
-    font-weight: 700 !important;
-    width: 100% !important;
-    text-align: center !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
+/* ─────────────────────────────────────────────────────────────
+   SCHEMATIC VIEW LAYOUT MODES (FIT SCREEN vs ZOOMED PC VIEW)
+   Works on both Laptop/Desktop and Mobile/Capacitor!
+   ───────────────────────────────────────────────────────────── */
 
-  .string-array-row.mobile-fit-screen .cell-compact-metric {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
+/* 1. Fit Screen Mode (All nodes scaled to fit screen width without overflow) */
+.string-array-row.schematic-fit-mode {
+  display: flex !important;
+  width: 100% !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  overflow-x: hidden !important;
+  padding: 0.6rem 0.25rem !important;
+  gap: 4px !important;
+}
+
+.string-array-row.schematic-fit-mode .iot-cell {
+  width: auto !important;
+  flex: 1 1 0 !important;
+  max-width: 23% !important;
+  min-width: 0 !important;
+  min-height: 112px !important;
+  padding: 0.5rem 0.25rem !important;
+  border-radius: 0.65rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.string-array-row.schematic-fit-mode .iot-cell.cell-pressed {
+  transform: scale(0.92) !important;
+  opacity: 0.85 !important;
+}
+
+.string-array-row.schematic-fit-mode .cell-title-full {
+  display: none !important;
+}
+
+.string-array-row.schematic-fit-mode .cell-title-compact {
+  display: block !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
+  margin: 0 0 0.2rem 0 !important;
+  color: #F0F6FC !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.string-array-row.schematic-fit-mode .iot-badge {
+  font-size: 0.55rem !important;
+  padding: 0.12rem 0.25rem !important;
+  letter-spacing: 0 !important;
+  border-radius: 0.25rem !important;
+  font-weight: 700 !important;
+  width: 100% !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.string-array-row.schematic-fit-mode .cell-compact-metric {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-top: 0.35rem !important;
+  padding: 0.25rem 0.15rem !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+  border-radius: 0.35rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.string-array-row.schematic-fit-mode .compact-volt {
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  color: #60A5FA !important;
+  font-family: ui-monospace, SFMono-Regular, monospace !important;
+}
+
+.string-array-row.schematic-fit-mode .compact-hint {
+  font-size: 0.52rem !important;
+  color: #94A3B8 !important;
+  line-height: 1 !important;
+  margin-top: 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .iot-vals {
+  display: none !important;
+}
+
+.string-array-row.schematic-fit-mode .iot-note {
+  display: none !important;
+}
+
+.string-array-row.schematic-fit-mode .wire-box {
+  flex: 0 0 clamp(16px, 3.5vw, 36px) !important;
+  width: clamp(16px, 3.5vw, 36px) !important;
+  min-width: 14px !important;
+  padding: 0 !important;
+}
+
+.string-array-row.schematic-fit-mode .wire-svg {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 22px !important;
+}
+
+.string-array-row.schematic-fit-mode .wire-status-text {
+  display: none !important;
+}
+
+/* 2. Zoomed PC View Mode (Full size panels with metrics directly inside) */
+.string-array-row.schematic-zoom-mode {
+  display: flex !important;
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.25rem 0.5rem !important;
+  gap: 0 !important;
+}
+
+@media (min-width: 1100px) {
+  .string-array-row.schematic-zoom-mode {
     justify-content: center !important;
-    margin-top: 0.35rem !important;
-    padding: 0.25rem 0.15rem !important;
-    background: rgba(0, 0, 0, 0.35) !important;
-    border-radius: 0.35rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
   }
+}
 
-  .string-array-row.mobile-fit-screen .compact-volt {
-    font-size: 0.76rem !important;
-    font-weight: 800 !important;
-    color: #60A5FA !important;
-    font-family: ui-monospace, SFMono-Regular, monospace !important;
-  }
+.string-array-row.schematic-zoom-mode .iot-cell {
+  width: 215px !important;
+  min-height: 230px !important;
+  flex: 0 0 215px !important;
+  padding: 1.1rem 0.95rem !important;
+}
 
-  .string-array-row.mobile-fit-screen .compact-hint {
-    font-size: 0.52rem !important;
-    color: #94A3B8 !important;
-    line-height: 1 !important;
-    margin-top: 2px !important;
-  }
+.string-array-row.schematic-zoom-mode .cell-title-full {
+  display: block !important;
+}
 
-  .string-array-row.mobile-fit-screen .iot-vals {
-    display: none !important;
-  }
+.string-array-row.schematic-zoom-mode .cell-title-compact {
+  display: none !important;
+}
 
-  .string-array-row.mobile-fit-screen .iot-note {
-    display: none !important;
-  }
+.string-array-row.schematic-zoom-mode .cell-compact-metric {
+  display: none !important;
+}
 
-  .string-array-row.mobile-fit-screen .wire-box {
-    flex: 0 0 16px !important;
-    width: 16px !important;
-    min-width: 12px !important;
-    padding: 0 !important;
-  }
+.string-array-row.schematic-zoom-mode .iot-badge {
+  font-size: 0.7rem !important;
+  padding: 0.25rem 0.65rem !important;
+}
 
-  .string-array-row.mobile-fit-screen .wire-svg {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 20px !important;
-  }
+.string-array-row.schematic-zoom-mode .iot-vals {
+  display: block !important;
+}
 
-  /* 2. Mobile Zoomed In Mode (Shows Exactly as on Laptop with info inside panels) */
-  .string-array-row.mobile-zoomed {
-    display: flex !important;
-    justify-content: flex-start !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    padding: 1.25rem 0.5rem !important;
-    gap: 0 !important;
-  }
+.string-array-row.schematic-zoom-mode .iot-note {
+  display: block !important;
+}
 
-  .string-array-row.mobile-zoomed .iot-cell {
-    width: 215px !important;
-    min-height: 230px !important;
-    flex: 0 0 215px !important;
-    padding: 1.1rem 0.95rem !important;
-  }
+.string-array-row.schematic-zoom-mode .wire-box {
+  width: 68px !important;
+  flex: 0 0 68px !important;
+}
 
-  .string-array-row.mobile-zoomed .cell-title-full {
-    display: block !important;
-  }
+.string-array-row.schematic-zoom-mode .wire-svg {
+  width: 68px !important;
+  height: 34px !important;
+}
 
-  .string-array-row.mobile-zoomed .cell-title-compact {
-    display: none !important;
-  }
+.string-array-row.schematic-zoom-mode .wire-status-text {
+  display: block !important;
+}
 
-  .string-array-row.mobile-zoomed .cell-compact-metric {
-    display: none !important;
-  }
-
-  .string-array-row.mobile-zoomed .iot-badge {
-    font-size: 0.7rem !important;
-    padding: 0.25rem 0.65rem !important;
-  }
-
-  .string-array-row.mobile-zoomed .iot-vals {
-    display: block !important;
-  }
-
-  .string-array-row.mobile-zoomed .iot-note {
-    display: block !important;
-  }
-
-  .string-array-row.mobile-zoomed .wire-box {
-    width: 68px !important;
-    flex: 0 0 68px !important;
-  }
-
-  .string-array-row.mobile-zoomed .wire-svg {
-    width: 68px !important;
-    height: 34px !important;
-  }
-
-  /* Safe area padding for notch & home bar */
+@media (max-width: 768px) {
   #mobile-bottom-nav {
     padding-bottom: env(safe-area-inset-bottom, 0.25rem);
   }

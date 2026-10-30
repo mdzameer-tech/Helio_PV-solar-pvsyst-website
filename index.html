@@ -148,17 +148,42 @@
             <span>Schematic String View (Series Circuit with Inter-Node Switch Isolation)</span>
           </div>
 
-          <!-- Mobile Viewport Controls (Fit to screen vs Zoomed in PC view) -->
-          <div class="flex items-center gap-1 sm:hidden self-end" id="mobile-schematic-controls">
-            <span class="text-[10px] text-slate-400 font-semibold mr-1">View:</span>
-            <button id="btn-schematic-fit" type="button" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-600 text-white transition flex items-center gap-1 shadow-sm">
-              <i data-lucide="smartphone" class="w-3 h-3"></i>
-              <span>Fit Screen</span>
+          <!-- Floating View Mode Toggle Tab (Hover/Float on laptop, Click on mobile & laptop) -->
+          <div class="relative group self-end sm:self-auto" id="schematic-view-dropdown-wrap">
+            <!-- Main Trigger Button -->
+            <button id="btn-toggle-schematic-view-menu" type="button" class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 transition shadow-sm cursor-pointer" title="Switch between Fit Screen and Zoomed PC View">
+              <span class="text-slate-400 font-medium">View:</span>
+              <span id="current-schematic-mode-label" class="text-amber-400 flex items-center gap-1">
+                <i data-lucide="smartphone" id="current-schematic-mode-icon" class="w-3 h-3 text-amber-400"></i>
+                <span id="current-schematic-mode-text">Fit Screen</span>
+              </span>
+              <i data-lucide="chevron-down" id="schematic-view-chevron" class="w-3 h-3 text-slate-400 transition-transform duration-200"></i>
             </button>
-            <button id="btn-schematic-zoom" type="button" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1">
-              <i data-lucide="zoom-in" class="w-3 h-3"></i>
-              <span>Zoom (PC View)</span>
-            </button>
+
+            <!-- Floating Popover / Toggle Tab Options (Reveals on float/hover on PC, click on mobile/laptop) -->
+            <div id="schematic-view-popover" class="schematic-popover-tab absolute right-0 top-full mt-1.5 z-30 min-w-[175px] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-2xl">
+              <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 border-b border-slate-800 mb-1">
+                Schematic Layout
+              </div>
+              
+              <!-- Option 1: Fit Screen -->
+              <button id="btn-schematic-fit" type="button" class="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-white bg-blue-600/20 border border-blue-500/40">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="smartphone" class="w-3.5 h-3.5 text-blue-400"></i>
+                  <span>Fit Screen</span>
+                </div>
+                <i data-lucide="check" id="check-schematic-fit" class="w-3.5 h-3.5 text-emerald-400"></i>
+              </button>
+
+              <!-- Option 2: Zoom (PC View) -->
+              <button id="btn-schematic-zoom" type="button" class="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-slate-300 hover:text-white hover:bg-slate-800 mt-1">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-amber-400"></i>
+                  <span>Zoom (PC View)</span>
+                </div>
+                <i data-lucide="check" id="check-schematic-zoom" class="w-3.5 h-3.5 text-emerald-400 hidden"></i>
+              </button>
+            </div>
           </div>
         </div>
         

@@ -1550,9 +1550,24 @@ function setupEventListeners() {
   document.getElementById('btn-close-hw-info')?.addEventListener('click', () => modalHwInfo?.classList.add('hidden'));
   document.getElementById('btn-close-hw-info-2')?.addEventListener('click', () => modalHwInfo?.classList.add('hidden'));
 
-  // Mobile Schematic Viewport Controls (Fit to screen vs Zoomed PC view)
-  document.getElementById('btn-schematic-fit')?.addEventListener('click', () => setSchematicMobileMode('fit'));
-  document.getElementById('btn-schematic-zoom')?.addEventListener('click', () => setSchematicMobileMode('zoomed'));
+  // Floating View Mode Dropdown Tab (Hover/Float on Laptop, Click on Mobile & Laptop)
+  const viewDropdownWrap = document.getElementById('schematic-view-dropdown-wrap');
+  const btnToggleViewMenu = document.getElementById('btn-toggle-schematic-view-menu');
+
+  btnToggleViewMenu?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    viewDropdownWrap?.classList.toggle('menu-open');
+  });
+
+  // Close dropdown if clicked outside
+  document.addEventListener('click', (e) => {
+    if (viewDropdownWrap && !viewDropdownWrap.contains(e.target)) {
+      viewDropdownWrap.classList.remove('menu-open');
+    }
+  });
+
+  document.getElementById('btn-schematic-fit')?.addEventListener('click', () => setSchematicMode('fit'));
+  document.getElementById('btn-schematic-zoom')?.addEventListener('click', () => setSchematicMode('zoomed'));
 
   // Mobile Panel Detail Modal Controls
   document.getElementById('btn-close-panel-modal')?.addEventListener('click', hidePanelTelemetryModal);
@@ -1563,7 +1578,7 @@ function setupEventListeners() {
   });
   document.getElementById('btn-modal-zoom-view')?.addEventListener('click', () => {
     hidePanelTelemetryModal();
-    setSchematicMobileMode('zoomed');
+    setSchematicMode('zoomed');
     setTimeout(() => {
       const container = document.getElementById('iot-string-row');
       container?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1966,6 +1981,12 @@ function startIoTMonitoring() {
   pollIoTStatus();
   IoTMonitorState.pollIntervalId = setInterval(() => pollIoTStatus(false), 800);
   fetchNetworkInfo();
+
+  // Set initial schematic mode: Fit on mobile, Zoom (PC View) on laptop/desktop
+  const container = document.getElementById('iot-string-row');
+  if (container && !container.classList.contains('schematic-fit-mode') && !container.classList.contains('schematic-zoom-mode')) {
+    setSchematicMode(window.innerWidth <= 768 ? 'fit' : 'zoomed');
+  }
 }
 
 function stopIoTMonitoring() {
@@ -2361,37 +2382,70 @@ function renderSwitchSvg(state) {
 let latestSchematicCells = [];
 let currentModalNodeId = null;
 
-function setSchematicMobileMode(mode) {
+function setSchematicMode(mode) {
   const container = document.getElementById('iot-string-row');
+  const checkFit = document.getElementById('check-schematic-fit');
+  const checkZoom = document.getElementById('check-schematic-zoom');
   const btnFit = document.getElementById('btn-schematic-fit');
   const btnZoom = document.getElementById('btn-schematic-zoom');
+  const modeText = document.getElementById('current-schematic-mode-text');
+  const modeIcon = document.getElementById('current-schematic-mode-icon');
+  const dropdownWrap = document.getElementById('schematic-view-dropdown-wrap');
 
   if (mode === 'zoomed') {
-    container?.classList.remove('mobile-fit-screen');
-    container?.classList.add('mobile-zoomed');
+    container?.classList.remove('schematic-fit-mode', 'mobile-fit-screen');
+    container?.classList.add('schematic-zoom-mode', 'mobile-zoomed');
+
+    if (modeText) modeText.textContent = 'Zoom (PC View)';
+    if (modeIcon) {
+      modeIcon.setAttribute('data-lucide', 'zoom-in');
+      modeIcon.className = 'w-3 h-3 text-amber-400';
+    }
+
+    if (checkZoom) checkZoom.classList.remove('hidden');
+    if (checkFit) checkFit.classList.add('hidden');
+
     if (btnZoom) {
-      btnZoom.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-600 text-white transition flex items-center gap-1 shadow-sm';
+      btnZoom.className = 'w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-white bg-amber-500/20 border border-amber-500/40 mt-1';
     }
     if (btnFit) {
-      btnFit.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1';
+      btnFit.className = 'w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-slate-300 hover:text-white hover:bg-slate-800';
     }
   } else {
-    container?.classList.remove('mobile-zoomed');
-    container?.classList.add('mobile-fit-screen');
+    container?.classList.remove('schematic-zoom-mode', 'mobile-zoomed');
+    container?.classList.add('schematic-fit-mode', 'mobile-fit-screen');
+
+    if (modeText) modeText.textContent = 'Fit Screen';
+    if (modeIcon) {
+      modeIcon.setAttribute('data-lucide', 'smartphone');
+      modeIcon.className = 'w-3 h-3 text-blue-400';
+    }
+
+    if (checkFit) checkFit.classList.remove('hidden');
+    if (checkZoom) checkZoom.classList.add('hidden');
+
     if (btnFit) {
-      btnFit.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-600 text-white transition flex items-center gap-1 shadow-sm';
+      btnFit.className = 'w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-white bg-blue-600/20 border border-blue-500/40';
     }
     if (btnZoom) {
-      btnZoom.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1';
+      btnZoom.className = 'w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-slate-300 hover:text-white hover:bg-slate-800 mt-1';
     }
   }
+
+  // Close dropdown on click selection
+  dropdownWrap?.classList.remove('menu-open');
+  if (window.lucide) lucide.createIcons();
+}
+
+function setSchematicMobileMode(mode) {
+  setSchematicMode(mode);
 }
 
 function toggleMobileSchematicZoom() {
   const container = document.getElementById('iot-string-row');
   if (!container) return;
-  const isZoomed = container.classList.contains('mobile-zoomed');
-  setSchematicMobileMode(isZoomed ? 'fit' : 'zoomed');
+  const isZoomed = container.classList.contains('schematic-zoom-mode') || container.classList.contains('mobile-zoomed');
+  setSchematicMode(isZoomed ? 'fit' : 'zoomed');
 }
 
 function showPanelTelemetryModal(nodeId) {
