@@ -1553,12 +1553,22 @@ function setupEventListeners() {
   document.getElementById('btn-close-hw-info')?.addEventListener('click', () => modalHwInfo?.classList.add('hidden'));
   document.getElementById('btn-close-hw-info-2')?.addEventListener('click', () => modalHwInfo?.classList.add('hidden'));
 
+  // Copy Cloud Backend URL
+  document.getElementById('btn-copy-cloud-ip')?.addEventListener('click', () => {
+    const input = document.getElementById('input-cloud-ip');
+    if (input) {
+      navigator.clipboard.writeText(input.value).then(() => {
+        alert('Live Cloud URL copied to clipboard:\n' + input.value);
+      });
+    }
+  });
+
   // Copy Server IP
   document.getElementById('btn-copy-server-ip')?.addEventListener('click', () => {
     const input = document.getElementById('input-server-ip');
     if (input) {
       navigator.clipboard.writeText(input.value).then(() => {
-        alert('Server URL copied to clipboard: ' + input.value);
+        alert('Local Server URL copied to clipboard:\n' + input.value);
       });
     }
   });
@@ -1887,20 +1897,24 @@ function initIoTMonitor() {
 }
 
 async function fetchNetworkInfo() {
+  const cloudUrl = 'https://heliopv-solar.onrender.com/api/data';
+  const inputCloudIp = document.getElementById('input-cloud-ip');
+  if (inputCloudIp) inputCloudIp.value = cloudUrl;
+
+  const codeSnippet = document.getElementById('code-snippet-esp32');
+  if (codeSnippet) {
+    codeSnippet.textContent = `const char *BACKEND_URL = "${cloudUrl}";`;
+  }
+
   try {
     const res = await fetch(`${getBackendBaseUrl()}/api/network-info`);
     if (res.ok) {
       const data = await res.json();
       const primaryIP = (data.localIPs && data.localIPs.length > 0) ? data.localIPs[0].address : 'localhost';
-      const targetUrl = `http://${primaryIP}:${data.port || 3000}/api/data`;
+      const localTargetUrl = `http://${primaryIP}:${data.port || 3000}/api/data`;
 
       const inputServerIp = document.getElementById('input-server-ip');
-      if (inputServerIp) inputServerIp.value = targetUrl;
-
-      const codeSnippet = document.getElementById('code-snippet-esp32');
-      if (codeSnippet) {
-        codeSnippet.textContent = `const char *BACKEND_URL = "${targetUrl}";`;
-      }
+      if (inputServerIp) inputServerIp.value = localTargetUrl;
     }
   } catch (err) {
     const inputServerIp = document.getElementById('input-server-ip');

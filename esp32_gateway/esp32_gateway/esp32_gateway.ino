@@ -27,11 +27,15 @@
 #include <RF24.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 
 /* ── WiFi / backend ─────────────────────────────────────── */
 const char *WIFI_SSID     = "Hasheer's M35";
 const char *WIFI_PASSWORD = "123456789";
-const char *BACKEND_URL   = "http://10.29.16.70:3000/api/data";
+// Cloud Render URL (Transmits from anywhere worldwide):
+const char *BACKEND_URL   = "https://heliopv-solar.onrender.com/api/data";
+// Local Offline IP fallback (for lab testing on same router):
+// const char *BACKEND_URL = "http://10.27.77.109:3000/api/data";
 
 /* ── nRF24 pins ─────────────────────────────────────────── */
 #define CE_PIN   19
@@ -205,10 +209,16 @@ void postToBackend()
     json += "]}";
 
     HTTPClient http;
-    http.begin(BACKEND_URL);
+    WiFiClientSecure secureClient;
+    secureClient.setInsecure(); // Connect securely to Render HTTPS without hardcoded CA certificates
+    if (String(BACKEND_URL).startsWith("https://")) {
+        http.begin(secureClient, BACKEND_URL);
+    } else {
+        http.begin(BACKEND_URL);
+    }
     http.addHeader("Content-Type", "application/json");
-    http.setConnectTimeout(2000);
-    http.setTimeout(2000);
+    http.setConnectTimeout(3000);
+    http.setTimeout(3000);
     int code = http.POST(json);
 
     static bool backendWasOffline = false;
