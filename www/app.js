@@ -86,14 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize Map
+  // Load cached location & settings from prior visit for instant restoration on revisit
+  loadCachedLocationAndSettings();
+
+  // Initialize Map with saved location
   initMap(AppState.project.lat, AppState.project.lon);
 
   // Setup Event Listeners
   setupEventListeners();
 
-  // Run initial simulation
-  runSimulation();
+  // Automatically sync satellite weather & run PV prediction for this location on revisit
+  fetchWeatherAndUpdate();
 
   // View mode check from URL (defaults to monitor)
   const urlParams = new URLSearchParams(window.location.search);
@@ -106,6 +109,71 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize JWT User Authentication Guard & Hamburger Profile Drawer
   initAuth();
 });
+
+/**
+ * Load cached location and project settings from localStorage on revisit
+ */
+function loadCachedLocationAndSettings() {
+  try {
+    const cachedLoc = localStorage.getItem('heliopv_saved_location');
+    if (cachedLoc) {
+      const loc = JSON.parse(cachedLoc);
+      if (loc && typeof loc.lat === 'number' && typeof loc.lon === 'number' && !isNaN(loc.lat) && !isNaN(loc.lon)) {
+        AppState.project.lat = Math.round(loc.lat * 10000) / 10000;
+        AppState.project.lon = Math.round(loc.lon * 10000) / 10000;
+        if (loc.displayLocation) {
+          AppState.project.displayLocation = loc.displayLocation;
+        }
+
+        // Pre-fill DOM inputs
+        const inputLat = document.getElementById('input-lat');
+        const inputLon = document.getElementById('input-lon');
+        const inputDisp = document.getElementById('input-display-location');
+        const inputSearch = document.getElementById('input-search-location');
+        const reportSubtitle = document.getElementById('report-location-subtitle');
+        const drawerLblLoc = document.getElementById('drawer-lbl-location');
+        const quickLblLoc = document.getElementById('quick-lbl-site-loc');
+
+        if (inputLat) inputLat.value = AppState.project.lat;
+        if (inputLon) inputLon.value = AppState.project.lon;
+        if (inputDisp && loc.displayLocation) inputDisp.value = loc.displayLocation;
+        if (inputSearch && loc.displayLocation) inputSearch.value = loc.displayLocation;
+        if (reportSubtitle && loc.displayLocation) reportSubtitle.textContent = `Project location: ${loc.displayLocation}`;
+        if (drawerLblLoc && loc.displayLocation) drawerLblLoc.textContent = loc.displayLocation;
+        if (quickLblLoc && loc.displayLocation) quickLblLoc.textContent = loc.displayLocation;
+      }
+    }
+
+    const cachedSettings = localStorage.getItem('heliopv_saved_settings');
+    if (cachedSettings) {
+      const s = JSON.parse(cachedSettings);
+      if (s.capacityKwp && !isNaN(s.capacityKwp)) {
+        AppState.project.capacityKwp = s.capacityKwp;
+        const inpCap = document.getElementById('input-capacity');
+        const sldCap = document.getElementById('slider-capacity');
+        if (inpCap) inpCap.value = s.capacityKwp;
+        if (sldCap) sldCap.value = s.capacityKwp;
+      }
+      if (s.tilt !== undefined && !isNaN(s.tilt)) {
+        AppState.project.tilt = s.tilt;
+        const inpTilt = document.getElementById('input-tilt');
+        if (inpTilt) inpTilt.value = s.tilt;
+      }
+      if (s.azimuth !== undefined && !isNaN(s.azimuth)) {
+        AppState.project.azimuth = s.azimuth;
+        const inpAzimuth = document.getElementById('input-azimuth');
+        if (inpAzimuth) inpAzimuth.value = s.azimuth;
+      }
+      if (s.tariff !== undefined && !isNaN(s.tariff)) {
+        AppState.project.tariffPerKwh = s.tariff;
+        const inpTariff = document.getElementById('input-tariff');
+        if (inpTariff) inpTariff.value = s.tariff;
+      }
+    }
+  } catch (e) {
+    console.warn('Error loading cached location/settings on revisit:', e);
+  }
+}
 
 /**
  * Initialize Interactive Map
@@ -2938,6 +3006,15 @@ async function initAuth() {
 // Debounced auto-save of chosen location to user profile in MongoDB Atlas
 let locationSaveTimeout = null;
 function saveUserLocationPreference(lat, lon, displayLocation) {
+  // Cache to localStorage for instant restoration on any page revisit
+  try {
+    localStorage.setItem('heliopv_saved_location', JSON.stringify({
+      lat: Math.round(lat * 10000) / 10000,
+      lon: Math.round(lon * 10000) / 10000,
+      displayLocation
+    }));
+  } catch (e) {}
+
   if (!AuthState.token || !AuthState.user) return; // Only if signed in
 
   clearTimeout(locationSaveTimeout);
@@ -2973,6 +3050,18 @@ function applyUserSavedLocation(user) {
   if (displayLocation) {
     AppState.project.displayLocation = displayLocation;
   }
+
+  // Cache to localStorage for instant 0ms restoration on future page revisits
+  try {
+    localStorage.setItem('heliopv_saved_location', JSON.stringify({
+      lat: AppState.project.lat,
+      lon: AppState.project.lon,
+      displayLocation: AppState.project.displayLocation
+    }));
+    if (user.savedSettings) {
+      localStorage.setItem('heliopv_saved_settings', JSON.stringify(user.savedSettings));
+    }
+  } catch (e) {}
 
   // Restore saved project settings if present in MongoDB profile
   if (user.savedSettings) {
