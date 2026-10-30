@@ -1622,6 +1622,22 @@ async function setupPushNotifications() {
           btnToggle.className = 'flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition';
         }
       }
+
+      // Sync Drawer Notification Status
+      const drawerLblStatus = document.getElementById('drawer-lbl-push-status');
+      const drawerBadge = document.getElementById('drawer-badge-push');
+      if (drawerLblStatus) {
+        drawerLblStatus.textContent = isSubscribed ? 'Active: Alerts enabled' : 'Disabled: Click to enable';
+      }
+      if (drawerBadge) {
+        if (isSubscribed) {
+          drawerBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+          drawerBadge.textContent = 'Active';
+        } else {
+          drawerBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700';
+          drawerBadge.textContent = 'Disabled';
+        }
+      }
     }
 
     updatePushUI(!!sub);
@@ -2740,6 +2756,48 @@ function setupAuthEventListeners() {
     } finally {
       btnSubmit.disabled = false;
     }
+  });
+
+  // Drawer Push Notification Toggle Button
+  document.getElementById('drawer-btn-push-alerts')?.addEventListener('click', () => {
+    document.getElementById('btn-toggle-push-notif')?.click();
+  });
+
+  // Drawer ESP32 Gateway Setup Button
+  document.getElementById('drawer-btn-esp32-setup')?.addEventListener('click', () => {
+    closeDrawer();
+    const modalHwInfo = document.getElementById('modal-hw-info');
+    modalHwInfo?.classList.remove('hidden');
+    fetchNetworkInfo();
+  });
+
+  // Drawer Export Options Accordion Toggle
+  const btnToggleExports = document.getElementById('drawer-btn-toggle-exports');
+  const exportOptions = document.getElementById('drawer-export-options');
+  const iconExportChevron = document.getElementById('drawer-icon-export-chevron');
+
+  btnToggleExports?.addEventListener('click', () => {
+    const isHidden = exportOptions?.classList.contains('hidden');
+    if (isHidden) {
+      exportOptions?.classList.remove('hidden');
+      iconExportChevron?.classList.add('rotate-180');
+    } else {
+      exportOptions?.classList.add('hidden');
+      iconExportChevron?.classList.remove('rotate-180');
+    }
+  });
+
+  // Drawer Export as Excel (.CSV)
+  document.getElementById('drawer-btn-export-excel')?.addEventListener('click', () => {
+    exportToCSV();
+  });
+
+  // Drawer Export as PDF Proposal
+  document.getElementById('drawer-btn-export-pdf')?.addEventListener('click', () => {
+    closeDrawer();
+    setTimeout(() => {
+      window.print();
+    }, 300);
   });
 
   // Logout Button

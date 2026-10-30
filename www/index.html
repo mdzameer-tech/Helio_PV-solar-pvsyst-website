@@ -1205,6 +1205,76 @@
         </div>
       </div>
 
+      <!-- System & IoT Controls Section -->
+      <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">System Controls &amp; Tools</span>
+
+        <!-- 1. Background Push Alerts Notification Button -->
+        <button id="drawer-btn-push-alerts" type="button" class="w-full flex items-center justify-between p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition text-xs">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
+              <i data-lucide="bell" id="drawer-icon-push-bell" class="w-4 h-4"></i>
+            </div>
+            <div class="text-left">
+              <span class="font-bold text-white block text-xs">Push Notifications</span>
+              <span id="drawer-lbl-push-status" class="text-[10px] text-slate-400">Fault alerts when app closed</span>
+            </div>
+          </div>
+          <span id="drawer-badge-push" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">Push Alerts</span>
+        </button>
+
+        <!-- 2. ESP32 Gateway Configuration -->
+        <button id="drawer-btn-esp32-setup" type="button" class="w-full flex items-center justify-between p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition text-xs">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <div class="text-left">
+              <span class="font-bold text-white block text-xs">ESP32 Configuration</span>
+              <span class="text-[10px] text-slate-400">Target IP &amp; gateway status</span>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+        </button>
+
+        <!-- 3. Export Reports (Excel or PDF Report) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <button id="drawer-btn-toggle-exports" type="button" class="w-full p-2.5 flex items-center justify-between text-left hover:bg-slate-800 transition">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-400/10 border border-blue-400/20 flex items-center justify-center text-blue-400 shrink-0">
+                <i data-lucide="download" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="font-bold text-xs text-white block">Export Reports</span>
+                <span class="text-[10px] text-slate-400">Excel spreadsheet or PDF proposal</span>
+              </div>
+            </div>
+            <i data-lucide="chevron-down" id="drawer-icon-export-chevron" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          </button>
+
+          <div id="drawer-export-options" class="p-2.5 pt-1 border-t border-slate-800/80 space-y-2 hidden">
+            <!-- Export Excel (.CSV) -->
+            <button id="drawer-btn-export-excel" type="button" class="w-full py-2 px-3 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg text-xs font-medium flex items-center justify-between transition">
+              <div class="flex items-center gap-2">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
+                <span>Export as Excel (.CSV)</span>
+              </div>
+              <span class="text-[10px] text-slate-500 font-mono">.csv</span>
+            </button>
+
+            <!-- Export PDF Proposal -->
+            <button id="drawer-btn-export-pdf" type="button" class="w-full py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center justify-between transition shadow-sm">
+              <div class="flex items-center gap-2">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Export as PDF Proposal</span>
+              </div>
+              <span class="text-[10px] font-bold text-slate-900 font-mono">.pdf</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
       <!-- Change Password Collapsible Section -->
       <div class="bg-slate-950/70 border border-slate-800 rounded-2xl overflow-hidden">
         <button id="btn-toggle-pwd-section" type="button" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition">
