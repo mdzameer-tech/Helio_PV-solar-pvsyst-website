@@ -17,48 +17,85 @@ const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+const dns = require("dns");
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+} catch (e) {
+  console.warn("Could not set custom DNS servers:", e.message);
+}
+
+const mongoose = require("mongoose");
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://mdzameer8618_db_user:xGEObXJ442Zru5EG@cluster0.uray226.mongodb.net/heliopv?retryWrites=true&w=majority";
+
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log("[MongoDB Atlas] Connected successfully to cluster0 (heliopv database)!");
+  })
+  .catch((err) => {
+    console.error("[MongoDB Atlas] Connection failed:", err.message);
+  });
+
+// MongoDB Mongoose Schemas & Models
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  passwordHash: { type: String, required: true },
+  profileImage: { type: String, default: "" },
+  savedLocation: {
+    lat: { type: Number, default: 12.8398 },
+    lon: { type: Number, default: 77.5815 },
+    displayLocation: { type: String, default: "RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)" },
+    updatedAt: { type: Date, default: Date.now }
+  },
+  savedSettings: {
+    capacityKwp: { type: Number, default: 36.60 },
+    tilt: { type: Number, default: 15 },
+    azimuth: { type: Number, default: 180 },
+    tariff: { type: Number, default: 7.50 },
+    panelModel: { type: String, default: "Mono PERC 550W (Tier-1)" },
+    inverterModel: { type: String, default: "SolarEdge String Inverter (98.5% Eff)" }
+  }
+}, { timestamps: true });
+
+const User = mongoose.model("User", userSchema);
+
+const pushSubscriptionSchema = new mongoose.Schema({
+  endpoint: { type: String, required: true, unique: true },
+  keys: {
+    p256dh: { type: String },
+    auth: { type: String }
+  },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const PushSubscription = mongoose.model("PushSubscription", pushSubscriptionSchema);
+
 // JWT Secret Key
 const JWT_SECRET = process.env.JWT_SECRET || "heliopv_jwt_secret_secure_key_2026_solar_iot";
-const USERS_FILE = path.join(__dirname, "users.json");
-let users = [];
-
-function loadUsers() {
-  try {
-    if (fs.existsSync(USERS_FILE)) {
-      users = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
-    }
-  } catch (e) {
-    users = [];
-  }
-}
-
-function saveUsers() {
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
-  } catch (e) {
-    console.error("Failed to save users:", e.message);
-  }
-}
-loadUsers();
 
 // Middleware to authenticate JWT
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
   if (!token) {
     return res.status(401).json({ error: "Authentication token required" });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(403).json({ error: "Session expired or invalid token" });
     }
-    const user = users.find((u) => u.id === decoded.id);
-    if (!user) {
-      return res.status(404).json({ error: "User account not found" });
+    try {
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({ error: "User account not found" });
+      }
+      req.user = user;
+      next();
+    } catch (e) {
+      return res.status(500).json({ error: "Database error during authentication: " + e.message });
     }
-    req.user = user;
-    next();
   });
 }
 
@@ -94,40 +131,49 @@ loadSubscriptions();
 
 // Broadcast push notification to all subscribed mobile & desktop devices
 async function sendPushNotification(payload) {
-  if (!pushSubscriptions || pushSubscriptions.length === 0) {
-    console.log(`[Push Notification] No active subscribers. Notification queued in logs: ${payload.title}`);
-    return;
-  }
-
-  console.log(`[Push Notification] Broadcasting to ${pushSubscriptions.length} device(s): ${payload.title}`);
-  const payloadString = JSON.stringify(payload);
-  const activeSubs = [];
-
-  for (const sub of pushSubscriptions) {
+  try {
+    let allSubs = [...pushSubscriptions];
     try {
-      await webpush.sendNotification(sub, payloadString);
-      activeSubs.push(sub);
-    } catch (err) {
-      if (err.statusCode === 410 || err.statusCode === 404) {
-        console.log(`[Push Notification] Expired subscription removed.`);
-      } else {
-        console.error(`[Push Notification] Delivery issue:`, err.message);
-        activeSubs.push(sub);
+      const mongoSubs = await PushSubscription.find({});
+      mongoSubs.forEach((ms) => {
+        if (!allSubs.some((s) => s.endpoint === ms.endpoint)) {
+          allSubs.push({ endpoint: ms.endpoint, keys: ms.keys });
+        }
+      });
+    } catch (e) {}
+
+    if (!allSubs || allSubs.length === 0) {
+      console.log(`[Push Notification] No active subscribers. Notification queued in logs: ${payload.title}`);
+      return;
+    }
+
+    console.log(`[Push Notification] Broadcasting to ${allSubs.length} device(s): ${payload.title}`);
+    const payloadString = JSON.stringify(payload);
+
+    for (const sub of allSubs) {
+      try {
+        await webpush.sendNotification(sub, payloadString);
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          console.log(`[Push Notification] Expired subscription removed.`);
+          PushSubscription.deleteOne({ endpoint: sub.endpoint }).catch(() => {});
+          pushSubscriptions = pushSubscriptions.filter((s) => s.endpoint !== sub.endpoint);
+          saveSubscriptions();
+        } else {
+          console.error(`[Push Notification] Delivery issue:`, err.message);
+        }
       }
     }
-  }
-
-  if (activeSubs.length !== pushSubscriptions.length) {
-    pushSubscriptions = activeSubs;
-    saveSubscriptions();
+  } catch (e) {
+    console.error("sendPushNotification exception:", e.message);
   }
 }
 
 // Enable CORS for all origins (localhost, 127.0.0.1, mobile, file://, etc.)
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
@@ -209,10 +255,10 @@ app.get("/api/network-info", (req, res) => {
 // AUTHENTICATION API ENDPOINTS (JWT + BCRYPT)
 // ─────────────────────────────────────────────────────────────
 
-// Register a new user
+// Register a new user in MongoDB
 app.post("/api/auth/signup", async (req, res) => {
   try {
-    const { name, email, password, profileImage } = req.body || {};
+    const { name, email, password, profileImage, location } = req.body || {};
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Full name, email, and password are required" });
     }
@@ -221,7 +267,8 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
 
@@ -230,21 +277,31 @@ app.post("/api/auth/signup", async (req, res) => {
 
     const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=0f356b,0a254a`;
 
-    const newUser = {
-      id: "usr_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+    const initialLocation = location && location.lat && location.lon ? {
+      lat: Number(location.lat) || 12.8398,
+      lon: Number(location.lon) || 77.5815,
+      displayLocation: location.displayLocation || "RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)",
+      updatedAt: new Date()
+    } : {
+      lat: 12.8398,
+      lon: 77.5815,
+      displayLocation: "RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)",
+      updatedAt: new Date()
+    };
+
+    const newUser = new User({
       name: name.trim(),
       email: normalizedEmail,
       passwordHash,
       profileImage: profileImage || defaultAvatar,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      savedLocation: initialLocation
+    });
 
-    users.push(newUser);
-    saveUsers();
+    await newUser.save();
+    console.log(`[MongoDB] New user registered: ${newUser.email} (${newUser.name})`);
 
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, name: newUser.name },
+      { id: newUser._id.toString(), email: newUser.email, name: newUser.name },
       JWT_SECRET,
       { expiresIn: "30d" }
     );
@@ -253,19 +310,21 @@ app.post("/api/auth/signup", async (req, res) => {
       message: "Account registered successfully",
       token,
       user: {
-        id: newUser.id,
+        id: newUser._id.toString(),
         name: newUser.name,
         email: newUser.email,
-        profileImage: newUser.profileImage
+        profileImage: newUser.profileImage,
+        savedLocation: newUser.savedLocation,
+        savedSettings: newUser.savedSettings
       }
     });
   } catch (err) {
     console.error("Signup error:", err);
-    res.status(500).json({ error: "Internal server error during registration" });
+    res.status(500).json({ error: "Internal server error during registration: " + err.message });
   }
 });
 
-// Log in an existing user
+// Log in an existing user from MongoDB
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -274,7 +333,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
@@ -285,41 +344,112 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user._id.toString(), email: user.email, name: user.name },
       JWT_SECRET,
       { expiresIn: "30d" }
     );
+
+    console.log(`[MongoDB] User logged in: ${user.email} (Location: ${user.savedLocation?.displayLocation})`);
 
     res.json({
       message: "Login successful",
       token,
       user: {
-        id: user.id,
+        id: user._id.toString(),
         name: user.name,
         email: user.email,
-        profileImage: user.profileImage
+        profileImage: user.profileImage,
+        savedLocation: user.savedLocation,
+        savedSettings: user.savedSettings
       }
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ error: "Internal server error during login" });
+    res.status(500).json({ error: "Internal server error during login: " + err.message });
   }
 });
 
-// Get current user profile
+// Get current user profile and saved location preferences
 app.get("/api/auth/me", authenticateToken, (req, res) => {
   res.json({
     user: {
-      id: req.user.id,
+      id: req.user._id.toString(),
       name: req.user.name,
       email: req.user.email,
       profileImage: req.user.profileImage,
+      savedLocation: req.user.savedLocation,
+      savedSettings: req.user.savedSettings,
       createdAt: req.user.createdAt
     }
   });
 });
 
-// Change user password
+// Save / update chosen location preference for the user
+const handleSaveLocation = async (req, res) => {
+  try {
+    const { lat, lon, displayLocation } = req.body || {};
+    if (typeof lat !== "number" && typeof lat !== "string") {
+      return res.status(400).json({ error: "Latitude is required" });
+    }
+    if (typeof lon !== "number" && typeof lon !== "string") {
+      return res.status(400).json({ error: "Longitude is required" });
+    }
+
+    const parsedLat = Number(lat);
+    const parsedLon = Number(lon);
+    if (isNaN(parsedLat) || isNaN(parsedLon)) {
+      return res.status(400).json({ error: "Valid numeric latitude and longitude are required" });
+    }
+
+    const currentLoc = req.user.savedLocation || {};
+    req.user.savedLocation = {
+      lat: Math.round(parsedLat * 10000) / 10000,
+      lon: Math.round(parsedLon * 10000) / 10000,
+      displayLocation: (displayLocation && String(displayLocation).trim()) || currentLoc.displayLocation || `Site Location (${parsedLat}°N, ${parsedLon}°E)`,
+      updatedAt: new Date()
+    };
+
+    await req.user.save();
+    console.log(`[MongoDB] Saved location for user ${req.user.email}: ${req.user.savedLocation.displayLocation} (${req.user.savedLocation.lat}, ${req.user.savedLocation.lon})`);
+
+    res.json({
+      message: "Location preference saved successfully",
+      savedLocation: req.user.savedLocation
+    });
+  } catch (err) {
+    console.error("Save location error:", err);
+    res.status(500).json({ error: "Failed to save location preference: " + err.message });
+  }
+};
+
+app.post("/api/auth/location", authenticateToken, handleSaveLocation);
+app.put("/api/auth/location", authenticateToken, handleSaveLocation);
+
+// Save / update project settings for the user
+app.post("/api/auth/settings", authenticateToken, async (req, res) => {
+  try {
+    const { capacityKwp, tilt, azimuth, tariff, panelModel, inverterModel } = req.body || {};
+    if (!req.user.savedSettings) req.user.savedSettings = {};
+
+    if (capacityKwp) req.user.savedSettings.capacityKwp = Number(capacityKwp);
+    if (tilt !== undefined) req.user.savedSettings.tilt = Number(tilt);
+    if (azimuth !== undefined) req.user.savedSettings.azimuth = Number(azimuth);
+    if (tariff !== undefined) req.user.savedSettings.tariff = Number(tariff);
+    if (panelModel) req.user.savedSettings.panelModel = panelModel;
+    if (inverterModel) req.user.savedSettings.inverterModel = inverterModel;
+
+    await req.user.save();
+    res.json({
+      message: "Project settings saved successfully",
+      savedSettings: req.user.savedSettings
+    });
+  } catch (err) {
+    console.error("Save settings error:", err);
+    res.status(500).json({ error: "Failed to save settings: " + err.message });
+  }
+});
+
+// Change user password in MongoDB
 app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body || {};
@@ -337,17 +467,16 @@ app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     req.user.passwordHash = await bcrypt.hash(newPassword, salt);
-    req.user.updatedAt = new Date().toISOString();
-    saveUsers();
+    await req.user.save();
 
     res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.error("Change password error:", err);
-    res.status(500).json({ error: "Internal server error updating password" });
+    res.status(500).json({ error: "Internal server error updating password: " + err.message });
   }
 });
 
-// Update user profile (Name, Profile Image)
+// Update user profile (Name, Profile Image) in MongoDB
 app.post("/api/auth/update-profile", authenticateToken, async (req, res) => {
   try {
     const { name, profileImage } = req.body || {};
@@ -357,11 +486,10 @@ app.post("/api/auth/update-profile", authenticateToken, async (req, res) => {
     if (profileImage) {
       req.user.profileImage = profileImage;
     }
-    req.user.updatedAt = new Date().toISOString();
-    saveUsers();
+    await req.user.save();
 
     const token = jwt.sign(
-      { id: req.user.id, email: req.user.email, name: req.user.name },
+      { id: req.user._id.toString(), email: req.user.email, name: req.user.name },
       JWT_SECRET,
       { expiresIn: "30d" }
     );
@@ -370,15 +498,17 @@ app.post("/api/auth/update-profile", authenticateToken, async (req, res) => {
       message: "Profile updated successfully",
       token,
       user: {
-        id: req.user.id,
+        id: req.user._id.toString(),
         name: req.user.name,
         email: req.user.email,
-        profileImage: req.user.profileImage
+        profileImage: req.user.profileImage,
+        savedLocation: req.user.savedLocation,
+        savedSettings: req.user.savedSettings
       }
     });
   } catch (err) {
     console.error("Update profile error:", err);
-    res.status(500).json({ error: "Internal server error updating profile" });
+    res.status(500).json({ error: "Internal server error updating profile: " + err.message });
   }
 });
 
@@ -391,28 +521,53 @@ app.get("/api/vapid-public-key", (req, res) => {
   res.json({ publicKey: VAPID_PUBLIC_KEY });
 });
 
-// Subscribe client device to push alerts
-app.post("/api/push-subscribe", (req, res) => {
-  const subscription = req.body;
-  if (!subscription || !subscription.endpoint) {
-    return res.status(400).json({ error: "Invalid subscription payload" });
-  }
+// Subscribe client device to push alerts in MongoDB & local cache
+app.post("/api/push-subscribe", async (req, res) => {
+  try {
+    const subscription = req.body;
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ error: "Invalid subscription payload" });
+    }
 
-  const exists = pushSubscriptions.some((s) => s.endpoint === subscription.endpoint);
-  if (!exists) {
-    pushSubscriptions.push(subscription);
-    saveSubscriptions();
-    console.log(`[Push Notification] New device subscribed! Total active devices: ${pushSubscriptions.length}`);
+    // Upsert into MongoDB
+    await PushSubscription.findOneAndUpdate(
+      { endpoint: subscription.endpoint },
+      {
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+        createdAt: new Date()
+      },
+      { upsert: true, new: true }
+    ).catch(() => {});
+
+    const exists = pushSubscriptions.some((s) => s.endpoint === subscription.endpoint);
+    if (!exists) {
+      pushSubscriptions.push(subscription);
+      saveSubscriptions();
+    }
+    const count = await PushSubscription.countDocuments().catch(() => pushSubscriptions.length);
+    console.log(`[Push Notification] New device subscribed! Total active devices: ${count}`);
+    res.status(201).json({ success: true, count });
+  } catch (err) {
+    console.error("Push subscribe error:", err.message);
+    res.status(500).json({ error: "Could not save push subscription" });
   }
-  res.status(201).json({ success: true, count: pushSubscriptions.length });
 });
 
 // Unsubscribe client device
-app.post("/api/push-unsubscribe", (req, res) => {
-  const { endpoint } = req.body || {};
-  pushSubscriptions = pushSubscriptions.filter((s) => s.endpoint !== endpoint);
-  saveSubscriptions();
-  res.json({ success: true, count: pushSubscriptions.length });
+app.post("/api/push-unsubscribe", async (req, res) => {
+  try {
+    const { endpoint } = req.body || {};
+    if (endpoint) {
+      await PushSubscription.deleteOne({ endpoint }).catch(() => {});
+      pushSubscriptions = pushSubscriptions.filter((s) => s.endpoint !== endpoint);
+      saveSubscriptions();
+    }
+    const count = await PushSubscription.countDocuments().catch(() => pushSubscriptions.length);
+    res.json({ success: true, count });
+  } catch (err) {
+    res.status(500).json({ error: "Could not remove subscription" });
+  }
 });
 
 // Immediate test push notification endpoint (test while app/tab is closed)

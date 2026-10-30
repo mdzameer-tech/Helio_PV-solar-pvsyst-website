@@ -286,6 +286,9 @@ async function onMapLocationSelected(lat, lon, knownAddress = null) {
     AppState.marker.bindPopup(`<b>${displayLoc}</b>`).openPopup();
   }
 
+  // Persist chosen location preference to MongoDB Atlas for the user
+  saveUserLocationPreference(AppState.project.lat, AppState.project.lon, displayLoc);
+
   // Fetch solar insolation and recalculate
   fetchWeatherAndUpdate();
 }
@@ -2906,6 +2909,7 @@ async function initAuth() {
       const data = await res.json();
       AuthState.user = data.user;
       updateAuthUI(AuthState.user);
+      applyUserSavedLocation(AuthState.user);
       unlockAuthWall();
       return;
     }
@@ -2924,6 +2928,111 @@ async function initAuth() {
   localStorage.removeItem('heliopv_jwt_token');
   updateAuthUI(null);
   lockAuthWall('login', 'Your session has expired. Please sign in again.');
+}
+
+// Debounced auto-save of chosen location to user profile in MongoDB Atlas
+let locationSaveTimeout = null;
+function saveUserLocationPreference(lat, lon, displayLocation) {
+  if (!AuthState.token || !AuthState.user) return; // Only if signed in
+
+  clearTimeout(locationSaveTimeout);
+  locationSaveTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/auth/location`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ lat, lon, displayLocation })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (AuthState.user && data.savedLocation) {
+          AuthState.user.savedLocation = data.savedLocation;
+        }
+        console.log('[HelioPV] Updated location preference in MongoDB Atlas:', displayLocation);
+      }
+    } catch (err) {
+      console.warn('Failed to auto-save location preference to MongoDB:', err);
+    }
+  }, 400);
+}
+
+// Restore user's saved location & automatically sync satellite weather prediction
+function applyUserSavedLocation(user) {
+  if (!user || !user.savedLocation) return;
+  const { lat, lon, displayLocation } = user.savedLocation;
+  if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) return;
+
+  // Apply to AppState
+  AppState.project.lat = Math.round(lat * 10000) / 10000;
+  AppState.project.lon = Math.round(lon * 10000) / 10000;
+  if (displayLocation) {
+    AppState.project.displayLocation = displayLocation;
+  }
+
+  // Restore saved project settings if present in MongoDB profile
+  if (user.savedSettings) {
+    const s = user.savedSettings;
+    if (s.capacityKwp && !isNaN(s.capacityKwp)) {
+      AppState.project.capacityKwp = s.capacityKwp;
+      const inpCap = document.getElementById('input-capacity');
+      const sldCap = document.getElementById('slider-capacity');
+      if (inpCap) inpCap.value = s.capacityKwp;
+      if (sldCap) sldCap.value = s.capacityKwp;
+    }
+    if (s.tilt !== undefined && !isNaN(s.tilt)) {
+      AppState.project.tilt = s.tilt;
+      const inpTilt = document.getElementById('input-tilt');
+      if (inpTilt) inpTilt.value = s.tilt;
+    }
+    if (s.azimuth !== undefined && !isNaN(s.azimuth)) {
+      AppState.project.azimuth = s.azimuth;
+      const inpAzimuth = document.getElementById('input-azimuth');
+      if (inpAzimuth) inpAzimuth.value = s.azimuth;
+    }
+    if (s.tariff !== undefined && !isNaN(s.tariff)) {
+      AppState.project.tariffPerKwh = s.tariff;
+      const inpTariff = document.getElementById('input-tariff');
+      if (inpTariff) inpTariff.value = s.tariff;
+    }
+  }
+
+  // Update input fields in the DOM
+  const inputLat = document.getElementById('input-lat');
+  const inputLon = document.getElementById('input-lon');
+  const inputDisp = document.getElementById('input-display-location');
+  const inputSearch = document.getElementById('input-search-location');
+  const reportSubtitle = document.getElementById('report-location-subtitle');
+
+  if (inputLat) inputLat.value = AppState.project.lat;
+  if (inputLon) inputLon.value = AppState.project.lon;
+  if (inputDisp && displayLocation) inputDisp.value = displayLocation;
+  if (inputSearch && displayLocation) inputSearch.value = displayLocation;
+  if (reportSubtitle && displayLocation) reportSubtitle.textContent = `Project location: ${displayLocation}`;
+
+  // Pan Leaflet map and marker if initialized
+  if (AppState.map) {
+    try {
+      AppState.map.setView([AppState.project.lat, AppState.project.lon], 17);
+      if (AppState.marker) {
+        AppState.marker.setLatLng([AppState.project.lat, AppState.project.lon]);
+        if (displayLocation) {
+          AppState.marker.bindPopup(`<b>${displayLocation}</b><br><span style="font-size:11px;color:#666;">Solar Installation Rooftop</span>`).openPopup();
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Pan Google Maps if initialized
+  if (AppState.googleMap && AppState.googleMarker) {
+    try {
+      AppState.googleMap.setCenter({ lat: AppState.project.lat, lng: AppState.project.lon });
+      AppState.googleMarker.setPosition({ lat: AppState.project.lat, lng: AppState.project.lon });
+    } catch (e) {}
+  }
+
+  // Automatically fetch weather API & compute instant solar predictions for their saved location!
+  console.log(`[HelioPV] Auto-syncing satellite weather and prediction for saved location: ${displayLocation} (${AppState.project.lat}, ${AppState.project.lon})`);
+  fetchWeatherAndUpdate();
 }
 
 function updateAuthUI(user) {
@@ -3053,6 +3162,7 @@ function setupAuthEventListeners() {
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
       updateAuthUI(data.user);
+      applyUserSavedLocation(data.user);
       unlockAuthWall();
     } catch (err) {
       showAuthError(err.message);
@@ -3079,7 +3189,17 @@ function setupAuthEventListeners() {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, profileImage: selectedSignupAvatar })
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          profileImage: selectedSignupAvatar,
+          location: {
+            lat: AppState.project.lat,
+            lon: AppState.project.lon,
+            displayLocation: AppState.project.displayLocation
+          }
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Registration failed');
@@ -3088,6 +3208,7 @@ function setupAuthEventListeners() {
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
       updateAuthUI(data.user);
+      applyUserSavedLocation(data.user);
       unlockAuthWall();
     } catch (err) {
       showAuthError(err.message);
