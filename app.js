@@ -102,6 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize IoT Monitoring
   initIoTMonitor();
+
+  // Initialize Native Background Web Push Notifications
+  setupPushNotifications();
 });
 
 /**
@@ -1518,6 +1521,14 @@ function setupEventListeners() {
   document.getElementById('btn-goto-monitor')?.addEventListener('click', () => switchView('monitor'));
   document.getElementById('btn-metric-to-estimation')?.addEventListener('click', () => switchView('estimate'));
 
+  // Mobile Bottom Navigation Bar Listeners
+  document.getElementById('mobile-nav-monitor')?.addEventListener('click', () => switchView('monitor'));
+  document.getElementById('mobile-nav-estimate')?.addEventListener('click', () => switchView('estimate'));
+  document.getElementById('mobile-nav-faults')?.addEventListener('click', () => {
+    switchView('monitor');
+    document.getElementById('iot-alert-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
   // Pop-out Window
   document.getElementById('btn-popout-window')?.addEventListener('click', () => {
     const currentView = IoTMonitorState.currentView;
@@ -1556,6 +1567,127 @@ function setupEventListeners() {
       if (scenario) triggerScenario(scenario);
     });
   });
+
+  // Test Background Push Notification Button
+  document.getElementById('btn-test-push-alert')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/push-test`, { method: 'POST' });
+      if (res.ok) {
+        alert('🔔 Test push notification dispatched!\nIf your browser/app is closed or in background, your device will receive the system alert.');
+      } else {
+        alert('Please enable push notifications first by clicking "Push Alerts" in the top bar.');
+      }
+    } catch (e) {
+      alert('Could not reach server to trigger test push.');
+    }
+  });
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function setupPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('Web Push is not supported in this browser environment.');
+    return;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+
+    let sub = await reg.pushManager.getSubscription();
+    const btnToggle = document.getElementById('btn-toggle-push-notif');
+    const lblStatus = document.getElementById('lbl-push-notif-status');
+
+    function updatePushUI(isSubscribed) {
+      if (lblStatus) {
+        lblStatus.textContent = isSubscribed ? 'Push: Active' : 'Push Alerts';
+      }
+      if (btnToggle) {
+        if (isSubscribed) {
+          btnToggle.className = 'flex items-center gap-1.5 bg-emerald-900/60 text-emerald-300 border border-emerald-500/60 text-xs px-2.5 py-1.5 rounded-lg font-bold transition shadow-sm';
+        } else {
+          btnToggle.className = 'flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition';
+        }
+      }
+    }
+
+    updatePushUI(!!sub);
+
+    async function subscribeUser() {
+      const res = await fetch(`${getBackendBaseUrl()}/api/vapid-public-key`);
+      if (!res.ok) throw new Error('Failed to fetch VAPID key');
+      const { publicKey } = await res.json();
+      const convertedKey = urlBase64ToUint8Array(publicKey);
+
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey
+      });
+
+      await fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+
+      updatePushUI(true);
+      return true;
+    }
+
+    btnToggle?.addEventListener('click', async () => {
+      if (Notification.permission === 'denied') {
+        alert('⚠️ Push notifications are blocked in your browser settings. Please click the lock icon next to the URL and set Notifications to "Allow".');
+        return;
+      }
+
+      if (sub) {
+        try {
+          await sub.unsubscribe();
+          await fetch(`${getBackendBaseUrl()}/api/push-unsubscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: sub.endpoint })
+          });
+        } catch (e) {}
+        sub = null;
+        updatePushUI(false);
+        alert('🔕 Background push notifications have been disabled.');
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          try {
+            await subscribeUser();
+            alert('🔔 Background Push Alerts Active!\n\nYou will now receive system notifications on your phone or PC screen whenever an open-circuit wire fault occurs—even when this app is closed or minimized!');
+          } catch (err) {
+            console.error('Subscription error:', err);
+            alert('Could not complete push subscription. Ensure server is running.');
+          }
+        }
+      }
+    });
+
+    // Auto-sync subscription with server if already granted
+    if (Notification.permission === 'granted' && sub) {
+      fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      }).catch(() => {});
+    }
+
+  } catch (err) {
+    console.warn('Push notification service worker init failed:', err);
+  }
 }
 
 /**
@@ -1649,12 +1781,22 @@ function switchView(viewName) {
   const tabMonitor = document.getElementById('tab-btn-monitor');
   const tabEstimate = document.getElementById('tab-btn-estimate');
   const popoutBtnLabel = document.getElementById('popout-btn-label');
+  const mobMonitor = document.getElementById('mobile-nav-monitor');
+  const mobEstimate = document.getElementById('mobile-nav-estimate');
 
   if (viewName === 'monitor') {
     monitorView?.classList.remove('hidden');
     estimateView?.classList.add('hidden');
     tabMonitor?.classList.add('active-tab');
     tabEstimate?.classList.remove('active-tab');
+    if (mobMonitor) {
+      mobMonitor.classList.add('text-emerald-400');
+      mobMonitor.classList.remove('text-slate-400');
+    }
+    if (mobEstimate) {
+      mobEstimate.classList.add('text-slate-400');
+      mobEstimate.classList.remove('text-amber-400', 'text-emerald-400');
+    }
     if (popoutBtnLabel) popoutBtnLabel.textContent = 'Pop-out Estimation Window';
     try {
       history.replaceState(null, '', '?view=monitor');
@@ -1664,6 +1806,14 @@ function switchView(viewName) {
     estimateView?.classList.remove('hidden');
     tabMonitor?.classList.remove('active-tab');
     tabEstimate?.classList.add('active-tab');
+    if (mobEstimate) {
+      mobEstimate.classList.add('text-amber-400');
+      mobEstimate.classList.remove('text-slate-400');
+    }
+    if (mobMonitor) {
+      mobMonitor.classList.add('text-slate-400');
+      mobMonitor.classList.remove('text-emerald-400');
+    }
     if (popoutBtnLabel) popoutBtnLabel.textContent = 'Pop-out Monitor Window';
     try {
       history.replaceState(null, '', '?view=estimate');
@@ -1730,6 +1880,52 @@ async function pollIoTStatus(force = false) {
   }
 }
 
+let lastNotifiedFaultId = null;
+
+function playFaultAlertAudio() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.35);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {}
+}
+
+function sendFaultPushNotification(title, body) {
+  playFaultAlertAudio();
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      try {
+        new Notification(title, {
+          body: body,
+          icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
+          vibrate: [250, 100, 250]
+        });
+      } catch (e) {}
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+}
+
+// Request permission once on first click on mobile/desktop
+document.addEventListener('click', function initNotifyPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+  document.removeEventListener('click', initNotifyPermission);
+}, { once: true });
+
 function renderIoTMonitor(data) {
   IoTMonitorState.gatewayOnline = data.gatewayOnline;
   IoTMonitorState.faultNodeId = data.faultNodeId;
@@ -1769,12 +1965,21 @@ function renderIoTMonitor(data) {
     if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-red-500';
   }
 
-  // 2. Alert Box (Root Cause Fault Isolation)
+  // 2. Alert Box (Root Cause Fault Isolation) & Notifications
   const alertBox = document.getElementById('iot-alert-box');
   const navFaultText = document.getElementById('nav-fault-summary-text');
   const estIotBadge = document.getElementById('estimation-iot-status-badge');
+  const mobileFaultBadge = document.getElementById('mobile-nav-fault-badge');
 
   if (data.faultDescription) {
+    if (mobileFaultBadge) mobileFaultBadge.classList.remove('hidden');
+    if (lastNotifiedFaultId !== data.faultNodeId) {
+      lastNotifiedFaultId = data.faultNodeId;
+      sendFaultPushNotification(
+        '⚠️ Solar String Fault Detected!',
+        `Break at Node ${data.faultNodeId}: ${data.faultDescription}`
+      );
+    }
     if (alertBox) {
       alertBox.className = 'monitor-alert-box danger';
       alertBox.innerHTML = `
@@ -1832,6 +2037,14 @@ function renderIoTMonitor(data) {
         estIotBadge.className = 'font-mono text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-300';
       }
     } else {
+      if (mobileFaultBadge) mobileFaultBadge.classList.add('hidden');
+      if (lastNotifiedFaultId !== null) {
+        lastNotifiedFaultId = null;
+        sendFaultPushNotification(
+          '✅ Solar String Restored',
+          'All series continuity connections are intact and continuous.'
+        );
+      }
       if (alertBox) {
         alertBox.className = 'monitor-alert-box success';
         alertBox.innerHTML = `

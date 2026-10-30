@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PVsyst Solar Generation & ROI Simulator | Solar EPC Tool</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for solar generation charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet CSS & JS for high-resolution satellite rooftop mapping fallback -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            epcBlue: '#0F356B',
+            epcDark: '#0A254A',
+            epcLight: '#F0F5FA',
+            epcAmber: '#F59E0B'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
+
+  <!-- TOP NAVIGATION / BRAND HEADER -->
+  <header class="bg-[#0F356B] text-white shadow-md sticky top-0 z-40 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="bg-amber-400 text-slate-900 p-2 rounded-lg font-black text-xl shadow flex items-center justify-center">
+          <i data-lucide="sun-medium" class="w-6 h-6 text-amber-900"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-xl tracking-tight text-white">HelioPV</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2">
+        <button id="btn-export-csv" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
+          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+          <span>Export Excel</span>
+        </button>
+
+        <button id="btn-print-report" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs px-3.5 py-1.5 rounded-lg font-bold transition shadow-md">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Print / PDF Proposal</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- VIEW SWITCHER & LIVE IoT STATUS NAVIGATION BAR -->
+  <nav class="bg-slate-900 border-b border-slate-800 text-white px-4 py-2.5 no-print sticky top-0 sm:top-[57px] z-30 shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Tab Switcher -->
+      <div class="flex items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700/80">
+        <button id="tab-btn-monitor" class="view-tab-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold active-tab">
+          <span class="relative flex h-2 w-2">
+            <span id="gateway-ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="gateway-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Live ESP32 String Monitor</span>
+        </button>
+
+        <button id="tab-btn-estimate" class="view-tab-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold">
+          <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Solar Estimation</span>
+        </button>
+      </div>
+
+      <!-- Right info & actions -->
+      <div class="flex items-center flex-wrap gap-2.5">
+        <!-- Live status ticker -->
+        <div id="nav-iot-summary" class="hidden md:flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
+          <span class="text-slate-400">ESP32 Status:</span>
+          <span id="nav-gateway-status-text" class="font-bold text-emerald-400">Connecting...</span>
+          <span class="text-slate-600">|</span>
+          <span id="nav-fault-summary-text" class="text-slate-300 font-mono">Checking continuity...</span>
+        </div>
+
+        <!-- Background Push Alerts Button -->
+        <button id="btn-toggle-push-notif" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition" title="Enable background push notifications when app is closed">
+          <i data-lucide="bell" id="icon-push-bell" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span id="lbl-push-notif-status">Push Alerts</span>
+        </button>
+
+        <!-- ESP32 Hardware Info Button -->
+        <button id="btn-open-hw-info" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition" title="View ESP32 connection details and IP address">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>ESP32 Setup</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- VIEW 1: LIVE ESP32 STRING MONITOR (FAULT & CONTINUITY DETECTION) -->
+  <section id="view-iot-monitor" class="view-panel max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 w-full flex-1 space-y-5">
+    
+    <!-- Main IoT Monitoring Shell -->
+    <div class="iot-monitor-shell p-5 sm:p-6 space-y-5">
+      
+      <!-- Monitor Header with Live Indicator & IP Target -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-800">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Solar String Fault Detection System</h2>
+            <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-mono border border-emerald-500/40 font-semibold">ESP32-C6 + CH32V003</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">Multi-Point Series Continuity, Per-Cell Voltage/Temp &amp; String Power Monitoring</p>
+        </div>
+        <div class="flex items-center flex-wrap gap-2">
+          <div id="iot-gateway-status" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-slate-700 bg-slate-900 text-slate-300">
+            <span class="inline-block w-2 h-2 rounded-full bg-slate-500"></span>
+            <span>Checking Gateway...</span>
+          </div>
+          <button id="btn-poll-refresh" class="text-xs text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 p-2 rounded-lg border border-slate-700 transition" title="Force refresh status">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Alert Banner (Danger / Warning / Success) -->
+      <div id="iot-alert-box" class="monitor-alert-box success">
+        <div class="alert-title">&#10003; Solar PV String Normal &amp; Continuous</div>
+        <div>All series connections intact. Listening for gateway telemetry on <code>/api/status</code>.</div>
+      </div>
+
+      <!-- Visual Schematic Array with SVG Circuit Switches -->
+      <div class="bg-black/30 rounded-xl p-3 border border-slate-800/80">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i data-lucide="circuit-board" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>Schematic String View (Series Circuit with Inter-Node Switch Isolation)</span>
+        </div>
+        
+        <div class="string-array-row" id="iot-string-row">
+          <!-- Dynamically populated by app.js -->
+          <div class="text-slate-400 text-xs py-8">Loading solar string nodes and circuit switches...</div>
+        </div>
+
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center justify-center gap-2 pt-3 border-t border-slate-800 text-[11px]">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0d2818] border border-[#2ea043] text-[#3fb950] font-semibold">
+            <span class="w-2 h-2 rounded-full bg-[#3fb950]"></span> Green: Intact &amp; Closed
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#3d1416] border border-[#f85149] text-[#ff6b6b] font-semibold">
+            <span class="w-2 h-2 rounded-full bg-[#f85149]"></span> Red: Open Circuit Break (Root Cause)
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1e242d] border border-[#8b949e] text-[#8b949e] font-semibold">
+            <span class="w-2 h-2 rounded-full bg-[#8b949e]"></span> Gray Zone: Downstream of Break (Indeterminate)
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#2b2006] border border-[#d29922] text-[#f39c12] font-semibold">
+            <span class="w-2 h-2 rounded-full bg-[#f39c12]"></span> Amber: Low Voltage / Shading
+          </span>
+        </div>
+      </div>
+
+      <!-- Real-Time Metrics & Macro PV Feasibility Bridge (Stacked for Mobile) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 block mb-1">Live String Voltage</span>
+          <span id="metric-string-voltage" class="text-2xl font-black text-blue-400 font-mono">-- V</span>
+          <span class="text-[11px] text-slate-500 block mt-1">Series sum of active cells</span>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 block mb-1">Live String Current</span>
+          <span id="metric-string-current" class="text-2xl font-black text-emerald-400 font-mono">-- A</span>
+          <span class="text-[11px] text-slate-500 block mt-1">Measured at String Node 4</span>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 block mb-1">Instantaneous String Power</span>
+          <span id="metric-string-power" class="text-2xl font-black text-amber-400 font-mono">-- W</span>
+          <span class="text-[11px] text-slate-500 block mt-1">P = V &times; I</span>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <span class="text-xs text-slate-400 block mb-1">Solar Light &amp; Avg Temp</span>
+            <div class="flex items-baseline gap-2">
+              <span id="metric-string-ldr" class="text-lg font-bold text-white font-mono">LDR: --</span>
+              <span id="metric-string-temp" class="text-sm font-semibold text-blue-300 font-mono">Temp: -- &deg;C</span>
+            </div>
+          </div>
+          <button id="btn-metric-to-estimation" class="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 mt-2">
+            <span>Project plant yield in Estimation Window &rarr;</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- VIEW 2: SOLAR PVsyst GENERATION & ROI ESTIMATION -->
+  <section id="view-solar-estimation" class="view-panel hidden w-full">
+    
+    <!-- Link to Live String Monitor Bar -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 no-print">
+      <div class="bg-blue-900/20 border border-blue-400/30 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="font-bold text-slate-800">Connected IoT Array Status:</span>
+          <span id="estimation-iot-status-badge" class="font-mono text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">All 4 Nodes Connected</span>
+        </div>
+        <button id="btn-goto-monitor" class="flex items-center gap-1.5 font-bold text-[#0F356B] hover:text-blue-700 transition">
+          <i data-lucide="radio" class="w-3.5 h-3.5 text-blue-600"></i>
+          <span>Switch to Live String Monitor &amp; Fault View &rarr;</span>
+        </button>
+      </div>
+    </div>
+
+  <!-- PRINT ONLY COMPANY HEADER (Visible only on print/PDF) -->
+  <div class="hidden print-only p-6 border-b border-slate-300 bg-white">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-black text-[#0F356B]">SOLAR EPC INSTALLATIONS & ENGINEERING</h1>
+        <p class="text-sm text-slate-600">Grid-Tied Photovoltaic System Yield & Financial Assessment Report</p>
+      </div>
+      <div class="text-right text-xs text-slate-500">
+        <p class="font-bold text-slate-700">Calibrated to PVsyst 8.0 & Satellite Weather</p>
+        <p id="print-date">Generated on: </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex-1 w-full">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT COLUMN: CONTROLS & INPUT PARAMETERS (Col 1-4) -->
+      <section class="lg:col-span-4 space-y-4 no-print">
+        
+        <!-- CARD 1: DESIRED KW INSTALLATION (FRONT & CENTER) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-[#0F356B] text-white px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+              <h2 class="font-bold text-sm uppercase tracking-wide">1. Desired kW Installation</h2>
+            </div>
+            <span class="text-xs bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black font-mono" id="badge-kwp-top">36.60 kWp</span>
+          </div>
+
+          <div class="p-4 space-y-3.5">
+            <!-- Capacity Input & Slider -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-xs font-bold text-slate-800">Target Solar Capacity (<span id="capacity-unit-label">kWp</span>)</label>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" id="input-capacity" step="0.1" min="0.1" max="50000" value="36.60" class="w-24 text-sm px-2.5 py-1 text-right font-black border-2 border-blue-600 rounded-lg text-blue-900 font-mono focus:ring-2 focus:ring-blue-600 outline-none">
+                  <div class="inline-flex rounded-lg border border-slate-300 p-0.5 bg-slate-100 text-[11px] font-bold">
+                    <button type="button" id="btn-unit-kw" class="px-2 py-0.5 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts">kW</button>
+                    <button type="button" id="btn-unit-w" class="px-2 py-0.5 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts">W</button>
+                  </div>
+                </div>
+              </div>
+              <input type="range" id="slider-capacity" min="1" max="250" step="0.5" value="36.60" class="w-full accent-[#0F356B]">
+            </div>
+
+            <!-- Quick Capacity Presets -->
+            <div>
+              <span class="block text-[11px] font-semibold text-slate-500 mb-1">Quick Sizing Presets:</span>
+              <div class="flex flex-wrap gap-1">
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="3">3 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="5">5 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="10">10 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="25">25 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="50">50 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="100">100 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="250">250 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="500">500 kW</button>
+                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="1000">1 MW</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: SITE & SATELLITE ROOFTOP LOCATION (FLEXIBLE SELECTION) -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-[#0F356B] text-white px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="map-pin" class="w-4 h-4 text-amber-400"></i>
+              <h2 class="font-bold text-sm uppercase tracking-wide">2. Specific Site Location</h2>
+            </div>
+            <span id="weather-badge" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">
+              Satellite Active
+            </span>
+          </div>
+
+          <div class="p-4 space-y-3 text-xs">
+            <!-- Search Input with GPS & Search button -->
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Search Address, Rooftop, or Plus Code</label>
+              <div class="flex gap-1.5">
+                <input type="text" id="input-search-location" value="RHM7+RH8, Bilwaradahalli, Karnataka" placeholder="Type city, street, or Plus Code (e.g. 7J4V+3Q)" class="flex-1 text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none">
+                <button id="btn-search-loc" class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center transition" title="Search Location">
+                  <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                </button>
+                <button id="btn-gps-loc" class="bg-slate-700 hover:bg-slate-600 text-amber-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center transition" title="Use My Current GPS Location">
+                  <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Site Label that appears in report header -->
+            <div>
+              <label class="block font-semibold text-slate-700 mb-0.5">Project Location Label (in Report Header)</label>
+              <input type="text" id="input-display-location" value="RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)" class="w-full text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-slate-800 font-medium outline-none">
+            </div>
+
+            <!-- Coordinates with live synchronization -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-slate-500 font-medium mb-0.5">Latitude (°N)</label>
+                <input type="number" id="input-lat" step="0.0001" value="12.8342" class="w-full px-2 py-1 border border-slate-300 rounded-md font-mono">
+              </div>
+              <div>
+                <label class="block text-slate-500 font-medium mb-0.5">Longitude (°E)</label>
+                <input type="number" id="input-lon" step="0.0001" value="77.5891" class="w-full px-2 py-1 border border-slate-300 rounded-md font-mono">
+              </div>
+            </div>
+
+            <!-- Interactive Rooftop Satellite Map -->
+            <div class="pt-1">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-slate-700 flex items-center gap-1">
+                  <i data-lucide="satellite" class="w-3.5 h-3.5 text-blue-600"></i> Rooftop Satellite View
+                </span>
+                <div class="flex items-center gap-1">
+                  <button id="btn-map-sat" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-700 text-white">Satellite</button>
+                  <button id="btn-map-street" class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 text-slate-700 hover:bg-slate-200">Street</button>
+                  <span id="map-mode-indicator" class="text-[10px] text-slate-500 ml-1">Esri High-Res</span>
+                </div>
+              </div>
+              
+              <!-- Map Container -->
+              <div id="map-container" class="shadow-inner rounded-lg"></div>
+              
+              <div class="flex justify-between items-center mt-1 text-[11px] text-slate-500">
+                <span><i data-lucide="mouse-pointer" class="w-3 h-3 inline"></i> Click or drag pin to inspect rooftop</span>
+                <button id="btn-fetch-weather" class="text-blue-700 hover:underline font-semibold flex items-center gap-0.5">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync Weather
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- CARD 3: HARDWARE & FINANCIAL PARAMETERS -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="bg-[#0F356B] text-white px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="settings-2" class="w-4 h-4 text-amber-400"></i>
+              <h2 class="font-bold text-sm uppercase tracking-wide">3. PV Hardware & Commercials</h2>
+            </div>
+            <span class="text-xs text-blue-200 font-mono">₹65k/kWp &bull; ₹7.5/u</span>
+          </div>
+
+          <div class="p-4 space-y-3 text-xs">
+            <!-- Installed Cost & Tariff -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-0.5">EPC Cost (₹/kWp)</label>
+                <input type="number" id="input-cost-per-kwp" step="1000" value="65000" class="w-full px-2 py-1 border border-slate-300 rounded font-mono font-bold">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-0.5">Tariff (₹/unit)</label>
+                <input type="number" id="input-tariff" step="0.10" value="7.50" class="w-full px-2 py-1 border border-slate-300 rounded font-mono font-bold">
+              </div>
+            </div>
+
+            <!-- Tilt & Azimuth -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <div class="flex justify-between mb-0.5">
+                  <label class="font-medium text-slate-600">Tilt Angle</label>
+                  <button id="btn-auto-tilt" class="text-[10px] text-blue-600 hover:underline">Auto Opt</button>
+                </div>
+                <div class="flex items-center">
+                  <input type="number" id="input-tilt" min="0" max="90" value="13" class="w-full px-2 py-1 border border-slate-300 rounded font-mono">
+                  <span class="ml-1 text-slate-500">deg</span>
+                </div>
+              </div>
+              <div>
+                <label class="block font-medium text-slate-600 mb-0.5">Orientation (Azimuth)</label>
+                <select id="select-azimuth" class="w-full px-2 py-1 border border-slate-300 rounded bg-white">
+                  <option value="180">South (180°)</option>
+                  <option value="165">South-SE (165°)</option>
+                  <option value="195">South-SW (195°)</option>
+                  <option value="90">East (90°)</option>
+                  <option value="270">West (270°)</option>
+                  <option value="0">North (0°)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Module & Inverter Selection -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-medium text-slate-600 mb-0.5">Module Tech</label>
+                <select id="select-module-type" class="w-full px-2 py-1 border border-slate-300 rounded bg-white">
+                  <option value="mono_550">Mono PERC 550Wp</option>
+                  <option value="topcon_580">TOPCon 580Wp</option>
+                  <option value="bifacial_600">Bifacial 600Wp</option>
+                  <option value="poly_330">Polycrystalline 330Wp</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-medium text-slate-600 mb-0.5">Degradation / Yr</label>
+                <div class="flex items-center">
+                  <input type="number" id="input-degradation" step="0.1" value="0.5" class="w-full px-2 py-1 border border-slate-300 rounded font-mono">
+                  <span class="ml-1 text-slate-500">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible PVsyst Loss Factors -->
+            <details class="cursor-pointer group pt-1">
+              <summary class="font-semibold text-blue-700 hover:text-blue-800 flex items-center justify-between">
+                <span>PVsyst Derate Loss Factors (PR ~ 79%)</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition group-open:rotate-180"></i>
+              </summary>
+              <div class="space-y-1.5 mt-2 pt-1 text-[11px] bg-slate-50 p-2 rounded border border-slate-200">
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-600">Soiling Loss:</span>
+                  <input type="number" id="input-loss-soiling" step="0.5" value="2.5" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-600">DC Cable Ohmic Loss:</span>
+                  <input type="number" id="input-loss-wiring" step="0.1" value="1.5" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-600">Inverter Efficiency Loss:</span>
+                  <input type="number" id="input-loss-inverter" step="0.1" value="2.0" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-600">Mismatch & Shading Loss:</span>
+                  <input type="number" id="input-loss-mismatch" step="0.5" value="2.0" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-600">Tariff Annual Escalation:</span>
+                  <input type="number" id="input-escalation" step="0.5" value="2.5" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT COLUMN: REPORT & VISUAL DASHBOARD (Col 5-12) -->
+      <section class="lg:col-span-8 space-y-5" id="report-content">
+
+        <!-- EXECUTIVE KPI SUMMARY CARDS -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 no-print">
+          
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Plant Size</span>
+            <div class="text-xl font-black text-[#0F356B] mt-0.5" id="kpi-capacity">36.60 kWp</div>
+            <span class="text-[10px] text-slate-400">Rooftop grid-tied</span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Annual Energy</span>
+            <div class="text-xl font-black text-emerald-600 mt-0.5" id="kpi-generation">58,634 kWh</div>
+            <span class="text-[10px] text-slate-400" id="kpi-avg-monthly">4,886 kWh / month</span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Specific Yield</span>
+            <div class="text-xl font-black text-amber-600 mt-0.5" id="kpi-yield">1,602</div>
+            <span class="text-[10px] text-slate-400">kWh / kWp / year</span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Annual Offset</span>
+            <div class="text-xl font-black text-blue-700 mt-0.5" id="kpi-bill-offset">₹4,39,755</div>
+            <span class="text-[10px] text-slate-400" id="kpi-avg-offset">₹36,646 / month</span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Simple Payback</span>
+            <div class="text-xl font-black text-indigo-600 mt-0.5" id="kpi-payback">5.4 Yrs</div>
+            <span class="text-[10px] text-slate-400" id="kpi-capex-sub">₹23.79 Lakh CAPEX</span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">25-Yr Net Benefit</span>
+            <div class="text-xl font-black text-teal-700 mt-0.5" id="kpi-net-benefit">₹86.15 L</div>
+            <span class="text-[10px] text-slate-400">After plant cost</span>
+          </div>
+
+        </div>
+
+        <!-- PRESENTATION TABS (no-print) -->
+        <div class="border-b border-slate-200 flex space-x-6 text-sm font-semibold no-print overflow-x-auto">
+          <button id="tab-btn-forecast" class="tab-btn pb-2 text-[#0F356B] border-b-2 border-[#0F356B] flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            <span>Hourly &amp; 7-Day Forecast</span>
+          </button>
+          <button id="tab-btn-report" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <span>PVsyst Generation &amp; ROI Report</span>
+          </button>
+          <button id="tab-btn-charts" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+            <span>Visual Charts &amp; Yield Profiles</span>
+          </button>
+          <button id="tab-btn-pvsyst" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="git-commit" class="w-4 h-4"></i>
+            <span>PVsyst Loss Tree &amp; Engineering</span>
+          </button>
+          <button id="tab-btn-cashflow" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <span>25-Year Cash Flow</span>
+          </button>
+        </div>
+
+        <!-- TAB CONTENT 0: HOURLY & NEXT 7 DAYS FORECAST -->
+        <div id="tab-pane-forecast" class="space-y-6 bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+          
+          <!-- Section 1: Hourly Estimation (Current Hour to 12 Midnight) -->
+          <div class="space-y-3">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-200">
+              <div>
+                <h2 class="report-section-header flex items-center gap-2">
+                  <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+                  <span id="forecast-hourly-title-text">TODAY'S HOURLY SOLAR ESTIMATION (UNTIL 12:00 AM MIDNIGHT)</span>
+                </h2>
+                <p class="report-section-subtitle text-xs text-slate-500" id="forecast-location-subtitle">
+                  Location: Bilwaradahalli, Bengaluru &bull; Plant: 36.60 kWp
+                </p>
+              </div>
+              <div class="flex items-center flex-wrap gap-2">
+                <!-- Unit Toggle Option (kW vs W) -->
+                <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs font-bold shadow-xs">
+                  <button type="button" id="btn-forecast-unit-kw" class="px-2.5 py-1 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts (kW / kWh)">kW</button>
+                  <button type="button" id="btn-forecast-unit-w" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts (W / Wh)">W</button>
+                </div>
+
+                <!-- Day Switcher with Right Button -->
+                <div class="inline-flex items-center rounded-lg border border-slate-300 bg-white shadow-xs p-0.5">
+                  <button id="btn-hourly-prev" class="px-2 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1" title="Previous Day">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    <span>Prev</span>
+                  </button>
+                  <span id="hourly-selected-day-label" class="px-2.5 py-1 text-xs font-black text-[#0F356B] border-x border-slate-200 font-mono">
+                    Today
+                  </span>
+                  <button id="btn-hourly-next" class="px-3 py-1 text-xs font-bold bg-[#0F356B] hover:bg-blue-800 text-white rounded-md transition shadow-xs flex items-center gap-1.5" title="Next Day Hourly Estimation">
+                    <span>Next Day</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+
+                <span id="forecast-current-time-badge" class="font-mono text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-xs">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Current Time: --:--
+                </span>
+                <span id="forecast-remaining-today-badge" class="font-mono text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1 rounded-lg shadow-xs">
+                  Remaining Today: 0.00 kWh
+                </span>
+              </div>
+            </div>
+
+            <!-- Hourly Chart -->
+            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span id="lbl-hourly-chart-units">Hourly Solar Power Generation Curve (kW / kWh)</span>
+                </span>
+                <span class="text-[11px] text-slate-400">Projection from Current Hour to Midnight</span>
+              </div>
+              <div class="relative w-full" style="height: 230px;">
+                <canvas id="chart-hourly-forecast"></canvas>
+              </div>
+            </div>
+
+            <!-- Hourly Table Breakdown -->
+            <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-xs">
+              <table class="epc-report-table text-xs">
+                <thead>
+                  <tr>
+                    <th>Time Window</th>
+                    <th>Solar Irradiance (GHI)</th>
+                    <th id="th-col-power">Est. Power (kW)</th>
+                    <th id="th-col-energy">Energy Yield (kWh)</th>
+                    <th>Sun Status</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-hourly-forecast">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+                <tfoot>
+                  <tr class="total-row font-bold">
+                    <td>Total</td>
+                    <td id="th-remaining-ghi">—</td>
+                    <td id="th-remaining-peak-power">—</td>
+                    <td id="th-remaining-kwh">0.00 kWh</td>
+                    <td>—</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- Section 2: Next 7-Day Solar Estimation -->
+          <div class="space-y-3 pt-5 border-t-2 border-slate-100">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-1">
+              <div>
+                <h2 class="report-section-header flex items-center gap-2">
+                  <i data-lucide="calendar" class="w-5 h-5 text-emerald-600"></i>
+                  NEXT 7 DAYS SOLAR GENERATION FORECAST
+                </h2>
+                <p class="report-section-subtitle text-xs text-slate-500">
+                  Daily projected kWh output and specific yield (kWh/kWp)
+                </p>
+              </div>
+              <div class="flex items-center flex-wrap gap-2">
+                <!-- Unit Toggle Option (kW vs W) for 7-Day Forecast -->
+                <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs font-bold shadow-xs">
+                  <button type="button" id="btn-daily-unit-kw" class="px-2.5 py-1 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts (kW / kWh)">kW</button>
+                  <button type="button" id="btn-daily-unit-w" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts (W / Wh)">W</button>
+                </div>
+
+                <div id="forecast-7day-total-badge" class="font-mono text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-200 px-3 py-1 rounded-lg shadow-xs">
+                  7-Day Total: 0 kWh
+                </div>
+              </div>
+            </div>
+
+            <!-- 7-Day Chart -->
+            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                  <span id="lbl-daily-chart-units">Daily Projected Generation (kWh/day)</span>
+                </span>
+                <span class="text-[11px] text-slate-400">Next 7 Days Ahead</span>
+              </div>
+              <div class="relative w-full" style="height: 200px;">
+                <canvas id="chart-daily-forecast"></canvas>
+              </div>
+            </div>
+
+            <!-- 7-Day Cards Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5" id="grid-daily-forecast">
+              <!-- Dynamically populated 7 day cards -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB CONTENT 1: EXACT MATCH REPORT FROM SCREENSHOT -->
+        <div id="tab-pane-report" class="space-y-7 bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 hidden">
+          
+          <!-- SECTION 2: MONTH-WISE GENERATION REPORT (FAITHFUL TO SCREENSHOT) -->
+          <div class="space-y-3">
+            <div>
+              <h2 class="report-section-header">
+                2. MONTH-WISE GENERATION REPORT
+              </h2>
+              <p class="report-section-subtitle text-center sm:text-left" id="report-location-subtitle">
+                Project location: RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)
+              </p>
+            </div>
+
+            <!-- Month-wise Table -->
+            <div class="overflow-x-auto rounded-md border border-slate-200 shadow-sm mt-3">
+              <table class="epc-report-table">
+                <thead>
+                  <tr>
+                    <th style="width: 25%;">Month</th>
+                    <th style="width: 25%;">Indicative yield (kWh/kWp)</th>
+                    <th style="width: 25%;">Generation (kWh)</th>
+                    <th style="width: 25%;" id="th-tariff-header">Bill offset @ ₹7.50/unit</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-monthly-generation">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+                <tfoot>
+                  <tr class="total-row font-bold">
+                    <td>Annual total</td>
+                    <td id="td-total-yield">1,602</td>
+                    <td id="td-total-generation">58,634</td>
+                    <td id="td-total-offset" class="text-right sm:text-left">₹439,755</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Footnote description from screenshot -->
+            <p class="text-xs text-slate-600 italic leading-relaxed pt-1" id="report-generation-disclaimer">
+              Estimated annual generation: 58,634 kWh (4,886 kWh/month average). These are planning estimates based on an indicative Bengaluru-region profile, not guaranteed output or a site-specific simulation.
+            </p>
+          </div>
+
+          <!-- SECTION 3: INDICATIVE ROI / SIMPLE PAYBACK (FAITHFUL TO SCREENSHOT) -->
+          <div class="space-y-3 pt-4 border-t border-slate-200">
+            <div>
+              <h2 class="report-section-header">
+                3. INDICATIVE ROI / SIMPLE PAYBACK
+              </h2>
+            </div>
+
+            <!-- ROI Table -->
+            <div class="overflow-x-auto rounded-md border border-slate-200 shadow-sm mt-3">
+              <table class="roi-table">
+                <thead>
+                  <tr>
+                    <th style="width: 42%;">Parameter</th>
+                    <th style="width: 58%;">Assumption / estimate</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-roi-parameters">
+                  <tr>
+                    <td class="param-name">Assumed installed cost</td>
+                    <td class="param-val" id="roi-installed-cost">₹65,000/kWp × 36.60 kWp = ₹2,379,000 (₹23.79 lakh)</td>
+                  </tr>
+                  <tr>
+                    <td class="param-name">Annual energy generation</td>
+                    <td class="param-val" id="roi-annual-generation">58,634 units</td>
+                  </tr>
+                  <tr>
+                    <td class="param-name">Assumed electricity tariff</td>
+                    <td class="param-val" id="roi-electricity-tariff">₹7.50 per unit</td>
+                  </tr>
+                  <tr>
+                    <td class="param-name">Estimated annual bill offset</td>
+                    <td class="param-val" id="roi-annual-offset">₹439,755 (average ₹36,646/month)</td>
+                  </tr>
+                  <tr>
+                    <td class="param-name">Simple payback</td>
+                    <td class="param-val" id="roi-simple-payback">5.4 years before O&M, degradation, financing and replacement costs</td>
+                  </tr>
+                  <tr>
+                    <td class="param-name">25-year gross bill offset</td>
+                    <td class="param-val" id="roi-gross-offset">₹10,993,875, assuming constant generation and tariff</td>
+                  </tr>
+                  <tr>
+                    <td class="param-name">25-year simple net benefit</td>
+                    <td class="param-val" id="roi-net-benefit">₹8,614,875 after initial cost only; excludes O&M/replacements</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Legal and engineering footnote from screenshot -->
+            <p class="text-[11px] text-slate-500 leading-relaxed pt-1">
+              Financial assumptions are illustrative, not a quote or a guarantee. Replace project cost with the approved EPC quote and tariff with the customer's actual effective avoided rate. Savings depend on self-consumption, export compensation, net-metering rules and utility charges. No subsidy is assumed.
+            </p>
+          </div>
+
+          <!-- ENVIRONMENTAL IMPACT ACCORDION / BADGES -->
+          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="bg-emerald-600 text-white p-2.5 rounded-lg">
+                <i data-lucide="leaf" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm text-emerald-950">Clean Green Energy Impact</h4>
+                <p class="text-xs text-emerald-700">Mitigates greenhouse gas emissions compared to coal-fired grid electricity</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-6 text-xs font-semibold text-emerald-900">
+              <div>
+                <span class="block text-slate-500 font-normal">Annual CO₂ Offset</span>
+                <span class="text-base font-bold text-emerald-700" id="env-annual-co2">48.1 Tons</span>
+              </div>
+              <div>
+                <span class="block text-slate-500 font-normal">25-Yr CO₂ Reduction</span>
+                <span class="text-base font-bold text-emerald-700" id="env-lifetime-co2">938 Tons</span>
+              </div>
+              <div>
+                <span class="block text-slate-500 font-normal">Equivalent Trees Planted</span>
+                <span class="text-base font-bold text-emerald-700" id="env-trees">2,164 Trees</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TAB CONTENT 2: INTERACTIVE CHARTS -->
+        <div id="tab-pane-charts" class="space-y-6 hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-bold text-base text-[#0F356B] flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-amber-500"></i>
+                Month-Wise Generation (kWh) & Indicative Yield (kWh/kWp)
+              </h3>
+              <span class="text-xs text-slate-500">Monsoon dips visible in Jun-Aug & Nov</span>
+            </div>
+            <div class="h-72 w-full">
+              <canvas id="chart-monthly-generation"></canvas>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-200 pt-6">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-bold text-base text-[#0F356B] flex items-center gap-2">
+                <i data-lucide="line-chart" class="w-4 h-4 text-emerald-500"></i>
+                25-Year Cumulative Cash Flow & Simple Payback Timeline
+              </h3>
+              <span class="text-xs text-slate-500">Break-even Point</span>
+            </div>
+            <div class="h-72 w-full">
+              <canvas id="chart-cashflow"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT 3: PVSYST LOSS TREE & TECHNICAL DETAILS -->
+        <div id="tab-pane-pvsyst" class="space-y-6 hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div>
+            <h3 class="font-bold text-base text-[#0F356B] flex items-center gap-2 mb-1">
+              <i data-lucide="git-pull-request" class="w-4 h-4 text-blue-600"></i>
+              PVsyst Loss Diagram & Energy Cascade
+            </h3>
+            <p class="text-xs text-slate-500">Step-by-step irradiance loss breakdown from Nominal Irradiance to Inverter AC Output</p>
+          </div>
+
+          <div class="space-y-3" id="loss-tree-container">
+            <!-- Dynamically populated waterfall bars -->
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-200 text-xs">
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <h4 class="font-bold text-slate-800 mb-2">Key PVsyst Simulation Factors</h4>
+              <ul class="space-y-1.5 text-slate-600">
+                <li class="flex justify-between"><span>Nominal STC Irradiance:</span> <span class="font-mono font-bold">1,000 W/m²</span></li>
+                <li class="flex justify-between"><span>Module Technology:</span> <span class="font-medium" id="tech-module-name">Mono PERC Half-cut</span></li>
+                <li class="flex justify-between"><span>Temperature Derate (γ):</span> <span class="font-mono font-bold">-0.35 %/°C</span></li>
+                <li class="flex justify-between"><span>NOCT Cell Temp:</span> <span class="font-mono font-bold">45.0 °C</span></li>
+                <li class="flex justify-between"><span>Inverter Euro Efficiency:</span> <span class="font-mono font-bold">98.4 %</span></li>
+                <li class="flex justify-between text-blue-800 font-bold border-t pt-1"><span>Overall Performance Ratio (PR):</span> <span class="font-mono text-sm" id="tech-pr">79.2%</span></li>
+              </ul>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <h4 class="font-bold text-slate-800 mb-2">Plant Bill of Materials (BOM) Estimate</h4>
+              <ul class="space-y-1.5 text-slate-600">
+                <li class="flex justify-between"><span>DC Sizing (Array):</span> <span class="font-mono font-bold" id="bom-dc-size">36.60 kWp</span></li>
+                <li class="flex justify-between"><span>AC Inverter Capacity:</span> <span class="font-mono font-bold" id="bom-ac-size">30.0 kW</span></li>
+                <li class="flex justify-between"><span>DC/AC Overloading Ratio:</span> <span class="font-mono font-bold">1.22</span></li>
+                <li class="flex justify-between"><span>Total Modules Required:</span> <span class="font-mono font-bold" id="bom-module-count">67 Modules</span></li>
+                <li class="flex justify-between"><span>Total Required Roof Shadow-Free:</span> <span class="font-mono font-bold" id="bom-roof-sqft">~3,660 sq ft</span></li>
+                <li class="flex justify-between text-emerald-800 font-bold border-t pt-1"><span>Daily Avg Generation:</span> <span class="font-mono text-sm" id="bom-daily-units">160.6 Units/day</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB CONTENT 4: 25-YEAR CASH FLOW TABLE -->
+        <div id="tab-pane-cashflow" class="space-y-4 hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="font-bold text-base text-[#0F356B]">25-Year Lifecycle Cash Flow Projection</h3>
+              <p class="text-xs text-slate-500">Factoring 0.5% annual degradation and 2.5% annual utility tariff escalation</p>
+            </div>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">Positive Cash Flow</span>
+          </div>
+
+          <div class="overflow-x-auto max-h-96 border border-slate-200 rounded-lg">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-800 text-white sticky top-0">
+                <tr>
+                  <th class="py-2 px-3">Year</th>
+                  <th class="py-2 px-3">Annual Gen (Units)</th>
+                  <th class="py-2 px-3">Tariff (₹/unit)</th>
+                  <th class="py-2 px-3">Yearly Savings (₹)</th>
+                  <th class="py-2 px-3">Cumulative Net Position (₹)</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-cashflow-25" class="divide-y divide-slate-200">
+                <!-- 25 years rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 text-slate-400 py-6 mt-12 border-t border-slate-800 no-print text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div>
+        <p class="text-white font-semibold">HelioPV Solar Estimator</p>
+        <p class="text-slate-500">Designed for Solar EPC installers, developers, and rooftop solar consultants across India & Global territories.</p>
+      </div>
+      <div class="text-right text-slate-400">
+        <p>Satellite Weather: Open-Meteo ERA5 & PVGIS Models</p>
+        <p>Maps: Leaflet Satellite Hybrid & Google Maps JavaScript API</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL: GOOGLE MAPS & API SETTINGS -->
+  <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="bg-[#0F356B] text-white px-5 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <i data-lucide="key" class="w-5 h-5 text-amber-400"></i>
+          <h3 class="font-bold text-base">Google Maps API Key Configuration</h3>
+        </div>
+        <button id="btn-close-settings" class="text-slate-300 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-800 mb-1">Google Maps JavaScript API Key</label>
+          <input type="text" id="input-google-api-key" value="AIzaSyCOu9sS27zZW88e4r9FpztHAggOJeqzuLs" placeholder="AIzaSy..." class="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-blue-600">
+          <p class="text-[11px] text-slate-500 mt-1">
+            Your key is pre-configured. If Google billing is enabled on your Google Cloud Console, Google Maps Satellite Hybrid and Places Autocomplete load automatically.
+          </p>
+        </div>
+
+        <div id="settings-status-box" class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-900 space-y-1">
+          <h4 class="font-bold flex items-center gap-1.5">
+            <i data-lucide="check-circle" class="w-4 h-4 text-blue-600"></i>
+            Reliability & Fallback Guarantee:
+          </h4>
+          <p>&bull; <strong>High-Resolution Rooftop Satellite:</strong> Active via Esri World Imagery (zooms directly into rooftop solar panels).</p>
+          <p>&bull; <strong>Satellite Solar Irradiance:</strong> Active via Open-Meteo ERA5 & PVsyst physics engine (free, unlimited, zero downtime).</p>
+          <p>&bull; <strong>Location & Plus Codes:</strong> Resolves addresses, Google Plus Codes, and GPS coordinates.</p>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button id="btn-cancel-settings" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 font-semibold">Cancel</button>
+          <button id="btn-save-settings" class="px-4 py-2 bg-[#0F356B] hover:bg-blue-800 text-white rounded-lg font-bold">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ESP32 HARDWARE SETUP -->
+  <div id="modal-hw-info" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+      <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="cpu" class="w-5 h-5 text-emerald-400"></i>
+          <h3 class="font-bold text-base">ESP32 Gateway Configuration</h3>
+        </div>
+        <button id="btn-close-hw-info" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-800 mb-1">Your Computer's Local Server IP Address</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="input-server-ip" readonly value="http://localhost:3000/api/data" class="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono bg-slate-50 text-slate-900 outline-none select-all font-bold">
+            <button id="btn-copy-server-ip" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold flex items-center gap-1 shrink-0">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span>Copy</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">
+            Ensure your ESP32 and this computer are connected to the same Wi-Fi network (or mobile hotspot).
+          </p>
+        </div>
+
+        <div class="bg-slate-900 text-slate-200 p-3.5 rounded-lg space-y-2 font-mono text-[11px] border border-slate-800">
+          <div class="text-emerald-400 font-bold font-sans text-xs flex items-center gap-1.5">
+            <i data-lucide="code" class="w-4 h-4"></i>
+            Paste into esp32_gateway.ino (line 34):
+          </div>
+          <pre id="code-snippet-esp32" class="text-amber-300 overflow-x-auto p-2 bg-black/40 rounded border border-slate-800">const char *BACKEND_URL = "http://localhost:3000/api/data";</pre>
+        </div>
+
+        <div class="space-y-1.5 text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <p class="font-bold text-slate-900">Quick Hardware Checklist:</p>
+          <p>&bull; <strong>Master Node:</strong> DFRobot Beetle ESP32-C6 receiving over nRF24L01+ Multiceiver (4 pipes).</p>
+          <p>&bull; <strong>Micro-Nodes:</strong> CH32V003 transmitting every ~2s (P1, P2, P3, and String Node).</p>
+          <p>&bull; <strong>Auto-ACK &amp; Post:</strong> ESP32 auto-ACKs received packets and sends HTTP POST to <code>/api/data</code>.</p>
+        </div>
+
+        <div class="pt-2">
+          <button id="btn-test-push-alert" type="button" class="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg flex items-center justify-center gap-2 transition shadow-sm text-xs">
+            <i data-lucide="bell-ring" class="w-4 h-4 text-slate-950"></i>
+            <span>Send Test Background Push Alert (Works When App Closed)</span>
+          </button>
+        </div>
+
+        <div class="flex justify-end pt-1">
+          <button id="btn-close-hw-info-2" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE STICKY BOTTOM NAVIGATION BAR (>44px touch targets, hidden on desktop md:hidden) -->
+  <nav id="mobile-bottom-nav" class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-50 md:hidden flex justify-around items-center h-16 px-2 shadow-2xl no-print">
+    <button id="mobile-nav-monitor" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-emerald-400 font-bold transition active:scale-95" type="button">
+      <div class="relative flex items-center justify-center">
+        <i data-lucide="radio" class="w-5 h-5"></i>
+        <span class="absolute -top-0.5 -right-1 flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+      </div>
+      <span class="text-[11px] mt-1 tracking-tight">String Monitor</span>
+    </button>
+
+    <button id="mobile-nav-estimate" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-slate-200 transition active:scale-95" type="button">
+      <i data-lucide="sun-medium" class="w-5 h-5"></i>
+      <span class="text-[11px] mt-1 tracking-tight">PV Estimation</span>
+    </button>
+
+    <button id="mobile-nav-faults" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-amber-400 transition active:scale-95" type="button">
+      <div class="relative flex items-center justify-center">
+        <i data-lucide="bell" class="w-5 h-5"></i>
+        <span id="mobile-nav-fault-badge" class="hidden absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full border border-slate-900 animate-pulse">!</span>
+      </div>
+      <span class="text-[11px] mt-1 tracking-tight">Fault Logs</span>
+    </button>
+  </nav>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="pv-engine.js"></script>
+  <script src="weather-api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,517 @@
+/* 
+ * Solar EPC / PVsyst Web Estimator Custom Stylesheet
+ * Custom styling for high-precision PV engineering reports
+ */
+
+:root {
+  --epc-blue: #0F356B;
+  --epc-blue-dark: #0A254A;
+  --epc-blue-light: #E8F0FE;
+  --epc-accent: #F59E0B;
+  --epc-green: #10B981;
+  --epc-text: #1E293B;
+  --epc-gray: #64748B;
+  --epc-border: #E2E8F0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--epc-text);
+  background-color: #F8FAFC;
+}
+
+/* Custom table styling to faithfully match the user's PVsyst report screenshot */
+.epc-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+
+.epc-report-table thead th {
+  background-color: #143767 !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  border: 1px solid #143767;
+}
+
+.epc-report-table thead th:last-child {
+  text-align: right;
+}
+
+.epc-report-table tbody td {
+  padding: 8px 14px;
+  border-top: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+  border-left: 1px solid #F1F5F9;
+  border-right: 1px solid #F1F5F9;
+  color: #1E293B;
+}
+
+.epc-report-table tbody tr:nth-child(even) {
+  background-color: #FAFBFD;
+}
+
+.epc-report-table tbody tr:hover {
+  background-color: #F1F5F9;
+}
+
+.epc-report-table tfoot tr,
+.epc-report-table tr.total-row {
+  background-color: #F8FAFC !important;
+  font-weight: 700;
+  border-top: 2px solid #CBD5E1;
+  border-bottom: 2px solid #CBD5E1;
+}
+
+.epc-report-table tfoot td,
+.epc-report-table tr.total-row td {
+  padding: 10px 14px;
+  color: #0F172A;
+}
+
+/* ROI Table styling */
+.roi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.925rem;
+}
+
+.roi-table thead th {
+  background-color: #143767 !important;
+  color: #FFFFFF !important;
+  font-weight: 600;
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  border: 1px solid #143767;
+}
+
+.roi-table tbody td {
+  padding: 10px 14px;
+  border-top: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+  border-left: 1px solid #F1F5F9;
+  border-right: 1px solid #F1F5F9;
+}
+
+.roi-table tbody tr:nth-child(even) {
+  background-color: #FAFBFD;
+}
+
+.roi-table td.param-name {
+  font-weight: 500;
+  color: #1E293B;
+  width: 38%;
+}
+
+.roi-table td.param-val {
+  font-weight: 600;
+  color: #0F172A;
+}
+
+/* Report Section Headers matching screenshot style */
+.report-section-header {
+  color: #143767;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-section-subtitle {
+  color: #475569;
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+/* Map Containers */
+#map-container {
+  height: 280px;
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #CBD5E1;
+}
+
+/* Print proposal styling */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    font-size: 11pt;
+    color: #000000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  #report-content {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .epc-report-table thead th,
+  .roi-table thead th {
+    background-color: #143767 !important;
+    color: #FFFFFF !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .epc-report-table tbody tr:nth-child(even),
+  .roi-table tbody tr:nth-child(even) {
+    background-color: #F8FAFC !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Animation pulses for real-time calculations */
+@keyframes calcPulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.calculating {
+  animation: calcPulse 1.2s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   ESP32 Solar IoT String Monitor & Fault Detection Styles
+   ========================================================================== */
+
+/* View Switcher Tabs */
+.view-tab-btn {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.view-tab-btn.active-tab {
+  background-color: #0F356B !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(15, 53, 107, 0.4);
+  border-color: #3B82F6 !important;
+}
+
+.view-tab-btn:not(.active-tab) {
+  background-color: transparent;
+  color: #64748B;
+  border-color: transparent;
+}
+
+.view-tab-btn:not(.active-tab):hover {
+  background-color: #E2E8F0;
+  color: #0F172A;
+}
+
+/* IoT Monitor Section Theme */
+.iot-monitor-shell {
+  background: #0D1117;
+  color: #E6EDF3;
+  border-radius: 1rem;
+  border: 1px solid #30363D;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+/* Dynamic Alert Banners */
+.monitor-alert-box {
+  border-radius: 0.625rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.925rem;
+  line-height: 1.5;
+  text-align: left;
+  transition: all 0.3s ease;
+}
+
+.monitor-alert-box.danger {
+  background: rgba(231, 76, 60, 0.15);
+  border: 2px solid #E74C3C;
+  color: #FF6B6B;
+}
+
+.monitor-alert-box.warning {
+  background: rgba(243, 156, 18, 0.15);
+  border: 2px solid #F39C12;
+  color: #F39C12;
+}
+
+.monitor-alert-box.success {
+  background: rgba(46, 204, 113, 0.12);
+  border: 2px solid #2ECC71;
+  color: #2ECC71;
+}
+
+.alert-title {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Interactive String Array Row */
+.string-array-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 1.25rem 0.5rem;
+  scrollbar-width: thin;
+}
+
+/* Panel & String Node Cards */
+.iot-cell {
+  width: 215px;
+  min-height: 230px;
+  padding: 1.1rem 0.95rem;
+  border-radius: 0.85rem;
+  border: 2px solid #30363D;
+  background: #161B22;
+  position: relative;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.iot-cell.panel {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.iot-cell.string-node {
+  background: #161B22;
+}
+
+/* Cell Status States */
+.iot-cell.ok {
+  border-color: #2EA043;
+  background-color: #0D2818;
+}
+
+.iot-cell.broken {
+  border-color: #F85149;
+  background-color: #3D1416;
+  animation: border-pulse 1.2s infinite;
+}
+
+.iot-cell.gray_zone {
+  border-color: #8B949E;
+  background-color: #1E242D;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+}
+
+.iot-cell.no_signal {
+  border-color: #484F58;
+  background-color: #161B22;
+  opacity: 0.65;
+}
+
+.iot-cell.low_voltage {
+  border-color: #D29922;
+  background-color: #2B2006;
+}
+
+@keyframes border-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(248, 81, 73, 0); }
+}
+
+.iot-cell h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #F0F6FC;
+}
+
+.iot-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.35rem;
+  text-transform: uppercase;
+}
+
+.iot-badge.ok          { background: #238636; color: #FFFFFF; }
+.iot-badge.broken      { background: #DA3633; color: #FFFFFF; }
+.iot-badge.gray_zone   { background: #6E7681; color: #FFFFFF; }
+.iot-badge.low_voltage { background: #9E6A03; color: #FFFFFF; }
+.iot-badge.no_signal   { background: #30363D; color: #8B949E; }
+
+.iot-vals {
+  margin-top: 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #E6EDF3;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.iot-vals .val-highlight {
+  font-weight: 600;
+  color: #58A6FF;
+}
+
+.iot-note {
+  font-size: 0.75rem;
+  margin-top: 0.65rem;
+  color: #8B949E;
+  line-height: 1.35;
+}
+
+.iot-note.warn {
+  color: #F85149;
+  font-weight: 600;
+}
+
+/* Inter-Panel Circuit Switch Connectors */
+.wire-box {
+  width: 72px;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  user-select: none;
+}
+
+.wire-svg {
+  width: 100%;
+  height: 36px;
+  overflow: visible;
+}
+
+.wire-status-text {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+  text-transform: uppercase;
+}
+
+.wire-status-text.closed { color: #3FB950; }
+.wire-status-text.open { color: #F85149; }
+.wire-status-text.gray_zone { color: #8B949E; }
+.wire-status-text.no_signal { color: #484F58; }
+
+/* Open switch spark animation */
+@keyframes spark-pulse {
+  0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 5px #F85149); }
+  50% { opacity: 0.35; filter: drop-shadow(0 0 1px #F85149); }
+}
+
+.wire-open-arm {
+  animation: spark-pulse 1s infinite;
+}
+
+/* Gray zone switch blink */
+@keyframes gray-blink {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.3; }
+}
+
+.wire-gray-arm {
+  animation: gray-blink 1.2s infinite;
+}
+
+/* Scenario button bar */
+.scenario-btn {
+  transition: all 0.15s ease-in-out;
+}
+.scenario-btn:hover {
+  transform: translateY(-1px);
+}
+.scenario-btn.active-scenario {
+  outline: 2px solid #3B82F6;
+  outline-offset: 1px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE & CAPACITOR TOUCH ADAPTATIONS
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .string-array-row {
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Safe area padding for notch & home bar */
+  #mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0.25rem);
+  }
+}
+
+.mobile-nav-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mobile-nav-btn.active-mobile-tab {
+  color: #10B981 !important;
+}
+
+.mobile-nav-btn.active-mobile-tab i {
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
+}
+

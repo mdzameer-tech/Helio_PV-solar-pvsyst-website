@@ -8,9 +8,72 @@
 const express = require("express");
 const path = require("path");
 const os = require("os");
+const fs = require("fs");
+const webpush = require("web-push");
 
 const app = express();
 app.use(express.json());
+
+// VAPID Keys for Native Web Push (Alerts phone even when app is closed)
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BFwo5xRNdlvZj3bMXhcPCPdu47mZgMMpZO3D1DO9OJ47Vg5jAkOdSEdhSZZID7OJW0sh2NK-5zqD6eqvNJWAcUU";
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "adsHJqvAZFKolPeWBWcrnUKKnzUg4EX962zZ_5LKCzQ";
+
+webpush.setVapidDetails(
+  "mailto:support@heliopv.com",
+  VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY
+);
+
+// File-backed push subscriptions store so device tokens survive restarts
+const SUBSCRIPTIONS_FILE = path.join(__dirname, "push_subscriptions.json");
+let pushSubscriptions = [];
+
+function loadSubscriptions() {
+  try {
+    if (fs.existsSync(SUBSCRIPTIONS_FILE)) {
+      pushSubscriptions = JSON.parse(fs.readFileSync(SUBSCRIPTIONS_FILE, "utf8"));
+    }
+  } catch (e) {
+    pushSubscriptions = [];
+  }
+}
+function saveSubscriptions() {
+  try {
+    fs.writeFileSync(SUBSCRIPTIONS_FILE, JSON.stringify(pushSubscriptions, null, 2), "utf8");
+  } catch (e) {}
+}
+loadSubscriptions();
+
+// Broadcast push notification to all subscribed mobile & desktop devices
+async function sendPushNotification(payload) {
+  if (!pushSubscriptions || pushSubscriptions.length === 0) {
+    console.log(`[Push Notification] No active subscribers. Notification queued in logs: ${payload.title}`);
+    return;
+  }
+
+  console.log(`[Push Notification] Broadcasting to ${pushSubscriptions.length} device(s): ${payload.title}`);
+  const payloadString = JSON.stringify(payload);
+  const activeSubs = [];
+
+  for (const sub of pushSubscriptions) {
+    try {
+      await webpush.sendNotification(sub, payloadString);
+      activeSubs.push(sub);
+    } catch (err) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        console.log(`[Push Notification] Expired subscription removed.`);
+      } else {
+        console.error(`[Push Notification] Delivery issue:`, err.message);
+        activeSubs.push(sub);
+      }
+    }
+  }
+
+  if (activeSubs.length !== pushSubscriptions.length) {
+    pushSubscriptions = activeSubs;
+    saveSubscriptions();
+  }
+}
 
 // Enable CORS for all origins (localhost, 127.0.0.1, mobile, file://, etc.)
 app.use((req, res, next) => {
@@ -78,6 +141,117 @@ app.get("/api/network-info", (req, res) => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────
+// WEB PUSH NOTIFICATION API ENDPOINTS
+// ─────────────────────────────────────────────────────────────
+
+// Return VAPID Public Key for client browser subscription
+app.get("/api/vapid-public-key", (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+// Subscribe client device to push alerts
+app.post("/api/push-subscribe", (req, res) => {
+  const subscription = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: "Invalid subscription payload" });
+  }
+
+  const exists = pushSubscriptions.some((s) => s.endpoint === subscription.endpoint);
+  if (!exists) {
+    pushSubscriptions.push(subscription);
+    saveSubscriptions();
+    console.log(`[Push Notification] New device subscribed! Total active devices: ${pushSubscriptions.length}`);
+  }
+  res.status(201).json({ success: true, count: pushSubscriptions.length });
+});
+
+// Unsubscribe client device
+app.post("/api/push-unsubscribe", (req, res) => {
+  const { endpoint } = req.body || {};
+  pushSubscriptions = pushSubscriptions.filter((s) => s.endpoint !== endpoint);
+  saveSubscriptions();
+  res.json({ success: true, count: pushSubscriptions.length });
+});
+
+// Immediate test push notification endpoint (test while app/tab is closed)
+app.post("/api/push-test", async (req, res) => {
+  await sendPushNotification({
+    title: "🔔 Solar String Push Test",
+    body: "Background push notifications are working! You will receive alerts even when the app is closed.",
+    icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+    badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+    vibrate: [250, 100, 250],
+    url: "/?view=monitor"
+  });
+  res.json({ success: true, count: pushSubscriptions.length });
+});
+
+// Helper: Compute fault state consistently across endpoints
+let lastFaultState = null;
+
+function computeFaultState() {
+  const gatewayAge = Date.now() - latest.receivedAt;
+  const gatewayOnline = latest.receivedAt !== 0 && gatewayAge < GATEWAY_TIMEOUT_MS;
+
+  let faultNodeId = null;
+  let faultDescription = null;
+
+  if (gatewayOnline) {
+    for (let id = 2; id <= 4; id++) {
+      const n = latest.nodes.find((x) => x.id === id);
+      if (n) {
+        const age = (n.ageMs || 0) + gatewayAge;
+        if (age <= NODE_TIMEOUT_MS && n.continuity === false) {
+          faultNodeId = id;
+          if (id === 2) {
+            faultDescription = "Disconnection detected between Panel 1 and Panel 2";
+          } else if (id === 3) {
+            faultDescription = "Disconnection detected between Panel 2 and Panel 3";
+          } else if (id === 4) {
+            faultDescription = "Disconnection detected between Panel 3 and String Node";
+          }
+          break; // Stop at LOWEST numbered node
+        }
+      }
+    }
+  }
+
+  return { gatewayAge, gatewayOnline, faultNodeId, faultDescription };
+}
+
+function checkFaultAndNotify() {
+  const { gatewayOnline, faultNodeId, faultDescription } = computeFaultState();
+
+  if (faultNodeId !== null && lastFaultState === null) {
+    // A NEW fault just occurred!
+    console.log(`[ALERT] 🚨 Solar String Fault at Node ${faultNodeId}! Triggering Native Push...`);
+    sendPushNotification({
+      title: "⚠️ Solar String Fault Detected!",
+      body: `Wire break at Node ${faultNodeId}: ${faultDescription}`,
+      icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+      badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+      vibrate: [250, 100, 250, 100, 250],
+      url: "/?view=monitor"
+    });
+    lastFaultState = faultNodeId;
+  } else if (faultNodeId === null && lastFaultState !== null) {
+    // System recovered
+    if (gatewayOnline) {
+      console.log(`[ALERT] ✅ Solar String Fault Cleared! Triggering Recovery Push...`);
+      sendPushNotification({
+        title: "✅ Solar String Restored",
+        body: "All panel connections are back to normal.",
+        icon: "https://cdn-icons-png.flaticon.com/512/190/190411.png",
+        badge: "https://cdn-icons-png.flaticon.com/512/190/190411.png",
+        vibrate: [100, 50, 100],
+        url: "/?view=monitor"
+      });
+      lastFaultState = null;
+    }
+  }
+}
+
 // ESP32 posts telemetry packets here
 app.post("/api/data", (req, res) => {
   const nodes = (req.body && req.body.nodes) || [];
@@ -92,6 +266,9 @@ app.post("/api/data", (req, res) => {
     lastLog = Date.now();
     console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${nodes.length} active node(s)`);
   }
+
+  // Trigger alert if open circuit fault was detected
+  checkFaultAndNotify();
   res.sendStatus(200);
 });
 
@@ -107,6 +284,7 @@ app.post("/api/simulate", (req, res) => {
       simulationScenario: null
     };
     console.log(`[${new Date().toLocaleTimeString()}] Switched to Live Hardware Mode (waiting for ESP32)`);
+    checkFaultAndNotify();
     return res.json({ success: true, message: "Switched to Live Hardware Mode", scenario: "live_hardware" });
   }
 
@@ -161,6 +339,7 @@ app.post("/api/simulate", (req, res) => {
       isSimulated: true,
       simulationScenario: "gateway_offline"
     };
+    checkFaultAndNotify();
     return res.json({ success: true, message: "Simulating Gateway Offline", scenario: "gateway_offline" });
   }
 
@@ -172,37 +351,13 @@ app.post("/api/simulate", (req, res) => {
   };
 
   console.log(`[${new Date().toLocaleTimeString()}] Simulation Scenario Active: ${scenario}`);
+  checkFaultAndNotify();
   res.json({ success: true, message: `Active scenario: ${scenario}`, scenario });
 });
 
 // Status endpoint polled by frontend UI
 app.get("/api/status", (req, res) => {
-  const gatewayAge = Date.now() - latest.receivedAt;
-  const gatewayOnline = latest.receivedAt !== 0 && gatewayAge < GATEWAY_TIMEOUT_MS;
-
-  // 1. Identify ROOT CAUSE continuity break (LOWEST node ID reporting broken)
-  let faultNodeId = null;
-  let faultDescription = null;
-
-  if (gatewayOnline) {
-    for (let id = 2; id <= 4; id++) {
-      const n = latest.nodes.find((x) => x.id === id);
-      if (n) {
-        const age = (n.ageMs || 0) + gatewayAge;
-        if (age <= NODE_TIMEOUT_MS && n.continuity === false) {
-          faultNodeId = id;
-          if (id === 2) {
-            faultDescription = "Disconnection detected between Panel 1 and Panel 2";
-          } else if (id === 3) {
-            faultDescription = "Disconnection detected between Panel 2 and Panel 3";
-          } else if (id === 4) {
-            faultDescription = "Disconnection detected between Panel 3 and String Node";
-          }
-          break; // Stop at the LOWEST panel number!
-        }
-      }
-    }
-  }
+  const { gatewayAge, gatewayOnline, faultNodeId, faultDescription } = computeFaultState();
 
   // 2. Build cell statuses with cascade / gray zone support
   const cells = [1, 2, 3, 4].map((id) => {

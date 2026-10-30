@@ -483,3 +483,35 @@ body {
   outline: 2px solid #3B82F6;
   outline-offset: 1px;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE & CAPACITOR TOUCH ADAPTATIONS
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .string-array-row {
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Safe area padding for notch & home bar */
+  #mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0.25rem);
+  }
+}
+
+.mobile-nav-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.mobile-nav-btn.active-mobile-tab {
+  color: #10B981 !important;
+}
+
+.mobile-nav-btn.active-mobile-tab i {
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
+}
+

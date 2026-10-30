@@ -1,0 +1,9 @@
+{
+  "appId": "com.heliopv.monitor",
+  "appName": "HelioPV IoT Monitor",
+  "webDir": "www",
+  "server": {
+    "url": "https://solar-pvsyst-website.onrender.com",
+    "cleartext": false
+  }
+}

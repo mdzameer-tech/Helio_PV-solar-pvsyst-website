@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>PVsyst Solar Generation & ROI Simulator | Solar EPC Tool</title>
   
   <!-- Tailwind CSS -->
@@ -33,7 +33,7 @@
     }
   </script>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
 
   <!-- TOP NAVIGATION / BRAND HEADER -->
   <header class="bg-[#0F356B] text-white shadow-md sticky top-0 z-40 no-print">
@@ -92,6 +92,12 @@
           <span class="text-slate-600">|</span>
           <span id="nav-fault-summary-text" class="text-slate-300 font-mono">Checking continuity...</span>
         </div>
+
+        <!-- Background Push Alerts Button -->
+        <button id="btn-toggle-push-notif" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition" title="Enable background push notifications when app is closed">
+          <i data-lucide="bell" id="icon-push-bell" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span id="lbl-push-notif-status">Push Alerts</span>
+        </button>
 
         <!-- ESP32 Hardware Info Button -->
         <button id="btn-open-hw-info" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition" title="View ESP32 connection details and IP address">
@@ -163,8 +169,8 @@
         </div>
       </div>
 
-      <!-- Real-Time Metrics & Macro PV Feasibility Bridge -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+      <!-- Real-Time Metrics & Macro PV Feasibility Bridge (Stacked for Mobile) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span class="text-xs text-slate-400 block mb-1">Live String Voltage</span>
           <span id="metric-string-voltage" class="text-2xl font-black text-blue-400 font-mono">-- V</span>
@@ -995,12 +1001,46 @@
           <p>&bull; <strong>Auto-ACK &amp; Post:</strong> ESP32 auto-ACKs received packets and sends HTTP POST to <code>/api/data</code>.</p>
         </div>
 
+        <div class="pt-2">
+          <button id="btn-test-push-alert" type="button" class="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg flex items-center justify-center gap-2 transition shadow-sm text-xs">
+            <i data-lucide="bell-ring" class="w-4 h-4 text-slate-950"></i>
+            <span>Send Test Background Push Alert (Works When App Closed)</span>
+          </button>
+        </div>
+
         <div class="flex justify-end pt-1">
           <button id="btn-close-hw-info-2" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold">Close</button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- MOBILE STICKY BOTTOM NAVIGATION BAR (>44px touch targets, hidden on desktop md:hidden) -->
+  <nav id="mobile-bottom-nav" class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-50 md:hidden flex justify-around items-center h-16 px-2 shadow-2xl no-print">
+    <button id="mobile-nav-monitor" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-emerald-400 font-bold transition active:scale-95" type="button">
+      <div class="relative flex items-center justify-center">
+        <i data-lucide="radio" class="w-5 h-5"></i>
+        <span class="absolute -top-0.5 -right-1 flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+      </div>
+      <span class="text-[11px] mt-1 tracking-tight">String Monitor</span>
+    </button>
+
+    <button id="mobile-nav-estimate" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-slate-200 transition active:scale-95" type="button">
+      <i data-lucide="sun-medium" class="w-5 h-5"></i>
+      <span class="text-[11px] mt-1 tracking-tight">PV Estimation</span>
+    </button>
+
+    <button id="mobile-nav-faults" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-amber-400 transition active:scale-95" type="button">
+      <div class="relative flex items-center justify-center">
+        <i data-lucide="bell" class="w-5 h-5"></i>
+        <span id="mobile-nav-fault-badge" class="hidden absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full border border-slate-900 animate-pulse">!</span>
+      </div>
+      <span class="text-[11px] mt-1 tracking-tight">Fault Logs</span>
+    </button>
+  </nav>
 
   <!-- APPLICATION SCRIPTS -->
   <script src="pv-engine.js"></script>
