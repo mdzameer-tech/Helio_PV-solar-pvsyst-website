@@ -141,15 +141,38 @@
       </div>
 
       <!-- Visual Schematic Array with SVG Circuit Switches -->
-      <div class="bg-black/30 rounded-xl p-3 border border-slate-800/80">
-        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <i data-lucide="circuit-board" class="w-3.5 h-3.5 text-slate-400"></i>
-          <span>Schematic String View (Series Circuit with Inter-Node Switch Isolation)</span>
+      <div class="bg-black/30 rounded-xl p-3 border border-slate-800/80" id="schematic-wrapper">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="circuit-board" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span>Schematic String View (Series Circuit with Inter-Node Switch Isolation)</span>
+          </div>
+
+          <!-- Mobile Viewport Controls (Fit to screen vs Zoomed in PC view) -->
+          <div class="flex items-center gap-1 sm:hidden self-end" id="mobile-schematic-controls">
+            <span class="text-[10px] text-slate-400 font-semibold mr-1">View:</span>
+            <button id="btn-schematic-fit" type="button" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-600 text-white transition flex items-center gap-1 shadow-sm">
+              <i data-lucide="smartphone" class="w-3 h-3"></i>
+              <span>Fit Screen</span>
+            </button>
+            <button id="btn-schematic-zoom" type="button" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1">
+              <i data-lucide="zoom-in" class="w-3 h-3"></i>
+              <span>Zoom (PC View)</span>
+            </button>
+          </div>
         </div>
         
-        <div class="string-array-row" id="iot-string-row">
+        <div class="string-array-row mobile-fit-screen" id="iot-string-row">
           <!-- Dynamically populated by app.js -->
           <div class="text-slate-400 text-xs py-8">Loading solar string nodes and circuit switches...</div>
+        </div>
+
+        <!-- Mobile Quick Hint -->
+        <div class="sm:hidden text-center text-[10px] text-slate-400 pt-1 pb-0.5" id="mobile-schematic-hint">
+          <span class="inline-flex items-center gap-1 bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-800">
+            <i data-lucide="touchpad" class="w-3 h-3 text-amber-400"></i>
+            <span>Hold or tap panel for info &bull; Double-tap or Zoom for PC view</span>
+          </span>
         </div>
 
         <!-- Legend -->
@@ -1025,6 +1048,70 @@
           <button id="btn-close-hw-info-2" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold">Close</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MOBILE PANEL TELEMETRY DETAIL (TRIGGERED ON LONG PRESS OR TAP) -->
+  <div id="modal-panel-detail" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-200">
+    <div class="bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden text-slate-100 animate-in slide-in-from-bottom duration-200">
+      
+      <!-- Popover Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
+        <div class="flex items-center gap-2.5">
+          <div id="panel-modal-icon-wrap" class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black text-xs">
+            P1
+          </div>
+          <div>
+            <h3 id="panel-modal-title" class="font-bold text-sm text-white">Panel 1 Telemetry</h3>
+            <span id="panel-modal-type" class="text-[10px] text-slate-400">Micro-Node (CH32V003 &bull; Pipe 1)</span>
+          </div>
+        </div>
+        <button id="btn-close-panel-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" type="button">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Popover Body: Live Metrics -->
+      <div class="p-4 space-y-3">
+        <!-- Status Badge Banner -->
+        <div id="panel-modal-badge" class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+          <span id="panel-modal-status-text">Normal &amp; Continuous</span>
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block mb-0.5">Cell Voltage</span>
+            <span id="panel-modal-volt" class="text-base font-black text-blue-400 font-mono">-- V</span>
+          </div>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block mb-0.5">Temperature</span>
+            <span id="panel-modal-temp" class="text-base font-black text-rose-400 font-mono">-- &deg;C</span>
+          </div>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block mb-0.5">String Current</span>
+            <span id="panel-modal-curr" class="text-base font-black text-emerald-400 font-mono">-- A</span>
+          </div>
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 block mb-0.5">String Power</span>
+            <span id="panel-modal-pwr" class="text-base font-black text-amber-400 font-mono">-- W</span>
+          </div>
+        </div>
+
+        <!-- Diagnostic Note -->
+        <div id="panel-modal-note-box" class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-300">
+          <span class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider mb-0.5">Circuit Diagnostic</span>
+          <span id="panel-modal-note-text">All series circuit continuity switches closed and communicating.</span>
+        </div>
+
+        <!-- Zoom to Laptop View Action -->
+        <button id="btn-modal-zoom-view" type="button" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Zoom In (Full Laptop View)</span>
+        </button>
+      </div>
+
     </div>
   </div>
 

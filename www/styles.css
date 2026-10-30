@@ -390,6 +390,17 @@ body {
   color: #F0F6FC;
 }
 
+/* Dual Title & Compact Metric Handlers */
+.cell-title-full {
+  display: block;
+}
+.cell-title-compact {
+  display: none;
+}
+.cell-compact-metric {
+  display: none;
+}
+
 .iot-badge {
   display: inline-block;
   font-size: 0.7rem;
@@ -504,11 +515,164 @@ body {
    MOBILE & CAPACITOR TOUCH ADAPTATIONS
    ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .string-array-row {
+  /* 1. Mobile Fit-to-Screen Overview (Contained in Screen, No Overflow) */
+  .string-array-row.mobile-fit-screen {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    overflow-x: hidden !important;
+    padding: 0.5rem 0.2rem !important;
+    gap: 3px !important;
+  }
+
+  .string-array-row.mobile-fit-screen .iot-cell {
+    width: auto !important;
+    flex: 1 1 0 !important;
+    max-width: 22.5% !important;
+    min-width: 0 !important;
+    min-height: 110px !important;
+    padding: 0.45rem 0.2rem !important;
+    border-radius: 0.6rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .string-array-row.mobile-fit-screen .iot-cell.cell-pressed {
+    transform: scale(0.92) !important;
+    opacity: 0.85 !important;
+  }
+
+  .string-array-row.mobile-fit-screen .cell-title-full {
+    display: none !important;
+  }
+
+  .string-array-row.mobile-fit-screen .cell-title-compact {
+    display: block !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em !important;
+    margin: 0 0 0.2rem 0 !important;
+    color: #F0F6FC !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .string-array-row.mobile-fit-screen .iot-badge {
+    font-size: 0.52rem !important;
+    padding: 0.12rem 0.25rem !important;
+    letter-spacing: 0 !important;
+    border-radius: 0.25rem !important;
+    font-weight: 700 !important;
+    width: 100% !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .string-array-row.mobile-fit-screen .cell-compact-metric {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 0.35rem !important;
+    padding: 0.25rem 0.15rem !important;
+    background: rgba(0, 0, 0, 0.35) !important;
+    border-radius: 0.35rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .string-array-row.mobile-fit-screen .compact-volt {
+    font-size: 0.76rem !important;
+    font-weight: 800 !important;
+    color: #60A5FA !important;
+    font-family: ui-monospace, SFMono-Regular, monospace !important;
+  }
+
+  .string-array-row.mobile-fit-screen .compact-hint {
+    font-size: 0.52rem !important;
+    color: #94A3B8 !important;
+    line-height: 1 !important;
+    margin-top: 2px !important;
+  }
+
+  .string-array-row.mobile-fit-screen .iot-vals {
+    display: none !important;
+  }
+
+  .string-array-row.mobile-fit-screen .iot-note {
+    display: none !important;
+  }
+
+  .string-array-row.mobile-fit-screen .wire-box {
+    flex: 0 0 16px !important;
+    width: 16px !important;
+    min-width: 12px !important;
+    padding: 0 !important;
+  }
+
+  .string-array-row.mobile-fit-screen .wire-svg {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 20px !important;
+  }
+
+  /* 2. Mobile Zoomed In Mode (Shows Exactly as on Laptop with info inside panels) */
+  .string-array-row.mobile-zoomed {
+    display: flex !important;
     justify-content: flex-start !important;
+    overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    padding: 1.25rem 0.5rem !important;
+    gap: 0 !important;
+  }
+
+  .string-array-row.mobile-zoomed .iot-cell {
+    width: 215px !important;
+    min-height: 230px !important;
+    flex: 0 0 215px !important;
+    padding: 1.1rem 0.95rem !important;
+  }
+
+  .string-array-row.mobile-zoomed .cell-title-full {
+    display: block !important;
+  }
+
+  .string-array-row.mobile-zoomed .cell-title-compact {
+    display: none !important;
+  }
+
+  .string-array-row.mobile-zoomed .cell-compact-metric {
+    display: none !important;
+  }
+
+  .string-array-row.mobile-zoomed .iot-badge {
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.65rem !important;
+  }
+
+  .string-array-row.mobile-zoomed .iot-vals {
+    display: block !important;
+  }
+
+  .string-array-row.mobile-zoomed .iot-note {
+    display: block !important;
+  }
+
+  .string-array-row.mobile-zoomed .wire-box {
+    width: 68px !important;
+    flex: 0 0 68px !important;
+  }
+
+  .string-array-row.mobile-zoomed .wire-svg {
+    width: 68px !important;
+    height: 34px !important;
   }
 
   /* Safe area padding for notch & home bar */

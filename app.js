@@ -1550,6 +1550,26 @@ function setupEventListeners() {
   document.getElementById('btn-close-hw-info')?.addEventListener('click', () => modalHwInfo?.classList.add('hidden'));
   document.getElementById('btn-close-hw-info-2')?.addEventListener('click', () => modalHwInfo?.classList.add('hidden'));
 
+  // Mobile Schematic Viewport Controls (Fit to screen vs Zoomed PC view)
+  document.getElementById('btn-schematic-fit')?.addEventListener('click', () => setSchematicMobileMode('fit'));
+  document.getElementById('btn-schematic-zoom')?.addEventListener('click', () => setSchematicMobileMode('zoomed'));
+
+  // Mobile Panel Detail Modal Controls
+  document.getElementById('btn-close-panel-modal')?.addEventListener('click', hidePanelTelemetryModal);
+  document.getElementById('modal-panel-detail')?.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal-panel-detail')) {
+      hidePanelTelemetryModal();
+    }
+  });
+  document.getElementById('btn-modal-zoom-view')?.addEventListener('click', () => {
+    hidePanelTelemetryModal();
+    setSchematicMobileMode('zoomed');
+    setTimeout(() => {
+      const container = document.getElementById('iot-string-row');
+      container?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  });
+
   // Copy Cloud Backend URL
   document.getElementById('btn-copy-cloud-ip')?.addEventListener('click', () => {
     const input = document.getElementById('input-cloud-ip');
@@ -2189,18 +2209,31 @@ function renderIoTMonitor(data) {
   // 3. Render Visual Schematic Array with SVG switches
   const container = document.getElementById('iot-string-row');
   if (container && data.cells && data.cells.length > 0) {
+    latestSchematicCells = data.cells;
     let html = '';
     const wires = data.wires || [];
 
     data.cells.forEach((c, i) => {
       const isString = (c.type === 'string');
       const label = isString ? 'String Monitor' : (`Panel ${c.id}`);
+      const shortLabel = isString ? 'String' : (`P${c.id}`);
       const cardClass = isString ? 'string-node' : 'panel';
 
       html += `
-        <div class="iot-cell ${cardClass} ${c.state}">
-          <h3>${label}</h3>
+        <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" title="${label}: hold or tap for details">
+          <!-- Desktop Full View Title -->
+          <h3 class="cell-title-full">${label}</h3>
+          <!-- Mobile Fit View Compact Title -->
+          <h3 class="cell-title-compact">${shortLabel}</h3>
+
           <div class="iot-badge ${c.state}">${IOT_LABELS[c.state] || c.state}</div>
+
+          <!-- Primary Metric for Mobile Fit View -->
+          <div class="cell-compact-metric">
+            <span class="compact-volt">${typeof c.voltage === 'number' ? c.voltage.toFixed(1) + 'V' : '--'}</span>
+            <span class="compact-hint">tap/hold</span>
+          </div>
+
           <div class="iot-vals">${renderCellBody(c)}</div>
           <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${IOT_NOTES[c.state] || ''}</div>
         </div>
@@ -2217,6 +2250,13 @@ function renderIoTMonitor(data) {
     });
 
     container.innerHTML = html;
+    setupCellTouchEvents();
+
+    // If panel detail modal is open on mobile, update its real-time values
+    if (currentModalNodeId !== null) {
+      const currentCell = latestSchematicCells.find(c => c.id === currentModalNodeId);
+      if (currentCell) updateModalTelemetryValues(currentCell);
+    }
   }
 
   // 4. Update Bottom Live Telemetry Metrics
@@ -2312,6 +2352,197 @@ function renderSwitchSvg(state) {
       <div class="wire-status-text no_signal">&mdash;</div>
     `;
   }
+}
+
+// ==========================================================================
+// Mobile Responsive Schematic Controls, Short-Hold Long Press & Telemetry Popover
+// ==========================================================================
+
+let latestSchematicCells = [];
+let currentModalNodeId = null;
+
+function setSchematicMobileMode(mode) {
+  const container = document.getElementById('iot-string-row');
+  const btnFit = document.getElementById('btn-schematic-fit');
+  const btnZoom = document.getElementById('btn-schematic-zoom');
+
+  if (mode === 'zoomed') {
+    container?.classList.remove('mobile-fit-screen');
+    container?.classList.add('mobile-zoomed');
+    if (btnZoom) {
+      btnZoom.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-600 text-white transition flex items-center gap-1 shadow-sm';
+    }
+    if (btnFit) {
+      btnFit.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1';
+    }
+  } else {
+    container?.classList.remove('mobile-zoomed');
+    container?.classList.add('mobile-fit-screen');
+    if (btnFit) {
+      btnFit.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-blue-600 text-white transition flex items-center gap-1 shadow-sm';
+    }
+    if (btnZoom) {
+      btnZoom.className = 'px-2 py-1 text-[10px] font-bold rounded-lg bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1';
+    }
+  }
+}
+
+function toggleMobileSchematicZoom() {
+  const container = document.getElementById('iot-string-row');
+  if (!container) return;
+  const isZoomed = container.classList.contains('mobile-zoomed');
+  setSchematicMobileMode(isZoomed ? 'fit' : 'zoomed');
+}
+
+function showPanelTelemetryModal(nodeId) {
+  currentModalNodeId = nodeId;
+  const cell = latestSchematicCells.find(c => c.id === nodeId);
+  if (!cell) return;
+
+  const modal = document.getElementById('modal-panel-detail');
+  updateModalTelemetryValues(cell);
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function hidePanelTelemetryModal() {
+  currentModalNodeId = null;
+  const modal = document.getElementById('modal-panel-detail');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
+function updateModalTelemetryValues(cell) {
+  if (!cell) return;
+  const iconWrap = document.getElementById('panel-modal-icon-wrap');
+  const title = document.getElementById('panel-modal-title');
+  const typeText = document.getElementById('panel-modal-type');
+  const badge = document.getElementById('panel-modal-badge');
+  const statusText = document.getElementById('panel-modal-status-text');
+  const voltEl = document.getElementById('panel-modal-volt');
+  const tempEl = document.getElementById('panel-modal-temp');
+  const currEl = document.getElementById('panel-modal-curr');
+  const pwrEl = document.getElementById('panel-modal-pwr');
+  const noteText = document.getElementById('panel-modal-note-text');
+
+  const isString = (cell.type === 'string');
+  if (title) title.textContent = isString ? 'String Monitor 4' : `Solar Panel ${cell.id}`;
+  if (iconWrap) iconWrap.textContent = isString ? 'STR' : `P${cell.id}`;
+  if (typeText) {
+    typeText.textContent = isString
+      ? 'Master String Monitor (DFRobot Beetle ESP32-C6)'
+      : `Series Micro-Node (CH32V003 • Pipe ${cell.id})`;
+  }
+
+  const voltStr = typeof cell.voltage === 'number' ? `${cell.voltage.toFixed(2)} V` : '-- V';
+  const tempStr = typeof cell.temp === 'number' ? `${cell.temp.toFixed(1)} °C` : (isString ? 'Panel Avg' : 'Sensor absent');
+  const currStr = typeof cell.current === 'number' ? `${cell.current.toFixed(3)} A` : '-- A';
+  const pwrStr = typeof cell.power === 'number' ? `${cell.power.toFixed(2)} W` : '-- W';
+
+  if (voltEl) voltEl.textContent = voltStr;
+  if (tempEl) tempEl.textContent = tempStr;
+  if (currEl) currEl.textContent = currStr;
+  if (pwrEl) pwrEl.textContent = pwrStr;
+
+  const stateLabel = IOT_LABELS[cell.state] || cell.state;
+  if (statusText) statusText.textContent = stateLabel;
+
+  if (badge) {
+    badge.className = `px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between iot-badge ${cell.state}`;
+  }
+
+  const noteStr = IOT_NOTES[cell.state] || 'All series connections continuous and active.';
+  if (noteText) noteText.textContent = noteStr;
+}
+
+let touchTimer = null;
+let touchStartX = 0;
+let touchStartY = 0;
+let hasLongPressed = false;
+
+function setupCellTouchEvents() {
+  const container = document.getElementById('iot-string-row');
+  if (!container) return;
+
+  container.querySelectorAll('.iot-cell').forEach(cell => {
+    const nodeId = parseInt(cell.getAttribute('data-node-id'), 10);
+    let lastTapTime = 0;
+
+    const onStart = (e) => {
+      hasLongPressed = false;
+      const touch = e.touches ? e.touches[0] : e;
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+
+      cell.classList.add('cell-pressed');
+
+      if (touchTimer) clearTimeout(touchTimer);
+      // Short duration: 240ms triggers long-press info
+      touchTimer = setTimeout(() => {
+        hasLongPressed = true;
+        cell.classList.remove('cell-pressed');
+        if (navigator.vibrate) {
+          try { navigator.vibrate(35); } catch (e) {}
+        }
+        showPanelTelemetryModal(nodeId);
+      }, 240);
+    };
+
+    const onMove = (e) => {
+      const touch = e.touches ? e.touches[0] : e;
+      const diffX = Math.abs(touch.clientX - touchStartX);
+      const diffY = Math.abs(touch.clientY - touchStartY);
+      if (diffX > 10 || diffY > 10) {
+        if (touchTimer) clearTimeout(touchTimer);
+        cell.classList.remove('cell-pressed');
+      }
+    };
+
+    const onEnd = (e) => {
+      cell.classList.remove('cell-pressed');
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+
+      // Check double-tap
+      const now = Date.now();
+      if (now - lastTapTime < 300) {
+        toggleMobileSchematicZoom();
+        lastTapTime = 0;
+        return;
+      }
+      lastTapTime = now;
+
+      // If user tapped without waiting full long-press, show telemetry info if in mobile-fit mode
+      if (!hasLongPressed && window.innerWidth <= 768) {
+        const isFit = container.classList.contains('mobile-fit-screen');
+        if (isFit) {
+          showPanelTelemetryModal(nodeId);
+        }
+      }
+    };
+
+    cell.addEventListener('touchstart', onStart, { passive: true });
+    cell.addEventListener('touchmove', onMove, { passive: true });
+    cell.addEventListener('touchend', onEnd);
+    cell.addEventListener('touchcancel', () => {
+      cell.classList.remove('cell-pressed');
+      if (touchTimer) clearTimeout(touchTimer);
+    });
+
+    cell.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768 && container.classList.contains('mobile-fit-screen')) {
+        showPanelTelemetryModal(nodeId);
+      }
+    });
+  });
 }
 
 function renderIoTMonitorOffline(errMsg) {
