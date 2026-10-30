@@ -3116,7 +3116,9 @@ function setupAuthEventListeners() {
     backdrop?.classList.add('hidden');
   }
 
-  btnToggleDrawer?.addEventListener('click', openDrawer);
+  document.querySelectorAll('.btn-open-user-drawer, #btn-toggle-user-drawer, #btn-toggle-user-drawer-guest').forEach(btn => {
+    btn.addEventListener('click', openDrawer);
+  });
   btnCloseDrawer?.addEventListener('click', closeDrawer);
   backdrop?.addEventListener('click', closeDrawer);
 

@@ -36,11 +36,11 @@
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
 
   <!-- MINIMALIST STICKY NAVIGATION BAR -->
-  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white shadow-sm no-print">
-    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white shadow-sm no-print w-full">
+    <div class="w-full px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
       
-      <!-- LOGO ON THE LEFT -->
-      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <!-- LOGO ON PROPER LEFT -->
+      <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
         <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
           <i data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 font-black"></i>
         </div>
@@ -50,9 +50,9 @@
         </div>
       </div>
 
-      <!-- NAVIGATION LINKS ON THE RIGHT -->
-      <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        <!-- Minimalist Navigation Links (Flexes smoothly: icons only when squeezed small) -->
+      <!-- REST OF THE THINGS TO PROPER RIGHT -->
+      <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+        <!-- Navigation Tabs (Live String Monitor & Solar Estimation) -->
         <nav class="flex items-center gap-1 sm:gap-1.5" aria-label="Main Navigation">
           <button id="tab-btn-monitor" class="view-tab-btn active-tab p-1.5 sm:px-3 sm:py-1.5" title="Live ESP32 String Monitor" type="button">
             <span class="relative flex h-2 w-2">
@@ -69,7 +69,7 @@
           </button>
         </nav>
 
-        <!-- Preserved Utility Action Elements (Now inside the Hamburger Drawer) -->
+        <!-- Preserved Utility Action Elements (Preserved for background telemetry handlers) -->
         <div class="hidden">
           <button id="btn-toggle-push-notif" type="button"></button>
           <span id="lbl-push-notif-status"></span>
@@ -78,26 +78,30 @@
           <button id="btn-print-report" type="button"></button>
         </div>
 
-        <!-- AUTHENTICATION STATE & HAMBURGER USER MENU -->
-        <div class="flex items-center gap-1.5 sm:gap-2 border-l border-slate-800 pl-1.5 sm:pl-3">
-          <!-- Logged Out State: Sign In Button -->
-          <div id="auth-header-logged-out" class="flex items-center">
+        <!-- Vertical Divider -->
+        <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+
+        <!-- ACCOUNT ATTACHED WITH HAMBURGER ICON (RIGHT-MOST LIKE OFFICIAL WEBSITES) -->
+        <div class="flex items-center">
+          <!-- Logged Out State: Sign In + Hamburger Menu Attached -->
+          <div id="auth-header-logged-out" class="flex items-center gap-1.5">
             <button id="btn-open-auth-modal" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1.5 sm:px-3 rounded-lg font-semibold shadow-sm transition" title="Sign In" type="button">
               <i data-lucide="log-in" class="w-3.5 h-3.5 shrink-0"></i>
               <span class="hidden sm:inline">Sign In</span>
             </button>
+            <button id="btn-toggle-user-drawer-guest" class="btn-open-user-drawer flex items-center justify-center p-1.5 sm:px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm shrink-0 cursor-pointer" title="Open Menu" type="button">
+              <i data-lucide="menu" class="w-4 h-4 text-slate-300"></i>
+            </button>
           </div>
 
-          <!-- Logged In State: User Avatar + Name -->
-          <div id="auth-header-logged-in" class="hidden items-center gap-1.5">
-            <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-amber-400/60 bg-slate-800 shrink-0">
-            <span id="header-user-name" class="text-xs font-semibold max-w-[70px] sm:max-w-[110px] truncate text-slate-100 hidden lg:inline">Operator</span>
+          <!-- Logged In State: Unified Account Button Attached with Hamburger Icon [Avatar + Name + ≡] -->
+          <div id="auth-header-logged-in" class="hidden items-center">
+            <button id="btn-toggle-user-drawer" class="btn-open-user-drawer flex items-center gap-2 py-1 px-2 sm:px-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 rounded-xl transition shadow-sm group cursor-pointer" title="Operator Profile & System Menu" type="button">
+              <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-amber-400/80 bg-slate-800 shrink-0">
+              <span id="header-user-name" class="text-xs font-semibold max-w-[80px] sm:max-w-[120px] truncate text-slate-100 hidden sm:inline">Operator</span>
+              <i data-lucide="menu" class="w-4 h-4 text-slate-300 group-hover:text-white transition shrink-0"></i>
+            </button>
           </div>
-
-          <!-- Hamburger Button (≡) -->
-          <button id="btn-toggle-user-drawer" class="flex items-center justify-center p-1.5 sm:px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm shrink-0" title="Open Menu" type="button">
-            <i data-lucide="menu" class="w-4 h-4 text-slate-300"></i>
-          </button>
         </div>
 
         <!-- Hidden status elements preserved for background telemetry handlers -->
