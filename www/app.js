@@ -281,6 +281,11 @@ async function onMapLocationSelected(lat, lon, knownAddress = null) {
   document.getElementById('input-display-location').value = displayLoc;
   document.getElementById('input-search-location').value = displayLoc;
   document.getElementById('report-location-subtitle').textContent = `Project location: ${displayLoc}`;
+  
+  const drawerLblLoc = document.getElementById('drawer-lbl-location');
+  if (drawerLblLoc) drawerLblLoc.textContent = displayLoc;
+  const quickLblLoc = document.getElementById('quick-lbl-site-loc');
+  if (quickLblLoc) quickLblLoc.textContent = displayLoc;
 
   if (AppState.marker) {
     AppState.marker.bindPopup(`<b>${displayLoc}</b>`).openPopup();
@@ -3009,6 +3014,11 @@ function applyUserSavedLocation(user) {
   if (inputSearch && displayLocation) inputSearch.value = displayLocation;
   if (reportSubtitle && displayLocation) reportSubtitle.textContent = `Project location: ${displayLocation}`;
 
+  const drawerLblLoc = document.getElementById('drawer-lbl-location');
+  if (drawerLblLoc && displayLocation) drawerLblLoc.textContent = displayLocation;
+  const quickLblLoc = document.getElementById('quick-lbl-site-loc');
+  if (quickLblLoc && displayLocation) quickLblLoc.textContent = displayLocation;
+
   // Pan Leaflet map and marker if initialized
   if (AppState.map) {
     try {
@@ -3353,6 +3363,61 @@ function setupAuthEventListeners() {
     } finally {
       btnSubmit.disabled = false;
     }
+  });
+
+  // Drawer: Site Location Accordion Toggle
+  const btnToggleSiteLoc = document.getElementById('drawer-btn-toggle-site-location');
+  const siteLocContent = document.getElementById('drawer-content-site-location');
+  const iconLocChevron = document.getElementById('drawer-icon-location-chevron');
+
+  function openSiteLocationTab() {
+    siteLocContent?.classList.remove('hidden');
+    iconLocChevron?.classList.add('rotate-180');
+    setTimeout(() => {
+      if (AppState.map) AppState.map.invalidateSize();
+      if (AppState.googleMap && window.google) google.maps.event.trigger(AppState.googleMap, 'resize');
+    }, 150);
+  }
+
+  btnToggleSiteLoc?.addEventListener('click', () => {
+    const isHidden = siteLocContent?.classList.contains('hidden');
+    if (isHidden) {
+      openSiteLocationTab();
+    } else {
+      siteLocContent?.classList.add('hidden');
+      iconLocChevron?.classList.remove('rotate-180');
+    }
+  });
+
+  // Drawer: Hardware & CAPEX Accordion Toggle
+  const btnToggleHwCapex = document.getElementById('drawer-btn-toggle-hardware-capex');
+  const hwCapexContent = document.getElementById('drawer-content-hardware-capex');
+  const iconHwChevron = document.getElementById('drawer-icon-hardware-chevron');
+
+  function openHardwareCapexTab() {
+    hwCapexContent?.classList.remove('hidden');
+    iconHwChevron?.classList.add('rotate-180');
+  }
+
+  btnToggleHwCapex?.addEventListener('click', () => {
+    const isHidden = hwCapexContent?.classList.contains('hidden');
+    if (isHidden) {
+      openHardwareCapexTab();
+    } else {
+      hwCapexContent?.classList.add('hidden');
+      iconHwChevron?.classList.remove('rotate-180');
+    }
+  });
+
+  // Quick Action Buttons from Solar Estimation View
+  document.getElementById('btn-quick-open-site-loc')?.addEventListener('click', () => {
+    openDrawer();
+    openSiteLocationTab();
+  });
+
+  document.getElementById('btn-quick-open-hw-capex')?.addEventListener('click', () => {
+    openDrawer();
+    openHardwareCapexTab();
   });
 
   // Drawer Push Notification Toggle Button

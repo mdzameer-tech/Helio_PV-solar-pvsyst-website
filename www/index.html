@@ -343,178 +343,18 @@
                 <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="1000">1 MW</button>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- CARD 2: SITE & SATELLITE ROOFTOP LOCATION (FLEXIBLE SELECTION) -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="bg-[#0F356B] text-white px-4 py-2.5 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <i data-lucide="map-pin" class="w-4 h-4 text-amber-400"></i>
-              <h2 class="font-bold text-sm uppercase tracking-wide">2. Specific Site Location</h2>
+            <!-- Quick Configuration Links (Opens drawer directly) -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+              <button id="btn-quick-open-site-loc" type="button" class="btn-open-user-drawer flex items-center gap-1.5 text-blue-700 hover:text-blue-800 font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition text-[11px] truncate cursor-pointer" title="Configure Site Location & Satellite Map">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 text-blue-600"></i>
+                <span class="truncate max-w-[130px]">Site Location</span>
+              </button>
+              <button id="btn-quick-open-hw-capex" type="button" class="btn-open-user-drawer flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-semibold bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-200 transition text-[11px] cursor-pointer" title="Configure Hardware & CAPEX">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 shrink-0 text-amber-500"></i>
+                <span>Hardware &amp; CAPEX</span>
+              </button>
             </div>
-            <span id="weather-badge" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">
-              Satellite Active
-            </span>
-          </div>
-
-          <div class="p-4 space-y-3 text-xs">
-            <!-- Search Input with GPS & Search button -->
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">Search Address, Rooftop, or Plus Code</label>
-              <div class="flex gap-1.5">
-                <input type="text" id="input-search-location" value="RHM7+RH8, Bilwaradahalli, Karnataka" placeholder="Type city, street, or Plus Code (e.g. 7J4V+3Q)" class="flex-1 text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none">
-                <button id="btn-search-loc" class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center transition" title="Search Location">
-                  <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                </button>
-                <button id="btn-gps-loc" class="bg-slate-700 hover:bg-slate-600 text-amber-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-center transition" title="Use My Current GPS Location">
-                  <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Dynamic Site Label that appears in report header -->
-            <div>
-              <label class="block font-semibold text-slate-700 mb-0.5">Project Location Label (in Report Header)</label>
-              <input type="text" id="input-display-location" value="RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)" class="w-full text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-slate-800 font-medium outline-none">
-            </div>
-
-            <!-- Coordinates with live synchronization -->
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-slate-500 font-medium mb-0.5">Latitude (°N)</label>
-                <input type="number" id="input-lat" step="0.0001" value="12.8342" class="w-full px-2 py-1 border border-slate-300 rounded-md font-mono">
-              </div>
-              <div>
-                <label class="block text-slate-500 font-medium mb-0.5">Longitude (°E)</label>
-                <input type="number" id="input-lon" step="0.0001" value="77.5891" class="w-full px-2 py-1 border border-slate-300 rounded-md font-mono">
-              </div>
-            </div>
-
-            <!-- Interactive Rooftop Satellite Map -->
-            <div class="pt-1">
-              <div class="flex justify-between items-center mb-1">
-                <span class="font-bold text-slate-700 flex items-center gap-1">
-                  <i data-lucide="satellite" class="w-3.5 h-3.5 text-blue-600"></i> Rooftop Satellite View
-                </span>
-                <div class="flex items-center gap-1">
-                  <button id="btn-map-sat" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-700 text-white">Satellite</button>
-                  <button id="btn-map-street" class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-100 text-slate-700 hover:bg-slate-200">Street</button>
-                  <span id="map-mode-indicator" class="text-[10px] text-slate-500 ml-1">Esri High-Res</span>
-                </div>
-              </div>
-              
-              <!-- Map Container -->
-              <div id="map-container" class="shadow-inner rounded-lg"></div>
-              
-              <div class="flex justify-between items-center mt-1 text-[11px] text-slate-500">
-                <span><i data-lucide="mouse-pointer" class="w-3 h-3 inline"></i> Click or drag pin to inspect rooftop</span>
-                <button id="btn-fetch-weather" class="text-blue-700 hover:underline font-semibold flex items-center gap-0.5">
-                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync Weather
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- CARD 3: HARDWARE & FINANCIAL PARAMETERS -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="bg-[#0F356B] text-white px-4 py-2.5 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <i data-lucide="settings-2" class="w-4 h-4 text-amber-400"></i>
-              <h2 class="font-bold text-sm uppercase tracking-wide">3. PV Hardware & Commercials</h2>
-            </div>
-            <span class="text-xs text-blue-200 font-mono">₹65k/kWp &bull; ₹7.5/u</span>
-          </div>
-
-          <div class="p-4 space-y-3 text-xs">
-            <!-- Installed Cost & Tariff -->
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-semibold text-slate-700 mb-0.5">EPC Cost (₹/kWp)</label>
-                <input type="number" id="input-cost-per-kwp" step="1000" value="65000" class="w-full px-2 py-1 border border-slate-300 rounded font-mono font-bold">
-              </div>
-              <div>
-                <label class="block font-semibold text-slate-700 mb-0.5">Tariff (₹/unit)</label>
-                <input type="number" id="input-tariff" step="0.10" value="7.50" class="w-full px-2 py-1 border border-slate-300 rounded font-mono font-bold">
-              </div>
-            </div>
-
-            <!-- Tilt & Azimuth -->
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <div class="flex justify-between mb-0.5">
-                  <label class="font-medium text-slate-600">Tilt Angle</label>
-                  <button id="btn-auto-tilt" class="text-[10px] text-blue-600 hover:underline">Auto Opt</button>
-                </div>
-                <div class="flex items-center">
-                  <input type="number" id="input-tilt" min="0" max="90" value="13" class="w-full px-2 py-1 border border-slate-300 rounded font-mono">
-                  <span class="ml-1 text-slate-500">deg</span>
-                </div>
-              </div>
-              <div>
-                <label class="block font-medium text-slate-600 mb-0.5">Orientation (Azimuth)</label>
-                <select id="select-azimuth" class="w-full px-2 py-1 border border-slate-300 rounded bg-white">
-                  <option value="180">South (180°)</option>
-                  <option value="165">South-SE (165°)</option>
-                  <option value="195">South-SW (195°)</option>
-                  <option value="90">East (90°)</option>
-                  <option value="270">West (270°)</option>
-                  <option value="0">North (0°)</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Module & Inverter Selection -->
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-medium text-slate-600 mb-0.5">Module Tech</label>
-                <select id="select-module-type" class="w-full px-2 py-1 border border-slate-300 rounded bg-white">
-                  <option value="mono_550">Mono PERC 550Wp</option>
-                  <option value="topcon_580">TOPCon 580Wp</option>
-                  <option value="bifacial_600">Bifacial 600Wp</option>
-                  <option value="poly_330">Polycrystalline 330Wp</option>
-                </select>
-              </div>
-              <div>
-                <label class="block font-medium text-slate-600 mb-0.5">Degradation / Yr</label>
-                <div class="flex items-center">
-                  <input type="number" id="input-degradation" step="0.1" value="0.5" class="w-full px-2 py-1 border border-slate-300 rounded font-mono">
-                  <span class="ml-1 text-slate-500">%</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Collapsible PVsyst Loss Factors -->
-            <details class="cursor-pointer group pt-1">
-              <summary class="font-semibold text-blue-700 hover:text-blue-800 flex items-center justify-between">
-                <span>PVsyst Derate Loss Factors (PR ~ 79%)</span>
-                <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition group-open:rotate-180"></i>
-              </summary>
-              <div class="space-y-1.5 mt-2 pt-1 text-[11px] bg-slate-50 p-2 rounded border border-slate-200">
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-600">Soiling Loss:</span>
-                  <input type="number" id="input-loss-soiling" step="0.5" value="2.5" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-600">DC Cable Ohmic Loss:</span>
-                  <input type="number" id="input-loss-wiring" step="0.1" value="1.5" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-600">Inverter Efficiency Loss:</span>
-                  <input type="number" id="input-loss-inverter" step="0.1" value="2.0" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-600">Mismatch & Shading Loss:</span>
-                  <input type="number" id="input-loss-mismatch" step="0.5" value="2.0" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-600">Tariff Annual Escalation:</span>
-                  <input type="number" id="input-escalation" step="0.5" value="2.5" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right">
-                </div>
-              </div>
-            </details>
           </div>
         </div>
 
@@ -1285,7 +1125,7 @@
   <!-- SLIDE-OVER TOGGLE BAR (USER PROFILE DRAWER ON RIGHT) -->
   <div id="drawer-backdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden transition-opacity duration-300"></div>
 
-  <aside id="drawer-user-profile" class="fixed top-0 right-0 h-full w-[85vw] sm:w-96 max-w-full bg-slate-900 border-l border-slate-800 shadow-2xl z-50 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out text-slate-100 no-print">
+  <aside id="drawer-user-profile" class="fixed top-0 right-0 h-full w-[92vw] sm:w-[420px] max-w-full bg-slate-900 border-l border-slate-800 shadow-2xl z-50 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out text-slate-100 no-print">
     
     <!-- Drawer Header -->
     <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
@@ -1341,7 +1181,193 @@
       <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">System Controls &amp; Tools</span>
 
-        <!-- 1. Background Push Alerts Notification Button -->
+        <!-- 1. Site Location (Renamed from Specific Site Location) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <button id="drawer-btn-toggle-site-location" type="button" class="w-full p-2.5 flex items-center justify-between text-left hover:bg-slate-800 transition group cursor-pointer">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                <i data-lucide="map-pin" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-xs text-white block">Site Location</span>
+                  <span id="weather-badge" class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono">
+                    Satellite Active
+                  </span>
+                </div>
+                <span id="drawer-lbl-location" class="text-[10px] text-slate-400 truncate max-w-[170px] sm:max-w-[200px] block">RHM7+RH8, Bilwaradahalli, Karnataka</span>
+              </div>
+            </div>
+            <i data-lucide="chevron-down" id="drawer-icon-location-chevron" class="w-4 h-4 text-slate-500 group-hover:text-white transition-transform shrink-0"></i>
+          </button>
+
+          <!-- Dropdown Tab Content (Satellite map, Search, GPS, Lat/Lon) -->
+          <div id="drawer-content-site-location" class="p-3 pt-2 space-y-2.5 border-t border-slate-800/80 text-xs hidden">
+            <!-- Search Input with GPS & Search button -->
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Search Address, Rooftop, or Plus Code</label>
+              <div class="flex gap-1.5">
+                <input type="text" id="input-search-location" value="RHM7+RH8, Bilwaradahalli, Karnataka" placeholder="City, street, or Plus Code" class="flex-1 text-xs px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:border-blue-500 outline-none">
+                <button id="btn-search-loc" class="bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center transition shrink-0" title="Search Location" type="button">
+                  <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                </button>
+                <button id="btn-gps-loc" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center border border-slate-700 transition shrink-0" title="Use My Current GPS Location" type="button">
+                  <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Dynamic Site Label that appears in report header -->
+            <div>
+              <label class="block font-semibold text-slate-300 mb-0.5">Project Location Label (Report Header)</label>
+              <input type="text" id="input-display-location" value="RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)" class="w-full text-xs px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-medium outline-none">
+            </div>
+
+            <!-- Coordinates with live synchronization -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-slate-400 font-medium mb-0.5">Latitude (°N)</label>
+                <input type="number" id="input-lat" step="0.0001" value="12.8342" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-mono">
+              </div>
+              <div>
+                <label class="block text-slate-400 font-medium mb-0.5">Longitude (°E)</label>
+                <input type="number" id="input-lon" step="0.0001" value="77.5891" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-mono">
+              </div>
+            </div>
+
+            <!-- Interactive Rooftop Satellite Map -->
+            <div class="pt-1">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-slate-300 flex items-center gap-1">
+                  <i data-lucide="satellite" class="w-3.5 h-3.5 text-blue-400"></i> Rooftop Satellite View
+                </span>
+                <div class="flex items-center gap-1">
+                  <button id="btn-map-sat" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-600 text-white" type="button">Sat</button>
+                  <button id="btn-map-street" class="px-1.5 py-0.5 text-[10px] font-medium rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700" type="button">Street</button>
+                  <span id="map-mode-indicator" class="text-[10px] text-slate-400 ml-1">Esri High-Res</span>
+                </div>
+              </div>
+              
+              <!-- Map Container -->
+              <div id="map-container" class="shadow-inner rounded-xl border border-slate-700 h-[220px]"></div>
+              
+              <div class="flex justify-between items-center mt-1 text-[11px] text-slate-400">
+                <span><i data-lucide="mouse-pointer" class="w-3 h-3 inline"></i> Click or drag pin to inspect</span>
+                <button id="btn-fetch-weather" class="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1" type="button">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync Weather
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Hardware & CAPEX (Industry-level short form for 3. PV Hardware & Commercials) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <button id="drawer-btn-toggle-hardware-capex" type="button" class="w-full p-2.5 flex items-center justify-between text-left hover:bg-slate-800 transition group cursor-pointer">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0">
+                <span class="font-bold text-xs text-white block">Hardware &amp; CAPEX</span>
+                <span class="text-[10px] text-slate-400 font-mono block">₹65k/kWp &bull; ₹7.5/u &bull; Tilt 13°</span>
+              </div>
+            </div>
+            <i data-lucide="chevron-down" id="drawer-icon-hardware-chevron" class="w-4 h-4 text-slate-500 group-hover:text-white transition-transform shrink-0"></i>
+          </button>
+
+          <!-- Dropdown Tab Content (Hardware & Commercials Inputs) -->
+          <div id="drawer-content-hardware-capex" class="p-3 pt-2 space-y-2.5 border-t border-slate-800/80 text-xs hidden">
+            <!-- Installed Cost & Tariff -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-0.5">EPC Cost (₹/kWp)</label>
+                <input type="number" id="input-cost-per-kwp" step="1000" value="65000" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-mono font-bold">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-300 mb-0.5">Tariff (₹/unit)</label>
+                <input type="number" id="input-tariff" step="0.10" value="7.50" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-mono font-bold">
+              </div>
+            </div>
+
+            <!-- Tilt & Azimuth -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <div class="flex justify-between mb-0.5">
+                  <label class="font-medium text-slate-400">Tilt Angle</label>
+                  <button id="btn-auto-tilt" class="text-[10px] text-blue-400 hover:underline" type="button">Auto Opt</button>
+                </div>
+                <div class="flex items-center">
+                  <input type="number" id="input-tilt" min="0" max="90" value="13" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-mono">
+                  <span class="ml-1 text-slate-500">deg</span>
+                </div>
+              </div>
+              <div>
+                <label class="block font-medium text-slate-400 mb-0.5">Orientation (Azimuth)</label>
+                <select id="select-azimuth" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200">
+                  <option value="180">South (180°)</option>
+                  <option value="165">South-SE (165°)</option>
+                  <option value="195">South-SW (195°)</option>
+                  <option value="90">East (90°)</option>
+                  <option value="270">West (270°)</option>
+                  <option value="0">North (0°)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Module & Inverter Selection -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-medium text-slate-400 mb-0.5">Module Tech</label>
+                <select id="select-module-type" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200">
+                  <option value="mono_550">Mono PERC 550Wp</option>
+                  <option value="topcon_580">TOPCon 580Wp</option>
+                  <option value="bifacial_600">Bifacial 600Wp</option>
+                  <option value="poly_330">Polycrystalline 330Wp</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-medium text-slate-400 mb-0.5">Degradation / Yr</label>
+                <div class="flex items-center">
+                  <input type="number" id="input-degradation" step="0.1" value="0.5" class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 font-mono">
+                  <span class="ml-1 text-slate-500">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsible PVsyst Loss Factors -->
+            <details class="cursor-pointer group pt-1">
+              <summary class="font-semibold text-blue-400 hover:text-blue-300 flex items-center justify-between">
+                <span>PVsyst Derate Loss Factors (PR ~ 79%)</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition group-open:rotate-180"></i>
+              </summary>
+              <div class="space-y-1.5 mt-2 pt-1 text-[11px] bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Soiling Loss:</span>
+                  <input type="number" id="input-loss-soiling" step="0.5" value="2.5" class="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-right text-slate-200">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">DC Cable Ohmic Loss:</span>
+                  <input type="number" id="input-loss-wiring" step="0.1" value="1.5" class="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-right text-slate-200">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Inverter Efficiency Loss:</span>
+                  <input type="number" id="input-loss-inverter" step="0.1" value="2.0" class="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-right text-slate-200">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Mismatch &amp; Shading Loss:</span>
+                  <input type="number" id="input-loss-mismatch" step="0.5" value="2.0" class="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-right text-slate-200">
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-400">Tariff Annual Escalation:</span>
+                  <input type="number" id="input-escalation" step="0.5" value="2.5" class="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-right text-slate-200">
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- 3. Background Push Alerts Notification Button -->
         <button id="drawer-btn-push-alerts" type="button" class="w-full flex items-center justify-between p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition text-xs">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">

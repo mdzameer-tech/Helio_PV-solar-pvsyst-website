@@ -5,6 +5,7 @@
 // 3. Status & Diagnostics Polling (GET /api/status)
 // 4. Interactive Simulation & Testing (POST /api/simulate)
 
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const os = require("os");

@@ -2,5 +2,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 push_subscriptions.json
+users.json
+.env
 
 
