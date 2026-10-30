@@ -402,11 +402,11 @@ app.post("/api/push-unsubscribe", (req, res) => {
 // Immediate test push notification endpoint (test while app/tab is closed)
 app.post("/api/push-test", async (req, res) => {
   await sendPushNotification({
-    title: "🔔 Solar String Push Test",
-    body: "Background push notifications are working! You will receive alerts even when the app is closed.",
+    title: "⚠️ Solar String Fault Detected! (Test Alert)",
+    body: "Wire break simulation at Node 2: Open circuit detected.",
     icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
     badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
-    vibrate: [250, 100, 250],
+    vibrate: [250, 100, 250, 100, 250],
     url: "/?view=monitor"
   });
   res.json({ success: true, count: pushSubscriptions.length });

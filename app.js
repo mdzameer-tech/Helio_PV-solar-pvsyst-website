@@ -1583,17 +1583,67 @@ function setupEventListeners() {
 
   // Test Background Push Notification Button
   document.getElementById('btn-test-push-alert')?.addEventListener('click', async () => {
-    try {
-      const res = await fetch(`${getBackendBaseUrl()}/api/push-test`, { method: 'POST' });
-      if (res.ok) {
-        alert('🔔 Test push notification dispatched!\nIf your browser/app is closed or in background, your device will receive the system alert.');
-      } else {
-        alert('Please enable push notifications first by clicking "Push Alerts" in the top bar.');
-      }
-    } catch (e) {
-      alert('Could not reach server to trigger test push.');
-    }
+    await triggerDirectTestNotification();
   });
+}
+
+async function triggerDirectTestNotification() {
+  playFaultAlertAudio();
+
+  // 1. Ensure permission is requested/granted
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') return;
+      } catch (e) {
+        return;
+      }
+    } else if (Notification.permission === 'denied') {
+      console.warn('Notifications blocked in browser settings.');
+      return;
+    }
+  }
+
+  const title = '⚠️ Solar String Fault Detected! (Test Alert)';
+  const options = {
+    body: 'Wire break simulation at Node 2: Open circuit detected.',
+    icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
+    badge: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
+    vibrate: [250, 100, 250, 100, 250],
+    tag: 'solar-fault-test-' + Date.now(),
+    renotify: true,
+    requireInteraction: true,
+    data: { url: '/?view=monitor' }
+  };
+
+  // 2. Immediately pop up native system notification on this device (Laptop / Mobile)
+  let directShown = false;
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.showNotification) {
+        await reg.showNotification(title, options);
+        directShown = true;
+      }
+    }
+  } catch (err) {
+    console.warn('ServiceWorker direct notification error:', err);
+  }
+
+  if (!directShown && 'Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, options);
+      directShown = true;
+    } catch (err) {
+      console.warn('Window Notification fallback error:', err);
+    }
+  }
+
+  // 3. Dispatch to server to broadcast to all other registered devices
+  try {
+    fetch(`${getBackendBaseUrl()}/api/push-test`, { method: 'POST' }).catch(() => {});
+  } catch (e) {}
 }
 
 function urlBase64ToUint8Array(base64String) {
