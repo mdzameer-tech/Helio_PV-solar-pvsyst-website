@@ -168,6 +168,22 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
+app.get("/login", (req, res) => {
+  res.redirect("/?auth=login");
+});
+
+app.get("/signup", (req, res) => {
+  res.redirect("/?auth=signup");
+});
+
+app.get("/register", (req, res) => {
+  res.redirect("/?auth=signup");
+});
+
+app.get("/dashboard", (req, res) => {
+  res.redirect("/?view=monitor");
+});
+
 app.get("/monitor", (req, res) => {
   res.redirect("/?view=monitor");
 });

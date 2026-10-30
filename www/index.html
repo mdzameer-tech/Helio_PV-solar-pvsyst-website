@@ -1050,6 +1050,12 @@
 
       <!-- Tab Switcher (Sign In vs Sign Up) -->
       <div class="p-6 pt-4 space-y-4">
+        <!-- Auth Guard Notice (shown when user is unauthenticated) -->
+        <div id="auth-guard-notice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2.5">
+          <i data-lucide="shield-alert" class="w-4 h-4 shrink-0 text-amber-400"></i>
+          <span id="auth-guard-notice-text">Authentication Required: Please sign in or create an account to access the dashboard.</span>
+        </div>
+
         <div class="grid grid-cols-2 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs font-semibold">
           <button id="tab-auth-login" class="py-2 rounded-lg transition text-white bg-slate-800 shadow" type="button">Sign In</button>
           <button id="tab-auth-signup" class="py-2 rounded-lg transition text-slate-400 hover:text-slate-200" type="button">Create Account</button>

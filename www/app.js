@@ -98,15 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // View mode check from URL (defaults to monitor)
   const urlParams = new URLSearchParams(window.location.search);
   const initialView = urlParams.get('view') || 'monitor';
-  switchView(initialView);
-
-  // Initialize IoT Monitoring
-  initIoTMonitor();
+  AuthState.intendedView = initialView;
 
   // Initialize Native Background Web Push Notifications
   setupPushNotifications();
 
-  // Initialize JWT User Authentication & Hamburger Profile Drawer
+  // Initialize JWT User Authentication Guard & Hamburger Profile Drawer
   initAuth();
 });
 
@@ -1876,6 +1873,11 @@ function getBackendBaseUrl() {
 }
 
 function switchView(viewName) {
+  if (!AuthState.token) {
+    AuthState.intendedView = viewName;
+    lockAuthWall('login', 'Please sign in or create an account to access ' + (viewName === 'monitor' ? 'Live String Monitor' : 'Solar Estimation'));
+    return;
+  }
   IoTMonitorState.currentView = viewName;
   const monitorView = document.getElementById('view-iot-monitor');
   const estimateView = document.getElementById('view-solar-estimation');
@@ -1939,11 +1941,24 @@ function openPopoutWindow(targetView) {
   window.open(url, `Solar_${targetView}_Window`, 'width=1280,height=900,menubar=no,toolbar=no');
 }
 
-function initIoTMonitor() {
-  pollIoTStatus();
+function startIoTMonitoring() {
   if (IoTMonitorState.pollIntervalId) clearInterval(IoTMonitorState.pollIntervalId);
+  pollIoTStatus();
   IoTMonitorState.pollIntervalId = setInterval(() => pollIoTStatus(false), 800);
   fetchNetworkInfo();
+}
+
+function stopIoTMonitoring() {
+  if (IoTMonitorState.pollIntervalId) {
+    clearInterval(IoTMonitorState.pollIntervalId);
+    IoTMonitorState.pollIntervalId = null;
+  }
+}
+
+function initIoTMonitor() {
+  if (AuthState.token) {
+    startIoTMonitoring();
+  }
 }
 
 async function fetchNetworkInfo() {
@@ -1973,6 +1988,7 @@ async function fetchNetworkInfo() {
 }
 
 async function pollIoTStatus(force = false) {
+  if (!AuthState.token) return;
   try {
     const res = await fetch(`${getBackendBaseUrl()}/api/status`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -2471,7 +2487,9 @@ function runClientSideSimulation(scenario) {
 
 const AuthState = {
   token: localStorage.getItem('heliopv_jwt_token') || null,
-  user: null
+  user: null,
+  isGuarded: false,
+  intendedView: 'monitor'
 };
 
 function getAuthHeaders() {
@@ -2482,30 +2500,145 @@ function getAuthHeaders() {
   return headers;
 }
 
-async function initAuth() {
-  setupAuthEventListeners();
+function setAuthModalTab(tabName) {
+  const tabLogin = document.getElementById('tab-auth-login');
+  const tabSignup = document.getElementById('tab-auth-signup');
+  const formLogin = document.getElementById('form-login');
+  const formSignup = document.getElementById('form-signup');
 
-  if (AuthState.token) {
-    try {
-      const res = await fetch(`${getBackendBaseUrl()}/api/auth/me`, {
-        headers: getAuthHeaders()
-      });
-      if (res.ok) {
-        const data = await res.json();
-        AuthState.user = data.user;
-        updateAuthUI(AuthState.user);
-        return;
-      }
-    } catch (e) {
-      console.warn('Session verification error:', e);
+  if (tabName === 'signup') {
+    if (tabSignup) tabSignup.className = 'py-2 rounded-lg transition text-white bg-slate-800 shadow';
+    if (tabLogin) tabLogin.className = 'py-2 rounded-lg transition text-slate-400 hover:text-slate-200';
+    formSignup?.classList.remove('hidden');
+    formLogin?.classList.add('hidden');
+  } else {
+    if (tabLogin) tabLogin.className = 'py-2 rounded-lg transition text-white bg-slate-800 shadow';
+    if (tabSignup) tabSignup.className = 'py-2 rounded-lg transition text-slate-400 hover:text-slate-200';
+    formLogin?.classList.remove('hidden');
+    formSignup?.classList.add('hidden');
+  }
+  clearAuthError();
+  if (window.lucide) lucide.createIcons();
+}
+
+function lockAuthWall(mode = 'login', noticeText = null) {
+  AuthState.isGuarded = true;
+  stopIoTMonitoring();
+
+  const authModal = document.getElementById('modal-auth');
+  const btnCloseAuth = document.getElementById('btn-close-auth-modal');
+  const guardNotice = document.getElementById('auth-guard-notice');
+  const guardNoticeText = document.getElementById('auth-guard-notice-text');
+  const monitorView = document.getElementById('view-iot-monitor');
+  const estimateView = document.getElementById('view-solar-estimation');
+
+  // Hide protected views from unauthenticated viewers
+  monitorView?.classList.add('hidden');
+  estimateView?.classList.add('hidden');
+
+  // Display Auth Window as a persistent modal wall
+  if (authModal) {
+    authModal.classList.remove('hidden');
+    authModal.classList.add('flex');
+  }
+  if (btnCloseAuth) {
+    btnCloseAuth.classList.add('hidden'); // Cannot dismiss without authenticating
+  }
+
+  if (guardNotice) {
+    guardNotice.classList.remove('hidden');
+    if (noticeText && guardNoticeText) {
+      guardNoticeText.textContent = noticeText;
     }
   }
 
-  // Not authenticated
+  setAuthModalTab(mode);
+}
+
+function unlockAuthWall() {
+  AuthState.isGuarded = false;
+
+  const authModal = document.getElementById('modal-auth');
+  const btnCloseAuth = document.getElementById('btn-close-auth-modal');
+  const guardNotice = document.getElementById('auth-guard-notice');
+
+  if (authModal) {
+    authModal.classList.add('hidden');
+    authModal.classList.remove('flex');
+  }
+  if (btnCloseAuth) {
+    btnCloseAuth.classList.remove('hidden');
+  }
+  if (guardNotice) {
+    guardNotice.classList.add('hidden');
+  }
+
+  // Display the user's intended view
+  const targetView = AuthState.intendedView || 'monitor';
+  switchView(targetView);
+
+  // Start live IoT telemetry monitoring
+  startIoTMonitoring();
+}
+
+async function initAuth() {
+  setupAuthEventListeners();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const actionParam = urlParams.get('action');
+  const authParam = urlParams.get('auth');
+  const viewParam = urlParams.get('view');
+
+  if (viewParam) {
+    AuthState.intendedView = viewParam;
+  }
+
+  // Handle explicit logout request e.g. /?action=logout
+  if (actionParam === 'logout') {
+    AuthState.token = null;
+    AuthState.user = null;
+    localStorage.removeItem('heliopv_jwt_token');
+    updateAuthUI(null);
+    lockAuthWall('login', 'You have been signed out. Please sign in to continue.');
+    return;
+  }
+
+  const requestedAuthMode = authParam === 'signup' ? 'signup' : 'login';
+
+  // If NO token is stored, immediately guard all views and present the Login/Signup screen
+  if (!AuthState.token) {
+    updateAuthUI(null);
+    lockAuthWall(requestedAuthMode, 'Authentication Required: Please sign in or create an account to access the dashboard.');
+    return;
+  }
+
+  // If token IS stored, verify it with the backend server
+  try {
+    const res = await fetch(`${getBackendBaseUrl()}/api/auth/me`, {
+      headers: getAuthHeaders()
+    });
+    if (res.ok) {
+      const data = await res.json();
+      AuthState.user = data.user;
+      updateAuthUI(AuthState.user);
+      unlockAuthWall();
+      return;
+    }
+  } catch (e) {
+    console.warn('Session verification network issue; retaining active session:', e);
+    // Offline / network fallback: if a valid local token exists, allow access
+    if (AuthState.token) {
+      unlockAuthWall();
+      return;
+    }
+  }
+
+  // Token is expired, invalid, or account removed
   AuthState.token = null;
   AuthState.user = null;
   localStorage.removeItem('heliopv_jwt_token');
   updateAuthUI(null);
+  lockAuthWall('login', 'Your session has expired. Please sign in again.');
 }
 
 function updateAuthUI(user) {
@@ -2561,15 +2694,22 @@ function setupAuthEventListeners() {
 
   btnOpenAuth?.addEventListener('click', () => {
     authModal?.classList.remove('hidden');
+    authModal?.classList.add('flex');
     clearAuthError();
   });
 
   btnCloseAuth?.addEventListener('click', () => {
+    if (AuthState.isGuarded) return; // Cannot close if unauthenticated
     authModal?.classList.add('hidden');
+    authModal?.classList.remove('flex');
   });
 
   authModal?.addEventListener('click', (e) => {
-    if (e.target === authModal) authModal.classList.add('hidden');
+    if (e.target === authModal) {
+      if (AuthState.isGuarded) return; // Cannot close if unauthenticated
+      authModal.classList.add('hidden');
+      authModal.classList.remove('flex');
+    }
   });
 
   // Modal Tab switching
@@ -2578,21 +2718,8 @@ function setupAuthEventListeners() {
   const formLogin = document.getElementById('form-login');
   const formSignup = document.getElementById('form-signup');
 
-  tabLogin?.addEventListener('click', () => {
-    tabLogin.className = 'py-2 rounded-lg transition text-white bg-slate-800 shadow';
-    tabSignup.className = 'py-2 rounded-lg transition text-slate-400 hover:text-slate-200';
-    formLogin?.classList.remove('hidden');
-    formSignup?.classList.add('hidden');
-    clearAuthError();
-  });
-
-  tabSignup?.addEventListener('click', () => {
-    tabSignup.className = 'py-2 rounded-lg transition text-white bg-slate-800 shadow';
-    tabLogin.className = 'py-2 rounded-lg transition text-slate-400 hover:text-slate-200';
-    formSignup?.classList.remove('hidden');
-    formLogin?.classList.add('hidden');
-    clearAuthError();
-  });
+  tabLogin?.addEventListener('click', () => setAuthModalTab('login'));
+  tabSignup?.addEventListener('click', () => setAuthModalTab('signup'));
 
   // Toggle password visibility
   document.querySelectorAll('.btn-toggle-pwd-vis').forEach(btn => {
@@ -2641,8 +2768,7 @@ function setupAuthEventListeners() {
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
       updateAuthUI(data.user);
-      authModal?.classList.add('hidden');
-      alert(`Welcome back, ${data.user.name}!`);
+      unlockAuthWall();
     } catch (err) {
       showAuthError(err.message);
     } finally {
@@ -2677,13 +2803,12 @@ function setupAuthEventListeners() {
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
       updateAuthUI(data.user);
-      authModal?.classList.add('hidden');
-      alert(`Account created successfully! Welcome to HelioPV, ${data.user.name}.`);
+      unlockAuthWall();
     } catch (err) {
       showAuthError(err.message);
     } finally {
       btnSubmit.disabled = false;
-      btnSubmit.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i><span>Create Account & Sign In</span>';
+      btnSubmit.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i><span>Create Account &amp; Sign In</span>';
       if (window.lucide) lucide.createIcons();
     }
   });
@@ -2872,7 +2997,10 @@ function setupAuthEventListeners() {
       localStorage.removeItem('heliopv_jwt_token');
       updateAuthUI(null);
       closeDrawer();
-      alert('Signed out successfully.');
+      lockAuthWall('login', 'You have been signed out. Please sign in to continue.');
+      try {
+        history.replaceState(null, '', '?auth=login');
+      } catch (e) {}
     }
   });
 }
