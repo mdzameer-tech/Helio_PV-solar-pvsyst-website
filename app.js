@@ -1676,13 +1676,33 @@ async function setupPushNotifications() {
       }
     });
 
-    // Auto-sync subscription with server if already granted
-    if (Notification.permission === 'granted' && sub) {
-      fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub)
-      }).catch(() => {});
+    // Auto-prompt on first open if permission is 'default'
+    if (Notification.permission === 'default') {
+      try {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          await subscribeUser();
+          console.log('[Push] Notification permission granted and subscribed on first launch.');
+        }
+      } catch (e) {
+        console.warn('[Push] Auto-request failed:', e);
+      }
+    } else if (Notification.permission === 'granted') {
+      if (!sub) {
+        // Permission was granted (e.g. via Android native prompt) but push subscription not yet stored
+        try {
+          await subscribeUser();
+        } catch (e) {
+          console.warn('[Push] Auto-subscribe failed:', e);
+        }
+      } else {
+        // Sync subscription with server to ensure it is registered
+        fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub)
+        }).catch(() => {});
+      }
     }
 
   } catch (err) {
@@ -1768,10 +1788,12 @@ const IOT_NOTES = {
 
 function getBackendBaseUrl() {
   if (window.location.protocol.startsWith('http')) {
-    if (window.location.port === '3000') return '';
-    return 'http://localhost:3000';
+    // When served over HTTP/HTTPS (e.g. Render, local server),
+    // use relative URL '' so requests hit the hosting server directly without mixed-content errors.
+    return '';
   }
-  return 'http://localhost:3000';
+  // When running inside local file:// or Capacitor native shell, fallback to live Render server
+  return 'https://heliopv-solar.onrender.com';
 }
 
 function switchView(viewName) {
