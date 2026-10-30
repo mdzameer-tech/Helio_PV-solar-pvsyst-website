@@ -37,35 +37,35 @@
 
   <!-- MINIMALIST STICKY NAVIGATION BAR -->
   <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white shadow-sm no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
       
       <!-- LOGO ON THE LEFT -->
-      <div class="flex items-center gap-3 shrink-0">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
-          <i data-lucide="sun" class="w-5 h-5 text-slate-950 font-black"></i>
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
+          <i data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 font-black"></i>
         </div>
-        <div class="flex items-baseline gap-2">
-          <span class="font-extrabold text-lg tracking-tight text-white">HelioPV</span>
-          <span class="hidden sm:inline-block text-[10px] font-semibold tracking-wider uppercase text-slate-400 border-l border-slate-800 pl-2">IoT Studio</span>
+        <div class="flex items-baseline gap-1.5 sm:gap-2">
+          <span class="font-extrabold text-base sm:text-lg tracking-tight text-white">HelioPV</span>
+          <span class="hidden md:inline-block text-[10px] font-semibold tracking-wider uppercase text-slate-400 border-l border-slate-800 pl-2">IoT Studio</span>
         </div>
       </div>
 
       <!-- NAVIGATION LINKS ON THE RIGHT -->
-      <div class="flex items-center gap-2 sm:gap-4">
-        <!-- Minimalist Navigation Links (Replaces bulky button capsules) -->
+      <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <!-- Minimalist Navigation Links (Flexes smoothly: icons only when squeezed small) -->
         <nav class="flex items-center gap-1 sm:gap-1.5" aria-label="Main Navigation">
-          <button id="tab-btn-monitor" class="view-tab-btn active-tab" type="button">
+          <button id="tab-btn-monitor" class="view-tab-btn active-tab p-1.5 sm:px-3 sm:py-1.5" title="Live ESP32 String Monitor" type="button">
             <span class="relative flex h-2 w-2">
               <span id="gateway-ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span id="gateway-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>Live String Monitor</span>
+            <i data-lucide="radio" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+            <span class="hidden md:inline">Live String Monitor</span>
           </button>
 
-          <button id="tab-btn-estimate" class="view-tab-btn" type="button">
-            <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Solar Estimation</span>
+          <button id="tab-btn-estimate" class="view-tab-btn p-1.5 sm:px-3 sm:py-1.5" title="Solar PVsyst Estimation Studio" type="button">
+            <i data-lucide="sun-medium" class="w-4 h-4 text-amber-400 shrink-0"></i>
+            <span class="hidden md:inline">Solar Estimation</span>
           </button>
         </nav>
 
@@ -79,23 +79,23 @@
         </div>
 
         <!-- AUTHENTICATION STATE & HAMBURGER USER MENU -->
-        <div class="flex items-center gap-2 border-l border-slate-800 pl-2 sm:pl-3">
+        <div class="flex items-center gap-1.5 sm:gap-2 border-l border-slate-800 pl-1.5 sm:pl-3">
           <!-- Logged Out State: Sign In Button -->
           <div id="auth-header-logged-out" class="flex items-center">
-            <button id="btn-open-auth-modal" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold shadow-sm transition" type="button">
-              <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
-              <span>Sign In</span>
+            <button id="btn-open-auth-modal" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1.5 sm:px-3 rounded-lg font-semibold shadow-sm transition" title="Sign In" type="button">
+              <i data-lucide="log-in" class="w-3.5 h-3.5 shrink-0"></i>
+              <span class="hidden sm:inline">Sign In</span>
             </button>
           </div>
 
           <!-- Logged In State: User Avatar + Name -->
           <div id="auth-header-logged-in" class="hidden items-center gap-1.5">
-            <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 rounded-full object-cover border border-amber-400/60 bg-slate-800">
-            <span id="header-user-name" class="text-xs font-semibold max-w-[80px] sm:max-w-[110px] truncate text-slate-100 hidden sm:inline">Operator</span>
+            <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-amber-400/60 bg-slate-800 shrink-0">
+            <span id="header-user-name" class="text-xs font-semibold max-w-[70px] sm:max-w-[110px] truncate text-slate-100 hidden lg:inline">Operator</span>
           </div>
 
           <!-- Hamburger Button (≡) -->
-          <button id="btn-toggle-user-drawer" class="flex items-center justify-center p-1.5 px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm" title="Open Menu" type="button">
+          <button id="btn-toggle-user-drawer" class="flex items-center justify-center p-1.5 sm:px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm shrink-0" title="Open Menu" type="button">
             <i data-lucide="menu" class="w-4 h-4 text-slate-300"></i>
           </button>
         </div>

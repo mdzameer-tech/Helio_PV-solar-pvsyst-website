@@ -221,8 +221,9 @@ body {
 .view-tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.85rem;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
   border-radius: 0.5rem;
@@ -234,6 +235,14 @@ body {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .view-tab-btn {
+    padding: 0.4rem 0.5rem;
+    gap: 0.3rem;
+  }
 }
 
 .view-tab-btn:hover {
