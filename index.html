@@ -35,78 +35,77 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
 
-  <!-- TOP NAVIGATION / BRAND HEADER -->
-  <header class="bg-[#0F356B] text-white shadow-md sticky top-0 z-40 no-print">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center space-x-3">
-        <div class="bg-amber-400 text-slate-900 p-2 rounded-lg font-black text-xl shadow flex items-center justify-center">
-          <i data-lucide="sun-medium" class="w-6 h-6 text-amber-900"></i>
+  <!-- MINIMALIST STICKY NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white shadow-sm no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- LOGO ON THE LEFT -->
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
+          <i data-lucide="sun" class="w-5 h-5 text-slate-950 font-black"></i>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="font-extrabold text-xl tracking-tight text-white">HelioPV</h1>
-          </div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-extrabold text-lg tracking-tight text-white">HelioPV</span>
+          <span class="hidden sm:inline-block text-[10px] font-semibold tracking-wider uppercase text-slate-400 border-l border-slate-800 pl-2">IoT Studio</span>
         </div>
       </div>
 
-      <div class="flex items-center flex-wrap gap-2">
-        <button id="btn-export-csv" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition shadow-sm">
-          <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-          <span>Export Excel</span>
-        </button>
+      <!-- NAVIGATION LINKS ON THE RIGHT -->
+      <div class="flex items-center gap-2 sm:gap-4">
+        <!-- Minimalist Navigation Links (Replaces bulky button capsules) -->
+        <nav class="flex items-center gap-1 sm:gap-1.5" aria-label="Main Navigation">
+          <button id="tab-btn-monitor" class="view-tab-btn active-tab" type="button">
+            <span class="relative flex h-2 w-2">
+              <span id="gateway-ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span id="gateway-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Live String Monitor</span>
+          </button>
 
-        <button id="btn-print-report" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs px-3.5 py-1.5 rounded-lg font-bold transition shadow-md">
-          <i data-lucide="printer" class="w-4 h-4"></i>
-          <span>Print / PDF Proposal</span>
-        </button>
+          <button id="tab-btn-estimate" class="view-tab-btn" type="button">
+            <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Solar Estimation</span>
+          </button>
+        </nav>
+
+        <!-- Divider -->
+        <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+
+        <!-- Utility Actions -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <!-- Background Push Alerts Button -->
+          <button id="btn-toggle-push-notif" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-800 transition" title="Enable background push notifications when app is closed" type="button">
+            <i data-lucide="bell" id="icon-push-bell" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span id="lbl-push-notif-status" class="hidden md:inline">Push Alerts</span>
+          </button>
+
+          <!-- ESP32 Hardware Info Button -->
+          <button id="btn-open-hw-info" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-800 transition" title="View ESP32 connection details and IP address" type="button">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="hidden md:inline">ESP32 Setup</span>
+          </button>
+
+          <!-- Export Excel -->
+          <button id="btn-export-csv" class="hidden lg:flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-800 transition" title="Export generation report to CSV" type="button">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Export</span>
+          </button>
+
+          <!-- Print / PDF Proposal -->
+          <button id="btn-print-report" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs px-3 py-1.5 rounded-lg font-bold transition shadow-sm" title="Generate printable proposal" type="button">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Print Proposal</span>
+          </button>
+        </div>
+
+        <!-- Hidden status elements preserved for background telemetry handlers -->
+        <span id="nav-gateway-status-text" class="hidden"></span>
+        <span id="nav-fault-summary-text" class="hidden"></span>
       </div>
+
     </div>
   </header>
-
-  <!-- VIEW SWITCHER & LIVE IoT STATUS NAVIGATION BAR -->
-  <nav class="bg-slate-900 border-b border-slate-800 text-white px-4 py-2.5 no-print sticky top-0 sm:top-[57px] z-30 shadow-md">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-      <!-- Tab Switcher -->
-      <div class="flex items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700/80">
-        <button id="tab-btn-monitor" class="view-tab-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold active-tab">
-          <span class="relative flex h-2 w-2">
-            <span id="gateway-ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span id="gateway-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Live ESP32 String Monitor</span>
-        </button>
-
-        <button id="tab-btn-estimate" class="view-tab-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold">
-          <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Solar Estimation</span>
-        </button>
-      </div>
-
-      <!-- Right info & actions -->
-      <div class="flex items-center flex-wrap gap-2.5">
-        <!-- Live status ticker -->
-        <div id="nav-iot-summary" class="hidden md:flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
-          <span class="text-slate-400">ESP32 Status:</span>
-          <span id="nav-gateway-status-text" class="font-bold text-emerald-400">Connecting...</span>
-          <span class="text-slate-600">|</span>
-          <span id="nav-fault-summary-text" class="text-slate-300 font-mono">Checking continuity...</span>
-        </div>
-
-        <!-- Background Push Alerts Button -->
-        <button id="btn-toggle-push-notif" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition" title="Enable background push notifications when app is closed">
-          <i data-lucide="bell" id="icon-push-bell" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span id="lbl-push-notif-status">Push Alerts</span>
-        </button>
-
-        <!-- ESP32 Hardware Info Button -->
-        <button id="btn-open-hw-info" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition" title="View ESP32 connection details and IP address">
-          <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>ESP32 Setup</span>
-        </button>
-      </div>
-    </div>
-  </nav>
 
   <!-- VIEW 1: LIVE ESP32 STRING MONITOR (FAULT & CONTINUITY DETECTION) -->
   <section id="view-iot-monitor" class="view-panel max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 w-full flex-1 space-y-5">
