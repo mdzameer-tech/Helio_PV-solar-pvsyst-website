@@ -105,6 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Native Background Web Push Notifications
   setupPushNotifications();
+
+  // Initialize JWT User Authentication & Hamburger Profile Drawer
+  initAuth();
 });
 
 /**
@@ -2379,5 +2382,375 @@ function runClientSideSimulation(scenario) {
     cells,
     isSimulated: true,
     simulationScenario: scenario
+  });
+}
+
+// ==========================================================================
+// User Authentication, Profile & JWT Session Management
+// ==========================================================================
+
+const AuthState = {
+  token: localStorage.getItem('heliopv_jwt_token') || null,
+  user: null
+};
+
+function getAuthHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (AuthState.token) {
+    headers['Authorization'] = `Bearer ${AuthState.token}`;
+  }
+  return headers;
+}
+
+async function initAuth() {
+  setupAuthEventListeners();
+
+  if (AuthState.token) {
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/auth/me`, {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        AuthState.user = data.user;
+        updateAuthUI(AuthState.user);
+        return;
+      }
+    } catch (e) {
+      console.warn('Session verification error:', e);
+    }
+  }
+
+  // Not authenticated
+  AuthState.token = null;
+  AuthState.user = null;
+  localStorage.removeItem('heliopv_jwt_token');
+  updateAuthUI(null);
+}
+
+function updateAuthUI(user) {
+  const loggedOutBox = document.getElementById('auth-header-logged-out');
+  const loggedInBox = document.getElementById('auth-header-logged-in');
+
+  if (user) {
+    loggedOutBox?.classList.add('hidden');
+    loggedOutBox?.classList.remove('flex');
+    loggedInBox?.classList.remove('hidden');
+    loggedInBox?.classList.add('flex');
+
+    const headerAvatar = document.getElementById('header-user-avatar');
+    const headerName = document.getElementById('header-user-name');
+    const drawerAvatar = document.getElementById('drawer-user-avatar');
+    const drawerName = document.getElementById('drawer-user-name');
+    const drawerEmail = document.getElementById('drawer-user-email');
+
+    const avatarUrl = user.profileImage || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.name)}`;
+    if (headerAvatar) headerAvatar.src = avatarUrl;
+    if (headerName) headerName.textContent = user.name || 'User';
+    if (drawerAvatar) drawerAvatar.src = avatarUrl;
+    if (drawerName) drawerName.textContent = user.name || 'User';
+    if (drawerEmail) drawerEmail.textContent = user.email || '';
+  } else {
+    loggedOutBox?.classList.remove('hidden');
+    loggedOutBox?.classList.add('flex');
+    loggedInBox?.classList.add('hidden');
+    loggedInBox?.classList.remove('flex');
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function showAuthError(msg) {
+  const banner = document.getElementById('auth-error-banner');
+  const text = document.getElementById('auth-error-text');
+  if (banner && text) {
+    text.textContent = msg;
+    banner.classList.remove('hidden');
+  }
+}
+
+function clearAuthError() {
+  const banner = document.getElementById('auth-error-banner');
+  if (banner) banner.classList.add('hidden');
+}
+
+function setupAuthEventListeners() {
+  const authModal = document.getElementById('modal-auth');
+  const btnOpenAuth = document.getElementById('btn-open-auth-modal');
+  const btnCloseAuth = document.getElementById('btn-close-auth-modal');
+
+  btnOpenAuth?.addEventListener('click', () => {
+    authModal?.classList.remove('hidden');
+    clearAuthError();
+  });
+
+  btnCloseAuth?.addEventListener('click', () => {
+    authModal?.classList.add('hidden');
+  });
+
+  authModal?.addEventListener('click', (e) => {
+    if (e.target === authModal) authModal.classList.add('hidden');
+  });
+
+  // Modal Tab switching
+  const tabLogin = document.getElementById('tab-auth-login');
+  const tabSignup = document.getElementById('tab-auth-signup');
+  const formLogin = document.getElementById('form-login');
+  const formSignup = document.getElementById('form-signup');
+
+  tabLogin?.addEventListener('click', () => {
+    tabLogin.className = 'py-2 rounded-lg transition text-white bg-slate-800 shadow';
+    tabSignup.className = 'py-2 rounded-lg transition text-slate-400 hover:text-slate-200';
+    formLogin?.classList.remove('hidden');
+    formSignup?.classList.add('hidden');
+    clearAuthError();
+  });
+
+  tabSignup?.addEventListener('click', () => {
+    tabSignup.className = 'py-2 rounded-lg transition text-white bg-slate-800 shadow';
+    tabLogin.className = 'py-2 rounded-lg transition text-slate-400 hover:text-slate-200';
+    formSignup?.classList.remove('hidden');
+    formLogin?.classList.add('hidden');
+    clearAuthError();
+  });
+
+  // Toggle password visibility
+  document.querySelectorAll('.btn-toggle-pwd-vis').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = btn.previousElementSibling;
+      if (input && input.type === 'password') {
+        input.type = 'text';
+      } else if (input) {
+        input.type = 'password';
+      }
+    });
+  });
+
+  // Avatar preset seeds
+  let selectedSignupAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=SolarUser';
+  document.querySelectorAll('.avatar-seed-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const seed = btn.getAttribute('data-seed');
+      selectedSignupAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=0f356b,0a254a`;
+      const img = document.getElementById('img-signup-avatar-preview');
+      if (img) img.src = selectedSignupAvatar;
+    });
+  });
+
+  // Submit Login
+  formLogin?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAuthError();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const btnSubmit = document.getElementById('btn-submit-login');
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span>Signing In...</span>';
+
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+
+      AuthState.token = data.token;
+      AuthState.user = data.user;
+      localStorage.setItem('heliopv_jwt_token', data.token);
+      updateAuthUI(data.user);
+      authModal?.classList.add('hidden');
+      alert(`Welcome back, ${data.user.name}!`);
+    } catch (err) {
+      showAuthError(err.message);
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i><span>Sign In to Dashboard</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+  });
+
+  // Submit Signup
+  formSignup?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAuthError();
+    const name = document.getElementById('signup-name').value;
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
+    const btnSubmit = document.getElementById('btn-submit-signup');
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span>Creating Account...</span>';
+
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, profileImage: selectedSignupAvatar })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+
+      AuthState.token = data.token;
+      AuthState.user = data.user;
+      localStorage.setItem('heliopv_jwt_token', data.token);
+      updateAuthUI(data.user);
+      authModal?.classList.add('hidden');
+      alert(`Account created successfully! Welcome to HelioPV, ${data.user.name}.`);
+    } catch (err) {
+      showAuthError(err.message);
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i><span>Create Account & Sign In</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+  });
+
+  // User Profile Drawer (Hamburger Menu ≡)
+  const drawer = document.getElementById('drawer-user-profile');
+  const backdrop = document.getElementById('drawer-backdrop');
+  const btnToggleDrawer = document.getElementById('btn-toggle-user-drawer');
+  const btnCloseDrawer = document.getElementById('btn-close-user-drawer');
+
+  function openDrawer() {
+    drawer?.classList.remove('translate-x-full');
+    drawer?.classList.add('translate-x-0');
+    backdrop?.classList.remove('hidden');
+  }
+
+  function closeDrawer() {
+    drawer?.classList.remove('translate-x-0');
+    drawer?.classList.add('translate-x-full');
+    backdrop?.classList.add('hidden');
+  }
+
+  btnToggleDrawer?.addEventListener('click', openDrawer);
+  btnCloseDrawer?.addEventListener('click', closeDrawer);
+  backdrop?.addEventListener('click', closeDrawer);
+
+  // Profile Image Upload & Randomize
+  const avatarWrapper = document.getElementById('profile-avatar-clickable');
+  const btnUploadPhoto = document.getElementById('btn-trigger-upload-photo');
+  const fileInput = document.getElementById('input-profile-file');
+  const btnRandomAvatar = document.getElementById('btn-random-avatar');
+
+  function triggerFilePick() {
+    fileInput?.click();
+  }
+
+  avatarWrapper?.addEventListener('click', triggerFilePick);
+  btnUploadPhoto?.addEventListener('click', triggerFilePick);
+
+  fileInput?.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Photo must be smaller than 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result;
+      try {
+        const res = await fetch(`${getBackendBaseUrl()}/api/auth/update-profile`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ profileImage: base64 })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to update photo');
+        AuthState.user = data.user;
+        updateAuthUI(data.user);
+        alert('Profile picture updated successfully!');
+      } catch (err) {
+        alert(err.message);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  btnRandomAvatar?.addEventListener('click', async () => {
+    const randomSeed = 'Solar_' + Math.random().toString(36).substring(2, 8);
+    const newAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${randomSeed}&backgroundColor=0f356b,0a254a`;
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/auth/update-profile`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ profileImage: newAvatar })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update avatar');
+      AuthState.user = data.user;
+      updateAuthUI(data.user);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  // Change Password Accordion & Submit
+  const btnTogglePwd = document.getElementById('btn-toggle-pwd-section');
+  const formChangePwd = document.getElementById('form-change-password');
+  const iconChevron = document.getElementById('icon-pwd-chevron');
+  const pwdStatusBanner = document.getElementById('pwd-status-banner');
+
+  btnTogglePwd?.addEventListener('click', () => {
+    const isHidden = formChangePwd?.classList.contains('hidden');
+    if (isHidden) {
+      formChangePwd?.classList.remove('hidden');
+      iconChevron?.classList.add('rotate-180');
+    } else {
+      formChangePwd?.classList.add('hidden');
+      iconChevron?.classList.remove('rotate-180');
+    }
+  });
+
+  formChangePwd?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById('input-curr-pwd').value;
+    const newPassword = document.getElementById('input-new-pwd').value;
+    const confirmPassword = document.getElementById('input-confirm-pwd').value;
+    const btnSubmit = document.getElementById('btn-submit-change-pwd');
+
+    if (newPassword !== confirmPassword) {
+      pwdStatusBanner.className = 'p-2.5 rounded-lg text-xs font-medium bg-red-950/80 text-red-300 border border-red-500/40 block';
+      pwdStatusBanner.textContent = 'New passwords do not match.';
+      return;
+    }
+
+    btnSubmit.disabled = true;
+    try {
+      const res = await fetch(`${getBackendBaseUrl()}/api/auth/change-password`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to change password');
+
+      pwdStatusBanner.className = 'p-2.5 rounded-lg text-xs font-medium bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 block';
+      pwdStatusBanner.textContent = 'Password updated successfully!';
+      formChangePwd.reset();
+    } catch (err) {
+      pwdStatusBanner.className = 'p-2.5 rounded-lg text-xs font-medium bg-red-950/80 text-red-300 border border-red-500/40 block';
+      pwdStatusBanner.textContent = err.message;
+    } finally {
+      btnSubmit.disabled = false;
+    }
+  });
+
+  // Logout Button
+  document.getElementById('btn-logout-user')?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      AuthState.token = null;
+      AuthState.user = null;
+      localStorage.removeItem('heliopv_jwt_token');
+      updateAuthUI(null);
+      closeDrawer();
+      alert('Signed out successfully.');
+    }
   });
 }

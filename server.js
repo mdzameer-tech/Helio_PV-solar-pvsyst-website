@@ -10,9 +10,57 @@ const path = require("path");
 const os = require("os");
 const fs = require("fs");
 const webpush = require("web-push");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// JWT Secret Key
+const JWT_SECRET = process.env.JWT_SECRET || "heliopv_jwt_secret_secure_key_2026_solar_iot";
+const USERS_FILE = path.join(__dirname, "users.json");
+let users = [];
+
+function loadUsers() {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      users = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+    }
+  } catch (e) {
+    users = [];
+  }
+}
+
+function saveUsers() {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+  } catch (e) {
+    console.error("Failed to save users:", e.message);
+  }
+}
+loadUsers();
+
+// Middleware to authenticate JWT
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authentication token required" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: "Session expired or invalid token" });
+    }
+    const user = users.find((u) => u.id === decoded.id);
+    if (!user) {
+      return res.status(404).json({ error: "User account not found" });
+    }
+    req.user = user;
+    next();
+  });
+}
 
 // VAPID Keys for Native Web Push (Alerts phone even when app is closed)
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BFwo5xRNdlvZj3bMXhcPCPdu47mZgMMpZO3D1DO9OJ47Vg5jAkOdSEdhSZZID7OJW0sh2NK-5zqD6eqvNJWAcUU";
@@ -139,6 +187,183 @@ app.get("/api/network-info", (req, res) => {
     port: 3000,
     serverTime: Date.now()
   });
+});
+
+// ─────────────────────────────────────────────────────────────
+// AUTHENTICATION API ENDPOINTS (JWT + BCRYPT)
+// ─────────────────────────────────────────────────────────────
+
+// Register a new user
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const { name, email, password, profileImage } = req.body || {};
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Full name, email, and password are required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
+      return res.status(409).json({ error: "An account with this email already exists" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const defaultAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name.trim())}&backgroundColor=0f356b,0a254a`;
+
+    const newUser = {
+      id: "usr_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7),
+      name: name.trim(),
+      email: normalizedEmail,
+      passwordHash,
+      profileImage: profileImage || defaultAvatar,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    saveUsers();
+
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email, name: newUser.name },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.status(201).json({
+      message: "Account registered successfully",
+      token,
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        profileImage: newUser.profileImage
+      }
+    });
+  } catch (err) {
+    console.error("Signup error:", err);
+    res.status(500).json({ error: "Internal server error during registration" });
+  }
+});
+
+// Log in an existing user
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage
+      }
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Internal server error during login" });
+  }
+});
+
+// Get current user profile
+app.get("/api/auth/me", authenticateToken, (req, res) => {
+  res.json({
+    user: {
+      id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      profileImage: req.user.profileImage,
+      createdAt: req.user.createdAt
+    }
+  });
+});
+
+// Change user password
+app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, req.user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Current password does not match" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    req.user.passwordHash = await bcrypt.hash(newPassword, salt);
+    req.user.updatedAt = new Date().toISOString();
+    saveUsers();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ error: "Internal server error updating password" });
+  }
+});
+
+// Update user profile (Name, Profile Image)
+app.post("/api/auth/update-profile", authenticateToken, async (req, res) => {
+  try {
+    const { name, profileImage } = req.body || {};
+    if (name && name.trim()) {
+      req.user.name = name.trim();
+    }
+    if (profileImage) {
+      req.user.profileImage = profileImage;
+    }
+    req.user.updatedAt = new Date().toISOString();
+    saveUsers();
+
+    const token = jwt.sign(
+      { id: req.user.id, email: req.user.email, name: req.user.name },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.json({
+      message: "Profile updated successfully",
+      token,
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        profileImage: req.user.profileImage
+      }
+    });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ error: "Internal server error updating profile" });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────
