@@ -69,38 +69,17 @@
           </button>
         </nav>
 
-        <!-- Divider -->
-        <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
-
-        <!-- Utility Actions -->
-        <div class="flex items-center gap-1.5 sm:gap-2">
-          <!-- Background Push Alerts Button -->
-          <button id="btn-toggle-push-notif" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-800 transition" title="Enable background push notifications when app is closed" type="button">
-            <i data-lucide="bell" id="icon-push-bell" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span id="lbl-push-notif-status" class="hidden md:inline">Push Alerts</span>
-          </button>
-
-          <!-- ESP32 Hardware Info Button -->
-          <button id="btn-open-hw-info" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-800 transition" title="View ESP32 connection details and IP address" type="button">
-            <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span class="hidden md:inline">ESP32 Setup</span>
-          </button>
-
-          <!-- Export Excel -->
-          <button id="btn-export-csv" class="hidden lg:flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-800 transition" title="Export generation report to CSV" type="button">
-            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>Export</span>
-          </button>
-
-          <!-- Print / PDF Proposal -->
-          <button id="btn-print-report" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs px-3 py-1.5 rounded-lg font-bold transition shadow-sm" title="Generate printable proposal" type="button">
-            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">Print Proposal</span>
-          </button>
+        <!-- Preserved Utility Action Elements (Now inside the Hamburger Drawer) -->
+        <div class="hidden">
+          <button id="btn-toggle-push-notif" type="button"></button>
+          <span id="lbl-push-notif-status"></span>
+          <button id="btn-open-hw-info" type="button"></button>
+          <button id="btn-export-csv" type="button"></button>
+          <button id="btn-print-report" type="button"></button>
         </div>
 
         <!-- AUTHENTICATION STATE & HAMBURGER USER MENU -->
-        <div class="flex items-center border-l border-slate-800 pl-2 sm:pl-3">
+        <div class="flex items-center gap-2 border-l border-slate-800 pl-2 sm:pl-3">
           <!-- Logged Out State: Sign In Button -->
           <div id="auth-header-logged-out" class="flex items-center">
             <button id="btn-open-auth-modal" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold shadow-sm transition" type="button">
@@ -109,14 +88,16 @@
             </button>
           </div>
 
-          <!-- Logged In State: User Avatar + Hamburger Button (≡) -->
-          <div id="auth-header-logged-in" class="hidden items-center">
-            <button id="btn-toggle-user-drawer" class="flex items-center gap-2 py-1 px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm" title="Open User Menu" type="button">
-              <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 rounded-full object-cover border border-amber-400/60 bg-slate-800">
-              <span id="header-user-name" class="text-xs font-semibold max-w-[80px] sm:max-w-[110px] truncate text-slate-100">Operator</span>
-              <i data-lucide="menu" class="w-4 h-4 text-slate-300"></i>
-            </button>
+          <!-- Logged In State: User Avatar + Name -->
+          <div id="auth-header-logged-in" class="hidden items-center gap-1.5">
+            <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 rounded-full object-cover border border-amber-400/60 bg-slate-800">
+            <span id="header-user-name" class="text-xs font-semibold max-w-[80px] sm:max-w-[110px] truncate text-slate-100 hidden sm:inline">Operator</span>
           </div>
+
+          <!-- Hamburger Button (≡) -->
+          <button id="btn-toggle-user-drawer" class="flex items-center justify-center p-1.5 px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm" title="Open Menu" type="button">
+            <i data-lucide="menu" class="w-4 h-4 text-slate-300"></i>
+          </button>
         </div>
 
         <!-- Hidden status elements preserved for background telemetry handlers -->
