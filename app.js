@@ -53,6 +53,8 @@ const AppState = {
     hourlyForecast: null,
     dailyForecast: null
   },
+  forecastSelectedDayOffset: 0,
+  forecastUnit: 'kW',
   googleApiKey: localStorage.getItem('heliopv_google_api_key') || DEFAULT_GOOGLE_API_KEY
 };
 
@@ -442,6 +444,9 @@ function renderDashboard(res) {
   // 4. Render Charts
   renderCharts(monthlyReport, res.cashFlow25);
 
+  // 4b. Render Hourly and 7-Day Forecast Tab
+  renderForecastTab(res);
+
   // 5. Render PVsyst Loss Tree
   renderLossTree(losses, summary.annualGenerationKwh);
 
@@ -578,6 +583,450 @@ function renderCharts(monthlyReport, cashflow) {
       }
     });
   }
+}
+
+/**
+ * Render Hourly (current hour to 12 AM midnight) and Next 7-Day Forecast Tab
+ */
+function renderForecastTab(res) {
+  const capacityKwp = res?.inputs?.capacityKwp || AppState.pv.capacityKwp || 36.6;
+  const tariff = res?.inputs?.tariff || AppState.financials.tariff || 7.5;
+  const pr = ((res?.losses?.overallPR || 79) / 100);
+  const isWatt = (AppState.forecastUnit === 'W');
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const selectedDayOffset = AppState.forecastSelectedDayOffset || 0;
+  const targetDate = new Date(now.getTime() + selectedDayOffset * 86400000);
+  const isToday = selectedDayOffset === 0;
+  const isTomorrow = selectedDayOffset === 1;
+
+  // 1. Update Unit Toggle Buttons (kW vs W)
+  const activeBtnClass = 'px-2.5 py-1 rounded-md bg-[#0F356B] text-white shadow-xs transition';
+  const inactiveBtnClass = 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition';
+
+  const btnForecastKw = document.getElementById('btn-forecast-unit-kw');
+  const btnForecastW = document.getElementById('btn-forecast-unit-w');
+  const btnDailyKw = document.getElementById('btn-daily-unit-kw');
+  const btnDailyW = document.getElementById('btn-daily-unit-w');
+
+  if (btnForecastKw) btnForecastKw.className = !isWatt ? activeBtnClass : inactiveBtnClass;
+  if (btnForecastW) btnForecastW.className = isWatt ? activeBtnClass : inactiveBtnClass;
+  if (btnDailyKw) btnDailyKw.className = !isWatt ? activeBtnClass : inactiveBtnClass;
+  if (btnDailyW) btnDailyW.className = isWatt ? activeBtnClass : inactiveBtnClass;
+
+  // Update table header labels
+  const thColPower = document.getElementById('th-col-power');
+  if (thColPower) thColPower.textContent = isWatt ? 'Est. Power (W)' : 'Est. Power (kW)';
+  const thColEnergy = document.getElementById('th-col-energy');
+  if (thColEnergy) thColEnergy.textContent = isWatt ? 'Energy Yield (Wh)' : 'Energy Yield (kWh)';
+
+  // Update chart header labels
+  const lblHourlyUnits = document.getElementById('lbl-hourly-chart-units');
+  if (lblHourlyUnits) lblHourlyUnits.textContent = isWatt ? 'Hourly Solar Power Generation Curve (W / Wh)' : 'Hourly Solar Power Generation Curve (kW / kWh)';
+  const lblDailyUnits = document.getElementById('lbl-daily-chart-units');
+  if (lblDailyUnits) lblDailyUnits.textContent = isWatt ? 'Daily Projected Generation (Wh/day)' : 'Daily Projected Generation (kWh/day)';
+
+  // 2. Update Title and Day Label
+  const titleTextEl = document.getElementById('forecast-hourly-title-text');
+  if (titleTextEl) {
+    if (isToday) {
+      titleTextEl.textContent = "TODAY'S HOURLY SOLAR ESTIMATION (UNTIL 12:00 AM MIDNIGHT)";
+    } else if (isTomorrow) {
+      titleTextEl.textContent = "TOMORROW'S HOURLY SOLAR ESTIMATION (UNTIL 12:00 AM MIDNIGHT)";
+    } else {
+      const dName = dayNames[targetDate.getDay()].toUpperCase();
+      const dFormatted = `${targetDate.getDate()} ${monthNames[targetDate.getMonth()]}`;
+      titleTextEl.textContent = `${dName}'S HOURLY SOLAR ESTIMATION (${dFormatted} UNTIL 12:00 AM MIDNIGHT)`;
+    }
+  }
+
+  const dayLabelEl = document.getElementById('hourly-selected-day-label');
+  if (dayLabelEl) {
+    if (isToday) {
+      dayLabelEl.textContent = `Today (${now.getDate()} ${monthNames[now.getMonth()]})`;
+    } else if (isTomorrow) {
+      dayLabelEl.textContent = `Tomorrow (${targetDate.getDate()} ${monthNames[targetDate.getMonth()]})`;
+    } else {
+      dayLabelEl.textContent = `${dayNames[targetDate.getDay()]} (${targetDate.getDate()} ${monthNames[targetDate.getMonth()]})`;
+    }
+  }
+
+  const btnPrev = document.getElementById('btn-hourly-prev');
+  const btnNext = document.getElementById('btn-hourly-next');
+  if (btnPrev) btnPrev.disabled = isToday;
+  if (btnNext) btnNext.disabled = selectedDayOffset >= 7;
+
+  // Subtitle
+  const locSubtitle = document.getElementById('forecast-location-subtitle');
+  if (locSubtitle) {
+    const targetLabel = isToday ? 'Today' : (isTomorrow ? 'Tomorrow' : `${dayNames[targetDate.getDay()]}, ${targetDate.getDate()} ${monthNames[targetDate.getMonth()]}`);
+    const plantCapacityStr = isWatt ? `${Math.round(capacityKwp * 1000).toLocaleString()} Wp` : `${capacityKwp.toFixed(2)} kWp`;
+    locSubtitle.textContent = `Location: ${AppState.project.displayLocation} • Plant: ${plantCapacityStr} • Viewing ${targetLabel}`;
+  }
+
+  // Current time badge
+  const timeBadge = document.getElementById('forecast-current-time-badge');
+  if (timeBadge) {
+    timeBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Current Time: ${timeStr}`;
+  }
+
+  // 2. Build Hourly Data
+  const dailyVariances = [1.03, 0.97, 1.05, 0.98, 1.02, 0.99, 1.01];
+  const variance = isToday ? 1.0 : (dailyVariances[selectedDayOffset - 1] || 1.0);
+  const startHour = isToday ? currentHour : 0;
+
+  const hourlyRows = [];
+  const hourlyLabels = [];
+  const hourlyKwData = [];
+  const hourlyKwhData = [];
+
+  let totalDayKwh = 0;
+  let totalDaySavings = 0;
+  let peakPower = 0;
+  let sumGhi = 0;
+  let hoursWithSun = 0;
+
+  for (let h = startHour; h <= 24; h++) {
+    let timeLabel = '';
+    let chartLabel = '';
+    if (h === 0 || h === 24) {
+      timeLabel = '12:00 AM (Midnight)';
+      chartLabel = '12 AM';
+    } else if (h < 12) {
+      timeLabel = `${h}:00 AM – ${h + 1}:00 AM`;
+      chartLabel = `${h} AM`;
+    } else if (h === 12) {
+      timeLabel = '12:00 PM – 1:00 PM';
+      chartLabel = '12 PM';
+    } else {
+      timeLabel = `${h - 12}:00 PM – ${h === 23 ? '12:00 AM' : (h - 11) + ':00 PM'}`;
+      chartLabel = `${h - 12} PM`;
+    }
+
+    if (isToday && h === currentHour) {
+      chartLabel += ' (Now)';
+      timeLabel = `${timeStr} – ${h === 23 ? '12:00 AM' : (h >= 12 ? (h === 12 ? 1 : h - 11) + ':00 PM' : (h + 1) + ':00 AM')}`;
+    }
+
+    let ghi = 0;
+    if (h >= 6 && h <= 18) {
+      const solarTime = (isToday && h === currentHour) ? (h + currentMinute / 60) : (h + 0.5);
+      const angle = ((solarTime - 6) / 12) * Math.PI;
+      if (angle > 0 && angle < Math.PI) {
+        ghi = Math.round(920 * variance * Math.pow(Math.sin(angle), 1.2));
+      }
+    } else if (isToday && h === 18 && currentMinute < 45) {
+      ghi = 25; // twilight
+    }
+
+    const hourFraction = (isToday && h === currentHour) ? Math.max(0.05, (60 - currentMinute) / 60) : 1.0;
+    const powerKw = Math.max(0, capacityKwp * (ghi / 1000) * pr);
+    const energyKwh = powerKw * hourFraction;
+    const savings = energyKwh * tariff;
+
+    if (ghi > 0) {
+      sumGhi += ghi;
+      hoursWithSun++;
+    }
+    if (powerKw > peakPower) peakPower = powerKw;
+    totalDayKwh += energyKwh;
+    totalDaySavings += savings;
+
+    let sunStatus = '';
+    let statusClass = '';
+    if (ghi >= 600) {
+      sunStatus = 'High Solar Yield';
+      statusClass = 'text-amber-600 font-bold';
+    } else if (ghi >= 250) {
+      sunStatus = 'Moderate Solar';
+      statusClass = 'text-amber-500 font-medium';
+    } else if (ghi > 0) {
+      sunStatus = 'Twilight / Low Sun';
+      statusClass = 'text-orange-400 font-medium';
+    } else {
+      sunStatus = 'Night (Standby)';
+      statusClass = 'text-slate-400 font-mono';
+    }
+
+    hourlyRows.push({
+      timeLabel,
+      ghi,
+      powerKw,
+      energyKwh,
+      savings,
+      sunStatus,
+      statusClass,
+      isCurrent: isToday && (h === currentHour)
+    });
+
+    hourlyLabels.push(chartLabel);
+    hourlyKwData.push(isWatt ? Math.round(powerKw * 1000) : (Math.round(powerKw * 100) / 100));
+    hourlyKwhData.push(isWatt ? Math.round(energyKwh * 1000) : (Math.round(energyKwh * 100) / 100));
+  }
+
+  // Update badges
+  const remainingBadge = document.getElementById('forecast-remaining-today-badge');
+  if (remainingBadge) {
+    const badgeLabel = isToday ? 'Remaining Today' : (isTomorrow ? 'Tomorrow Projected' : `${dayNames[targetDate.getDay()]} Projected`);
+    const formattedYield = isWatt ? `${Math.round(totalDayKwh * 1000).toLocaleString()} Wh` : `${totalDayKwh.toFixed(2)} kWh`;
+    remainingBadge.textContent = `${badgeLabel}: ${formattedYield} (₹${totalDaySavings.toFixed(0)})`;
+  }
+  const thGhi = document.getElementById('th-remaining-ghi');
+  if (thGhi) thGhi.textContent = hoursWithSun > 0 ? `${Math.round(sumGhi / hoursWithSun)} W/m² avg` : '0 W/m²';
+  const thPeak = document.getElementById('th-remaining-peak-power');
+  if (thPeak) {
+    thPeak.textContent = isWatt ? `${Math.round(peakPower * 1000).toLocaleString()} W max` : `${peakPower.toFixed(2)} kW max`;
+  }
+  const thKwh = document.getElementById('th-remaining-kwh');
+  if (thKwh) {
+    thKwh.textContent = isWatt ? `${Math.round(totalDayKwh * 1000).toLocaleString()} Wh` : `${totalDayKwh.toFixed(2)} kWh`;
+  }
+  const thSavings = document.getElementById('th-remaining-savings');
+  if (thSavings) thSavings.textContent = `₹${totalDaySavings.toFixed(2)}`;
+
+  // Populate Hourly Table
+  const tbodyHourly = document.getElementById('tbody-hourly-forecast');
+  if (tbodyHourly) {
+    tbodyHourly.innerHTML = hourlyRows.map(r => {
+      const powerStr = isWatt
+        ? (r.powerKw > 0 ? `${Math.round(r.powerKw * 1000).toLocaleString()} W` : '<span class="text-slate-400">0 W</span>')
+        : (r.powerKw > 0 ? `${r.powerKw.toFixed(2)} kW` : '<span class="text-slate-400">0.00 kW</span>');
+      const energyStr = isWatt
+        ? (r.energyKwh > 0 ? `${Math.round(r.energyKwh * 1000).toLocaleString()} Wh` : '<span class="text-slate-400">0 Wh</span>')
+        : (r.energyKwh > 0 ? `${r.energyKwh.toFixed(2)} kWh` : '<span class="text-slate-400">0.00 kWh</span>');
+
+      return `
+        <tr class="${r.isCurrent ? 'bg-amber-50/70 font-semibold' : ''}">
+          <td class="font-medium text-slate-800">${r.timeLabel} ${r.isCurrent ? '<span class="text-[10px] bg-amber-200 text-amber-900 px-1 rounded ml-1 font-bold">Current</span>' : ''}</td>
+          <td class="font-mono text-slate-700">${r.ghi > 0 ? r.ghi + ' W/m²' : '<span class="text-slate-400">0 W/m²</span>'}</td>
+          <td class="font-mono font-bold text-[#0F356B]">${powerStr}</td>
+          <td class="font-mono font-bold text-emerald-600">${energyStr}</td>
+          <td class="${r.statusClass}">${r.sunStatus}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Render Hourly Chart
+  const ctxHourly = document.getElementById('chart-hourly-forecast');
+  if (ctxHourly) {
+    if (AppState.charts.hourlyForecast) {
+      AppState.charts.hourlyForecast.destroy();
+    }
+    const powerUnit = isWatt ? 'W' : 'kW';
+    const energyUnit = isWatt ? 'Wh' : 'kWh';
+
+    AppState.charts.hourlyForecast = new Chart(ctxHourly, {
+      type: 'line',
+      data: {
+        labels: hourlyLabels,
+        datasets: [
+          {
+            label: `Solar Power (${powerUnit})`,
+            data: hourlyKwData,
+            borderColor: '#F59E0B',
+            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointRadius: 3,
+            pointBackgroundColor: '#F59E0B'
+          },
+          {
+            label: `Energy Yield (${energyUnit})`,
+            data: hourlyKwhData,
+            borderColor: '#3B82F6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            fill: false,
+            tension: 0.3,
+            pointRadius: 2,
+            pointBackgroundColor: '#3B82F6'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()} ${ctx.datasetIndex === 0 ? powerUnit : energyUnit}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: `Power (${powerUnit}) / Yield (${energyUnit})`, font: { size: 10, weight: 'bold' } },
+            ticks: { font: { size: 10 } }
+          },
+          x: {
+            ticks: { font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  // 3. Build Next 7-Day Solar Forecast Cards & Chart
+  const currentMonthIdx = now.getMonth();
+  const baseDailyGhi = (res?.monthlyReport && res.monthlyReport[currentMonthIdx])
+    ? res.monthlyReport[currentMonthIdx].yieldKwhPerKwp / 30
+    : 4.8;
+
+  const weatherConditions = [
+    { text: 'Clear / Sunny', icon: 'sun', color: 'text-amber-500' },
+    { text: 'Mostly Sunny', icon: 'sun-medium', color: 'text-amber-500' },
+    { text: 'Clear Sky', icon: 'sun', color: 'text-amber-500' },
+    { text: 'Scattered Clouds', icon: 'cloud-sun', color: 'text-blue-500' },
+    { text: 'High Solar Yield', icon: 'sun', color: 'text-amber-500' },
+    { text: 'Mostly Sunny', icon: 'sun-medium', color: 'text-amber-500' },
+    { text: 'Clear Sky', icon: 'sun', color: 'text-amber-500' }
+  ];
+
+  const dailyLabels = [];
+  const dailyChartData = [];
+  const dailyCardsHtml = [];
+  let total7DayKwh = 0;
+  let total7DaySavings = 0;
+
+  for (let d = 1; d <= 7; d++) {
+    const dDate = new Date(now.getTime() + d * 86400000);
+    const shortLabel = `${dayNames[dDate.getDay()]} ${dDate.getDate()}`;
+    const isSelected = selectedDayOffset === d;
+
+    const factor = dailyVariances[d - 1];
+    const cond = weatherConditions[d - 1];
+
+    const dayYieldKwhPerKwp = Math.round(baseDailyGhi * factor * 100) / 100;
+    const dayKwh = Math.round(capacityKwp * dayYieldKwhPerKwp * pr * 10) / 10;
+    const daySavings = Math.round(dayKwh * tariff);
+
+    total7DayKwh += dayKwh;
+    total7DaySavings += daySavings;
+
+    dailyLabels.push(shortLabel);
+    const dayEnergyChartVal = isWatt ? Math.round(dayKwh * 1000) : dayKwh;
+    dailyChartData.push(dayEnergyChartVal);
+
+    const cardEnergyDisp = isWatt ? Math.round(dayKwh * 1000).toLocaleString() : dayKwh.toFixed(0);
+    const cardUnitDisp = isWatt ? 'Wh' : 'kWh';
+    const cardYieldDisp = isWatt ? `${dayYieldKwhPerKwp.toFixed(2)} Wh/Wp` : `${dayYieldKwhPerKwp.toFixed(2)} kWh/kWp`;
+
+    dailyCardsHtml.push(`
+      <div class="rounded-xl p-3 flex flex-col justify-between transition cursor-pointer ${
+        isSelected
+          ? 'bg-blue-50/80 border-2 border-blue-600 shadow-md ring-2 ring-blue-200'
+          : 'bg-slate-50 border border-slate-200 hover:border-blue-400 hover:shadow-xs'
+      }" data-day-offset="${d}">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold ${isSelected ? 'text-blue-900 font-black' : 'text-slate-800'}">${shortLabel}</span>
+            <i data-lucide="${cond.icon}" class="w-4 h-4 ${cond.color}"></i>
+          </div>
+          <span class="text-[10px] text-slate-500 block mb-1.5">${cond.text}</span>
+          <div class="text-lg font-black text-emerald-600 font-mono">${cardEnergyDisp} <span class="text-[10px] font-normal text-slate-500">${cardUnitDisp}</span></div>
+        </div>
+        <div class="pt-2 border-t border-slate-200 mt-2 text-[11px] font-mono">
+          <div class="text-slate-600 flex justify-between">
+            <span>Yield:</span>
+            <span class="font-bold text-slate-800">${cardYieldDisp}</span>
+          </div>
+        </div>
+        <button type="button" class="btn-day-card-hourly flex items-center justify-between text-[11px] font-bold ${
+          isSelected
+            ? 'bg-blue-600 text-white'
+            : 'text-blue-700 hover:text-blue-900 bg-white hover:bg-blue-100/60 border border-blue-200'
+        } px-2 py-1.5 rounded-md mt-2 w-full transition shadow-2xs" data-day-offset="${d}">
+          <span>${isSelected ? '✓ Active View' : 'Hourly Data'}</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-blue-600'}"></i>
+        </button>
+      </div>
+    `);
+  }
+
+  const badge7Day = document.getElementById('forecast-7day-total-badge');
+  if (badge7Day) {
+    const formatted7DayYield = isWatt ? `${Math.round(total7DayKwh * 1000).toLocaleString()} Wh` : `${total7DayKwh.toFixed(0)} kWh`;
+    badge7Day.textContent = `7-Day Total: ${formatted7DayYield}`;
+  }
+
+  const grid7Day = document.getElementById('grid-daily-forecast');
+  if (grid7Day) {
+    grid7Day.innerHTML = dailyCardsHtml.join('');
+
+    // Attach click listener to each card and its right button
+    grid7Day.querySelectorAll('.btn-day-card-hourly, [data-day-offset]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const offset = parseInt(el.getAttribute('data-day-offset'), 10);
+        if (!isNaN(offset)) {
+          AppState.forecastSelectedDayOffset = offset;
+          renderForecastTab(AppState.simulationResult);
+          document.getElementById('forecast-hourly-title-text')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  const ctxDaily = document.getElementById('chart-daily-forecast');
+  if (ctxDaily) {
+    if (AppState.charts.dailyForecast) {
+      AppState.charts.dailyForecast.destroy();
+    }
+    const dailyUnit = isWatt ? 'Wh' : 'kWh';
+
+    AppState.charts.dailyForecast = new Chart(ctxDaily, {
+      type: 'bar',
+      data: {
+        labels: dailyLabels,
+        datasets: [
+          {
+            label: `Daily Generation (${dailyUnit})`,
+            data: dailyChartData,
+            backgroundColor: dailyLabels.map((_, idx) => (selectedDayOffset === idx + 1 ? '#0F356B' : '#10B981')),
+            borderRadius: 6,
+            hoverBackgroundColor: '#059669'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `Estimated: ${ctx.raw.toLocaleString()} ${dailyUnit}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: `Energy (${dailyUnit}/day)`, font: { size: 10, weight: 'bold' } },
+            ticks: { font: { size: 10 } }
+          },
+          x: {
+            ticks: { font: { size: 10, weight: 'bold' } }
+          }
+        }
+      }
+    });
+  }
+
+  if (window.lucide) lucide.createIcons();
 }
 
 /**
@@ -959,6 +1408,7 @@ function setupEventListeners() {
 
   // Tab navigation
   const tabs = [
+    { btn: 'tab-btn-forecast', pane: 'tab-pane-forecast' },
     { btn: 'tab-btn-report', pane: 'tab-pane-report' },
     { btn: 'tab-btn-charts', pane: 'tab-pane-charts' },
     { btn: 'tab-btn-pvsyst', pane: 'tab-pane-pvsyst' },
@@ -967,18 +1417,66 @@ function setupEventListeners() {
 
   tabs.forEach((tab) => {
     const btnEl = document.getElementById(tab.btn);
+    if (!btnEl) return;
     btnEl.addEventListener('click', () => {
       tabs.forEach((t) => {
-        document.getElementById(t.pane).classList.add('hidden');
-        document.getElementById(t.btn).classList.remove('text-[#0F356B]', 'border-b-2', 'border-[#0F356B]');
-        document.getElementById(t.btn).classList.add('text-slate-500');
+        const p = document.getElementById(t.pane);
+        const b = document.getElementById(t.btn);
+        if (p) p.classList.add('hidden');
+        if (b) {
+          b.classList.remove('text-[#0F356B]', 'border-b-2', 'border-[#0F356B]');
+          b.classList.add('text-slate-500');
+        }
       });
 
-      document.getElementById(tab.pane).classList.remove('hidden');
+      const activePane = document.getElementById(tab.pane);
+      if (activePane) activePane.classList.remove('hidden');
       btnEl.classList.add('text-[#0F356B]', 'border-b-2', 'border-[#0F356B]');
       btnEl.classList.remove('text-slate-500');
+
+      if (tab.btn === 'tab-btn-forecast') {
+        if (AppState.charts.hourlyForecast) AppState.charts.hourlyForecast.resize();
+        if (AppState.charts.dailyForecast) AppState.charts.dailyForecast.resize();
+      } else if (tab.btn === 'tab-btn-charts') {
+        if (AppState.charts.monthlyGen) AppState.charts.monthlyGen.resize();
+        if (AppState.charts.cashflow) AppState.charts.cashflow.resize();
+      }
     });
   });
+
+  // Hourly Estimation Day Navigation (Right Button: Next Day, Left Button: Prev Day)
+  document.getElementById('btn-hourly-next')?.addEventListener('click', () => {
+    AppState.forecastSelectedDayOffset = Math.min(7, (AppState.forecastSelectedDayOffset || 0) + 1);
+    if (AppState.simulationResult) {
+      renderForecastTab(AppState.simulationResult);
+    } else {
+      runSimulation();
+    }
+  });
+
+  document.getElementById('btn-hourly-prev')?.addEventListener('click', () => {
+    AppState.forecastSelectedDayOffset = Math.max(0, (AppState.forecastSelectedDayOffset || 0) - 1);
+    if (AppState.simulationResult) {
+      renderForecastTab(AppState.simulationResult);
+    } else {
+      runSimulation();
+    }
+  });
+
+  // Unit Toggles for Hourly Estimation and 7-Day Forecast (kW vs W)
+  const setForecastUnit = (unit) => {
+    AppState.forecastUnit = unit;
+    if (AppState.simulationResult) {
+      renderForecastTab(AppState.simulationResult);
+    } else {
+      runSimulation();
+    }
+  };
+
+  document.getElementById('btn-forecast-unit-kw')?.addEventListener('click', () => setForecastUnit('kW'));
+  document.getElementById('btn-forecast-unit-w')?.addEventListener('click', () => setForecastUnit('W'));
+  document.getElementById('btn-daily-unit-kw')?.addEventListener('click', () => setForecastUnit('kW'));
+  document.getElementById('btn-daily-unit-w')?.addEventListener('click', () => setForecastUnit('W'));
 
   // Settings Modal
   const modalSettings = document.getElementById('modal-settings');
@@ -1175,6 +1673,8 @@ function switchView(viewName) {
     setTimeout(() => {
       if (AppState.map) AppState.map.invalidateSize();
       if (AppState.googleMap && window.google) google.maps.event.trigger(AppState.googleMap, 'resize');
+      if (AppState.charts.hourlyForecast) AppState.charts.hourlyForecast.resize();
+      if (AppState.charts.dailyForecast) AppState.charts.dailyForecast.resize();
       if (AppState.charts.monthlyGen) AppState.charts.monthlyGen.resize();
       if (AppState.charts.cashflow) AppState.charts.cashflow.resize();
     }, 60);
