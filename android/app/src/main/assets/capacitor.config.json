@@ -3,7 +3,7 @@
 	"appName": "HelioPV IoT Monitor",
 	"webDir": "www",
 	"server": {
-		"url": "https://solar-pvsyst-website.onrender.com",
+		"url": "https://heliopv-solar.onrender.com",
 		"cleartext": false
 	}
 }
