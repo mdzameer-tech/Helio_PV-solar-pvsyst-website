@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar PV Distributed Fault Detection & String Monitor</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    margin: 0;
+    padding: 24px 16px 40px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 26px;
+    margin: 0 0 6px;
+    letter-spacing: 0.5px;
+    color: #f0f6fc;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 12px;
+  }
+  #gateway {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    margin-bottom: 18px;
+  }
+
+  /* Alert Banners */
+  #alert-box {
+    max-width: 920px;
+    margin: 0 auto 24px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: left;
+    display: none;
+  }
+  #alert-box.danger {
+    background: rgba(231, 76, 60, 0.15);
+    border: 2px solid #e74c3c;
+    color: #ff6b6b;
+  }
+  #alert-box.warning {
+    background: rgba(243, 156, 18, 0.15);
+    border: 2px solid #f39c12;
+    color: #f39c12;
+  }
+  #alert-box.success {
+    background: rgba(46, 204, 113, 0.12);
+    border: 2px solid #2ecc71;
+    color: #2ecc71;
+  }
+  .alert-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Main Array Wrapper */
+  .array-container {
+    max-width: 1050px;
+    margin: 0 auto;
+    position: relative;
+    padding-bottom: 40px;
+  }
+  .string-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px 4px;
+  }
+
+  /* Panel & String Cards */
+  .cell {
+    width: 200px;
+    min-height: 205px;
+    padding: 16px 14px;
+    border-radius: 12px;
+    border: 2px solid #30363d;
+    background: #161b22;
+    position: relative;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+  }
+  .cell.panel {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .cell.string-node {
+    border-style: solid;
+    background: #161b22;
+  }
+
+  /* Cell states */
+  .cell.ok {
+    border-color: #2ea043;
+    background-color: #0d2818;
+  }
+  .cell.broken {
+    border-color: #f85149;
+    background-color: #3d1416;
+    animation: border-pulse 1.2s infinite;
+  }
+  .cell.gray_zone {
+    border-color: #8b949e;
+    background-color: #1e242d;
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.03) 10px,
+      transparent 10px,
+      transparent 20px
+    );
+  }
+  .cell.no_signal {
+    border-color: #484f58;
+    background-color: #161b22;
+    opacity: 0.6;
+  }
+  .cell.low_voltage {
+    border-color: #d29922;
+    background-color: #2b2006;
+  }
+
+  @keyframes border-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7); }
+    50% { box-shadow: 0 0 0 8px rgba(248, 81, 73, 0); }
+  }
+
+  .cell h2 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .badge.ok          { background: #238636; color: #fff; }
+  .badge.broken      { background: #da3633; color: #fff; }
+  .badge.gray_zone   { background: #6e7681; color: #fff; }
+  .badge.low_voltage { background: #9e6a03; color: #fff; }
+  .badge.no_signal   { background: #30363d; color: #8b949e; }
+
+  .vals {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #e6edf3;
+  }
+  .vals .val-highlight {
+    font-weight: 600;
+    color: #58a6ff;
+  }
+  .note {
+    font-size: 11px;
+    margin-top: 10px;
+    color: #8b949e;
+    line-height: 1.4;
+  }
+  .note.warn {
+    color: #f85149;
+    font-weight: 600;
+  }
+
+  /* ── Inter-Panel Circuit Switch Connectors ── */
+  .wire-box {
+    width: 68px;
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    user-select: none;
+  }
+  .wire-svg {
+    width: 100%;
+    height: 34px;
+    overflow: visible;
+  }
+  .wire-status-text {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+    text-transform: uppercase;
+  }
+  .wire-status-text.closed { color: #3fb950; }
+  .wire-status-text.open { color: #f85149; }
+  .wire-status-text.gray_zone { color: #8b949e; }
+  .wire-status-text.no_signal { color: #484f58; }
+
+  /* Open switch spark animation */
+  @keyframes spark-pulse {
+    0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px #f85149); }
+    50% { opacity: 0.3; filter: drop-shadow(0 0 1px #f85149); }
+  }
+  .wire-open-arm {
+    animation: spark-pulse 1s infinite;
+  }
+
+  /* Gray zone switch blink */
+  @keyframes gray-blink {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 0.25; }
+  }
+  .wire-gray-arm {
+    animation: gray-blink 1.2s infinite;
+  }
+
+  /* ── Legend Badges ── */
+  .legend-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 4px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Solar String Fault Detection System</h1>
+  <div class="subtitle">Distributed CH32V003 Micro-Nodes + ESP32 Gateway Multi-Point PV Monitoring</div>
+  <div id="gateway">Connecting to ESP32 gateway...</div>
+
+  <!-- Dynamic Alert Banner -->
+  <div id="alert-box"></div>
+
+  <!-- Main Array Display with Wire Switches -->
+  <div class="array-container">
+    <div class="string-row" id="string-row"></div>
+
+    <div style="margin-top: 24px;">
+      <span class="legend-badge" style="background:#238636;color:#fff;">Green: Intact</span>
+      <span class="legend-badge" style="background:#da3633;color:#fff;">Red: Open Circuit Fault</span>
+      <span class="legend-badge" style="background:#6e7681;color:#fff;">Gray Zone: Downstream of Break (Indeterminate)</span>
+    </div>
+  </div>
+
+<script>
+const LABEL = {
+  ok: "CONNECTED",
+  broken: "OPEN CIRCUIT HERE",
+  gray_zone: "GRAY ZONE",
+  low_voltage: "LOW VOLTAGE",
+  no_signal: "NO SIGNAL"
+};
+
+const NOTE = {
+  ok: "Series continuity intact. EL817 conducting.",
+  broken: "Break detected at this input connection!",
+  gray_zone: "Downstream of break. Status unverified until upstream wire repaired.",
+  low_voltage: "Connected but voltage is below normal operating threshold.",
+  no_signal: "No radio packet received from this node."
+};
+
+function cellBody(c) {
+  if (c.state === "no_signal") return "&mdash;";
+  if (c.type === "string") {
+    const volt = typeof c.voltage === "number" ? c.voltage.toFixed(2) + " V" : "—";
+    const cur  = typeof c.current === "number" ? c.current.toFixed(3) + " A" : "—";
+    const pwr  = typeof c.power === "number" ? c.power.toFixed(2) + " W" : "—";
+    const ldr  = c.ldr !== undefined ? c.ldr : "—";
+    return `Voltage: <span class="val-highlight">${volt}</span><br>` +
+           `Current: <span class="val-highlight">${cur}</span><br>` +
+           `Power: <span class="val-highlight" style="color:#f39c12;">${pwr}</span><br>` +
+           `LDR: <span class="val-highlight">${ldr}</span>`;
+  }
+  const temp = typeof c.temp === "number" ? c.temp.toFixed(1) + " &deg;C" : "—";
+  const volt = typeof c.voltage === "number" ? c.voltage.toFixed(2) + " V" : "—";
+  return `Temperature: <span class="val-highlight">${temp}</span><br>Voltage: <span class="val-highlight">${volt}</span>`;
+}
+
+function renderSwitchSvg(state) {
+  // SVG electrical schematic switch contact
+  // Dimensions 68 x 34. Terminals at x=14 and x=54 (y=17).
+  if (state === "closed") {
+    return `
+      <svg class="wire-svg" viewBox="0 0 68 34">
+        <!-- Lead lines -->
+        <line x1="0" y1="17" x2="16" y2="17" stroke="#3fb950" stroke-width="3" />
+        <line x1="52" y1="17" x2="68" y2="17" stroke="#3fb950" stroke-width="3" />
+        <!-- Contact Terminals -->
+        <circle cx="16" cy="17" r="4.5" fill="#3fb950" />
+        <circle cx="52" cy="17" r="4.5" fill="#3fb950" />
+        <!-- Closed Switch Blade -->
+        <line x1="16" y1="17" x2="52" y2="17" stroke="#3fb950" stroke-width="3.5" stroke-linecap="round" />
+      </svg>
+      <div class="wire-status-text closed">&#10003; CLOSED</div>
+    `;
+  } else if (state === "open") {
+    return `
+      <svg class="wire-svg" viewBox="0 0 68 34">
+        <!-- Lead lines -->
+        <line x1="0" y1="17" x2="16" y2="17" stroke="#f85149" stroke-width="3" />
+        <line x1="52" y1="17" x2="68" y2="17" stroke="#f85149" stroke-width="3" />
+        <!-- Contact Terminals -->
+        <circle cx="16" cy="17" r="4.5" fill="#f85149" />
+        <circle cx="52" cy="17" r="4.5" fill="#f85149" />
+        <!-- Open Switch Blade (swung up at angle) -->
+        <line class="wire-open-arm" x1="16" y1="17" x2="44" y2="4" stroke="#f85149" stroke-width="3.5" stroke-linecap="round" />
+        <!-- Break spark indicator -->
+        <line x1="42" y1="9" x2="48" y2="15" stroke="#ffeb3b" stroke-width="1.5" stroke-dasharray="2,2" />
+      </svg>
+      <div class="wire-status-text open">&#9888; OPEN CKT</div>
+    `;
+  } else if (state === "gray_zone") {
+    return `
+      <svg class="wire-svg" viewBox="0 0 68 34">
+        <!-- Lead lines -->
+        <line x1="0" y1="17" x2="16" y2="17" stroke="#6e7681" stroke-width="2.5" stroke-dasharray="3,3" />
+        <line x1="52" y1="17" x2="68" y2="17" stroke="#6e7681" stroke-width="2.5" stroke-dasharray="3,3" />
+        <!-- Contact Terminals -->
+        <circle cx="16" cy="17" r="4" fill="#6e7681" />
+        <circle cx="52" cy="17" r="4" fill="#6e7681" />
+        <!-- Indeterminate Blade -->
+        <line class="wire-gray-arm" x1="16" y1="17" x2="52" y2="17" stroke="#8b949e" stroke-width="2" stroke-dasharray="4,4" />
+      </svg>
+      <div class="wire-status-text gray_zone">&#63; BLOCKED</div>
+    `;
+  } else {
+    // no_signal
+    return `
+      <svg class="wire-svg" viewBox="0 0 68 34">
+        <line x1="0" y1="17" x2="68" y2="17" stroke="#30363d" stroke-width="2" stroke-dasharray="4,4" />
+      </svg>
+      <div class="wire-status-text no_signal">&mdash;</div>
+    `;
+  }
+}
+
+function render(data) {
+  // 1. Gateway status
+  const gw = document.getElementById("gateway");
+  if (data.gatewayOnline) {
+    gw.textContent = "\u25CF ESP32 Gateway: ONLINE";
+    gw.style.color = "#3fb950";
+    gw.style.borderColor = "#238636";
+  } else {
+    gw.textContent = "\u25CB ESP32 Gateway: OFFLINE";
+    gw.style.color = "#f85149";
+    gw.style.borderColor = "#da3633";
+  }
+
+  // 2. Alert Banner Logic (Root cause isolation)
+  const alertBox = document.getElementById("alert-box");
+  if (data.faultDescription) {
+    alertBox.style.display = "block";
+    alertBox.className = "danger";
+    alertBox.innerHTML = `
+      <div class="alert-title">&#9888; ROOT CAUSE FAULT DETECTED: ${data.faultDescription}</div>
+      <div>
+        <strong>Fault Isolation:</strong> Node ${data.faultNodeId} is the <em>lowest numbered node</em> detecting open continuity.
+        All subsequent nodes (in gray) are downstream of this break and cannot establish ground reference until this connection is repaired.
+      </div>
+    `;
+  } else if (!data.gatewayOnline) {
+    alertBox.style.display = "block";
+    alertBox.className = "warning";
+    alertBox.innerHTML = `
+      <div class="alert-title">&#9888; ESP32 Gateway Offline</div>
+      <div>Waiting for incoming HTTP POST from ESP32 gateway at <code>/api/data</code>.</div>
+    `;
+  } else {
+    const lowV = data.cells.filter(c => c.state === "low_voltage");
+    if (lowV.length > 0) {
+      alertBox.style.display = "block";
+      alertBox.className = "warning";
+      alertBox.innerHTML = `
+        <div class="alert-title">&#9888; Low Voltage Detected on: ${lowV.map(c => (c.type === "string" ? "String Node" : "Panel " + c.id)).join(", ")}</div>
+        <div>Check for partial shading, dust accumulation, or panel degradation.</div>
+      `;
+    } else {
+      alertBox.style.display = "block";
+      alertBox.className = "success";
+      alertBox.innerHTML = `
+        <div class="alert-title">&#10003; Solar PV String Normal &amp; Continuous</div>
+        <div>All 4 nodes reporting intact series connections. No open circuits detected.</div>
+      `;
+    }
+  }
+
+  // 3. Render Cards and Wire Switch Connectors
+  const container = document.getElementById("string-row");
+  const wires = data.wires || [];
+
+  let html = "";
+  data.cells.forEach((c, i) => {
+    const isString = (c.type === "string");
+    const label = isString ? "String Monitor" : ("Panel " + c.id);
+    const cardClass = isString ? "string-node" : "panel";
+
+    html += `
+      <div class="cell ${cardClass} ${c.state}">
+        <h2>${label}</h2>
+        <div class="badge ${c.state}">${LABEL[c.state] || c.state}</div>
+        <div class="vals">${cellBody(c)}</div>
+        <div class="note ${c.state === 'broken' ? 'warn' : ''}">${NOTE[c.state] || ""}</div>
+      </div>
+    `;
+
+    // Add Wire switch connector between adjacent cards
+    if (i < data.cells.length - 1) {
+      const wireState = (wires[i] && wires[i].state) ? wires[i].state : "no_signal";
+      html += `
+        <div class="wire-box" title="Connection between ${c.id} and ${c.id + 1}">
+          ${renderSwitchSvg(wireState)}
+        </div>
+      `;
+    }
+  });
+
+  container.innerHTML = html;
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/status");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    render(await r.json());
+  } catch (e) {
+    const gw = document.getElementById("gateway");
+    gw.textContent = "\u25CB Backend unreachable (" + e.message + ")";
+    gw.style.color = "#f85149";
+    gw.style.borderColor = "#da3633";
+  }
+}
+
+setInterval(poll, 800);
+poll();
+</script>
+</body>
+</html>
