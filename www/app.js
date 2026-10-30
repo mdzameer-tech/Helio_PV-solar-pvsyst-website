@@ -2128,20 +2128,21 @@ function renderIoTMonitor(data) {
     document.getElementById('metric-string-voltage').textContent = `${stringNode.voltage.toFixed(2)} V`;
     document.getElementById('metric-string-current').textContent = `${stringNode.current.toFixed(3)} A`;
     document.getElementById('metric-string-power').textContent = `${stringNode.power.toFixed(2)} W`;
-    document.getElementById('metric-string-ldr').textContent = `LDR: ${stringNode.ldr !== undefined ? stringNode.ldr : '--'}`;
   } else {
     document.getElementById('metric-string-voltage').textContent = '-- V';
     document.getElementById('metric-string-current').textContent = '-- A';
     document.getElementById('metric-string-power').textContent = '-- W';
-    document.getElementById('metric-string-ldr').textContent = 'LDR: --';
   }
 
   const temps = panels.map(p => p.temp).filter(t => typeof t === 'number');
-  if (temps.length > 0) {
-    const avgT = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1);
-    document.getElementById('metric-string-temp').textContent = `Temp: ${avgT} °C`;
-  } else {
-    document.getElementById('metric-string-temp').textContent = 'Temp: -- °C';
+  const tempEl = document.getElementById('metric-string-temp');
+  if (tempEl) {
+    if (temps.length > 0) {
+      const avgT = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1);
+      tempEl.textContent = `${avgT} °C`;
+    } else {
+      tempEl.textContent = '-- °C';
+    }
   }
 
   const scenarioBadge = document.getElementById('active-scenario-badge');
