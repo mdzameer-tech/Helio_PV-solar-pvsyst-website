@@ -3,21 +3,58 @@
  * Custom styling for high-precision PV engineering reports
  */
 
+/* Minimalist & Official Enterprise Typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap');
+
 :root {
   --epc-blue: #0F356B;
   --epc-blue-dark: #0A254A;
   --epc-blue-light: #E8F0FE;
   --epc-accent: #F59E0B;
   --epc-green: #10B981;
-  --epc-text: #1E293B;
+  --epc-text: #0F172A;
   --epc-gray: #64748B;
   --epc-border: #E2E8F0;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'calt' 1, 'tnum' 1;
+  letter-spacing: -0.011em;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   color: var(--epc-text);
   background-color: #F8FAFC;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'calt' 1, 'tnum' 1;
+  letter-spacing: -0.011em;
+}
+
+/* Minimalist & Official Heading Styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.025em;
+  font-weight: 700;
+}
+
+/* Precision Technical Data & Numeric Values */
+code, kbd, samp, pre, .font-mono, .epc-num, .iot-vals, .compact-volt {
+  font-family: var(--font-mono) !important;
+  font-feature-settings: 'zero' 1, 'tnum' 1;
+  letter-spacing: -0.02em;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
 }
 
 /* Custom table styling to faithfully match the user's PVsyst report screenshot */
@@ -116,8 +153,8 @@ body {
 .report-section-header {
   color: #143767;
   font-size: 1.45rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -142,6 +179,7 @@ body {
 /* Print proposal styling */
 @media print {
   body {
+    font-family: var(--font-sans) !important;
     background-color: #FFFFFF !important;
     font-size: 11pt;
     color: #000000;
@@ -421,7 +459,7 @@ body {
   margin-top: 0.85rem;
   font-size: 0.875rem;
   line-height: 1.65;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   color: #E6EDF3;
   text-align: left;
   background: rgba(0, 0, 0, 0.25);
@@ -625,9 +663,9 @@ body {
 
 .string-array-row.schematic-fit-mode .compact-volt {
   font-size: 0.82rem !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   color: #60A5FA !important;
-  font-family: ui-monospace, SFMono-Regular, monospace !important;
+  font-family: var(--font-mono) !important;
 }
 
 .string-array-row.schematic-fit-mode .compact-hint {

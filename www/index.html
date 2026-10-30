@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>PVsyst Solar Generation & ROI Simulator | Solar EPC Tool</title>
+
+  <!-- Minimalist & Official Enterprise Typography: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -22,6 +27,10 @@
     tailwind.config = {
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          },
           colors: {
             epcBlue: '#0F356B',
             epcDark: '#0A254A',
@@ -42,10 +51,10 @@
       <!-- LOGO ON PROPER LEFT -->
       <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
         <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
-          <i data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 font-black"></i>
+          <i data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 stroke-[2.5]"></i>
         </div>
         <div class="flex items-baseline gap-1.5 sm:gap-2">
-          <span class="font-extrabold text-base sm:text-lg tracking-tight text-white">HelioPV</span>
+          <span class="font-bold text-base sm:text-lg tracking-tight text-white">HelioPV</span>
           <span class="hidden md:inline-block text-[10px] font-semibold tracking-wider uppercase text-slate-400 border-l border-slate-800 pl-2">IoT Studio</span>
         </div>
       </div>
@@ -122,7 +131,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-800">
         <div>
           <div class="flex items-center gap-2.5">
-            <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight">Solar String Fault Detection System</h2>
+            <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Solar String Fault Detection System</h2>
             <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-mono border border-emerald-500/40 font-semibold">ESP32-C6 + CH32V003</span>
           </div>
           <p class="text-xs text-slate-400 mt-1">Multi-Point Series Continuity, Per-Cell Voltage/Temp &amp; String Power Monitoring</p>
@@ -225,25 +234,25 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span class="text-xs text-slate-400 block mb-1">Live String Voltage</span>
-          <span id="metric-string-voltage" class="text-2xl font-black text-blue-400 font-mono">-- V</span>
+          <span id="metric-string-voltage" class="text-2xl font-bold text-blue-400 font-mono tracking-tight">-- V</span>
           <span class="text-[11px] text-slate-500 block mt-1">Series sum of active cells</span>
         </div>
 
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span class="text-xs text-slate-400 block mb-1">Live String Current</span>
-          <span id="metric-string-current" class="text-2xl font-black text-emerald-400 font-mono">-- A</span>
+          <span id="metric-string-current" class="text-2xl font-bold text-emerald-400 font-mono tracking-tight">-- A</span>
           <span class="text-[11px] text-slate-500 block mt-1">Measured at String Node 4</span>
         </div>
 
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span class="text-xs text-slate-400 block mb-1">Instantaneous String Power</span>
-          <span id="metric-string-power" class="text-2xl font-black text-amber-400 font-mono">-- W</span>
+          <span id="metric-string-power" class="text-2xl font-bold text-amber-400 font-mono tracking-tight">-- W</span>
           <span class="text-[11px] text-slate-500 block mt-1">P = V &times; I</span>
         </div>
 
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <span class="text-xs text-slate-400 block mb-1">Average Temperature</span>
-          <span id="metric-string-temp" class="text-2xl font-black text-rose-400 font-mono">-- &deg;C</span>
+          <span id="metric-string-temp" class="text-2xl font-bold text-rose-400 font-mono tracking-tight">-- &deg;C</span>
           <span class="text-[11px] text-slate-500 block mt-1">Panel string average</span>
         </div>
       </div>
@@ -276,7 +285,7 @@
   <div class="hidden print-only p-6 border-b border-slate-300 bg-white">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-black text-[#0F356B]">SOLAR EPC INSTALLATIONS & ENGINEERING</h1>
+        <h1 class="text-2xl font-bold text-[#0F356B] tracking-tight">SOLAR EPC INSTALLATIONS & ENGINEERING</h1>
         <p class="text-sm text-slate-600">Grid-Tied Photovoltaic System Yield & Financial Assessment Report</p>
       </div>
       <div class="text-right text-xs text-slate-500">
@@ -300,7 +309,7 @@
               <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
               <h2 class="font-bold text-sm uppercase tracking-wide">1. Desired kW Installation</h2>
             </div>
-            <span class="text-xs bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black font-mono" id="badge-kwp-top">36.60 kWp</span>
+            <span class="text-xs bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-bold font-mono tracking-tight" id="badge-kwp-top">36.60 kWp</span>
           </div>
 
           <div class="p-4 space-y-3.5">
@@ -309,7 +318,7 @@
               <div class="flex justify-between items-center mb-1">
                 <label class="text-xs font-bold text-slate-800">Target Solar Capacity (<span id="capacity-unit-label">kWp</span>)</label>
                 <div class="flex items-center gap-1.5">
-                  <input type="number" id="input-capacity" step="0.1" min="0.1" max="50000" value="36.60" class="w-24 text-sm px-2.5 py-1 text-right font-black border-2 border-blue-600 rounded-lg text-blue-900 font-mono focus:ring-2 focus:ring-blue-600 outline-none">
+                  <input type="number" id="input-capacity" step="0.1" min="0.1" max="50000" value="36.60" class="w-24 text-sm px-2.5 py-1 text-right font-bold border-2 border-blue-600 rounded-lg text-blue-900 font-mono focus:ring-2 focus:ring-blue-600 outline-none">
                   <div class="inline-flex rounded-lg border border-slate-300 p-0.5 bg-slate-100 text-[11px] font-bold">
                     <button type="button" id="btn-unit-kw" class="px-2 py-0.5 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts">kW</button>
                     <button type="button" id="btn-unit-w" class="px-2 py-0.5 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts">W</button>
@@ -519,37 +528,37 @@
           
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Plant Size</span>
-            <div class="text-xl font-black text-[#0F356B] mt-0.5" id="kpi-capacity">36.60 kWp</div>
+            <div class="text-xl font-bold font-mono text-[#0F356B] mt-0.5 tracking-tight" id="kpi-capacity">36.60 kWp</div>
             <span class="text-[10px] text-slate-400">Rooftop grid-tied</span>
           </div>
 
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Annual Energy</span>
-            <div class="text-xl font-black text-emerald-600 mt-0.5" id="kpi-generation">58,634 kWh</div>
+            <div class="text-xl font-bold font-mono text-emerald-600 mt-0.5 tracking-tight" id="kpi-generation">58,634 kWh</div>
             <span class="text-[10px] text-slate-400" id="kpi-avg-monthly">4,886 kWh / month</span>
           </div>
 
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Specific Yield</span>
-            <div class="text-xl font-black text-amber-600 mt-0.5" id="kpi-yield">1,602</div>
+            <div class="text-xl font-bold font-mono text-amber-600 mt-0.5 tracking-tight" id="kpi-yield">1,602</div>
             <span class="text-[10px] text-slate-400">kWh / kWp / year</span>
           </div>
 
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Annual Offset</span>
-            <div class="text-xl font-black text-blue-700 mt-0.5" id="kpi-bill-offset">₹4,39,755</div>
+            <div class="text-xl font-bold font-mono text-blue-700 mt-0.5 tracking-tight" id="kpi-bill-offset">₹4,39,755</div>
             <span class="text-[10px] text-slate-400" id="kpi-avg-offset">₹36,646 / month</span>
           </div>
 
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Simple Payback</span>
-            <div class="text-xl font-black text-indigo-600 mt-0.5" id="kpi-payback">5.4 Yrs</div>
+            <div class="text-xl font-bold font-mono text-indigo-600 mt-0.5 tracking-tight" id="kpi-payback">5.4 Yrs</div>
             <span class="text-[10px] text-slate-400" id="kpi-capex-sub">₹23.79 Lakh CAPEX</span>
           </div>
 
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
             <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">25-Yr Net Benefit</span>
-            <div class="text-xl font-black text-teal-700 mt-0.5" id="kpi-net-benefit">₹86.15 L</div>
+            <div class="text-xl font-bold font-mono text-teal-700 mt-0.5 tracking-tight" id="kpi-net-benefit">₹86.15 L</div>
             <span class="text-[10px] text-slate-400">After plant cost</span>
           </div>
 
@@ -607,7 +616,7 @@
                     <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
                     <span>Prev</span>
                   </button>
-                  <span id="hourly-selected-day-label" class="px-2.5 py-1 text-xs font-black text-[#0F356B] border-x border-slate-200 font-mono">
+                  <span id="hourly-selected-day-label" class="px-2.5 py-1 text-xs font-bold text-[#0F356B] border-x border-slate-200 font-mono tracking-tight">
                     Today
                   </span>
                   <button id="btn-hourly-next" class="px-3 py-1 text-xs font-bold bg-[#0F356B] hover:bg-blue-800 text-white rounded-md transition shadow-xs flex items-center gap-1.5" title="Next Day Hourly Estimation">
@@ -1087,7 +1096,7 @@
       <!-- Popover Header -->
       <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
         <div class="flex items-center gap-2.5">
-          <div id="panel-modal-icon-wrap" class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black text-xs">
+          <div id="panel-modal-icon-wrap" class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs">
             P1
           </div>
           <div>
@@ -1112,19 +1121,19 @@
         <div class="grid grid-cols-2 gap-2 text-xs">
           <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block mb-0.5">Cell Voltage</span>
-            <span id="panel-modal-volt" class="text-base font-black text-blue-400 font-mono">-- V</span>
+            <span id="panel-modal-volt" class="text-base font-bold text-blue-400 font-mono tracking-tight">-- V</span>
           </div>
           <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block mb-0.5">Temperature</span>
-            <span id="panel-modal-temp" class="text-base font-black text-rose-400 font-mono">-- &deg;C</span>
+            <span id="panel-modal-temp" class="text-base font-bold text-rose-400 font-mono tracking-tight">-- &deg;C</span>
           </div>
           <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block mb-0.5">String Current</span>
-            <span id="panel-modal-curr" class="text-base font-black text-emerald-400 font-mono">-- A</span>
+            <span id="panel-modal-curr" class="text-base font-bold text-emerald-400 font-mono tracking-tight">-- A</span>
           </div>
           <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
             <span class="text-[10px] text-slate-400 block mb-0.5">String Power</span>
-            <span id="panel-modal-pwr" class="text-base font-black text-amber-400 font-mono">-- W</span>
+            <span id="panel-modal-pwr" class="text-base font-bold text-amber-400 font-mono tracking-tight">-- W</span>
           </div>
         </div>
 
@@ -1152,10 +1161,10 @@
       <div class="px-6 pt-6 pb-4 border-b border-slate-800 flex justify-between items-start">
         <div>
           <div class="flex items-center gap-2 mb-1">
-            <div class="w-7 h-7 rounded-lg bg-amber-400 flex items-center justify-center text-slate-950 font-black">
-              <i data-lucide="sun" class="w-4 h-4"></i>
+            <div class="w-7 h-7 rounded-lg bg-amber-400 flex items-center justify-center text-slate-950 font-bold">
+              <i data-lucide="sun" class="w-4 h-4 stroke-[2.5]"></i>
             </div>
-            <span class="font-extrabold text-base tracking-tight text-white">HelioPV Account</span>
+            <span class="font-bold text-base tracking-tight text-white">HelioPV Account</span>
           </div>
           <p class="text-xs text-slate-400">Access your solar monitoring and EPC project cloud</p>
         </div>
@@ -1467,7 +1476,7 @@
     <button id="mobile-nav-faults" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-amber-400 transition active:scale-95" type="button">
       <div class="relative flex items-center justify-center">
         <i data-lucide="bell" class="w-5 h-5"></i>
-        <span id="mobile-nav-fault-badge" class="hidden absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full border border-slate-900 animate-pulse">!</span>
+        <span id="mobile-nav-fault-badge" class="hidden absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full border border-slate-900 animate-pulse">!</span>
       </div>
       <span class="text-[11px] mt-1 tracking-tight">Fault Logs</span>
     </button>
