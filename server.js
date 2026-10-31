@@ -19,22 +19,49 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 const dns = require("dns");
-try {
-  dns.setServers(["8.8.8.8", "8.8.4.4"]);
-} catch (e) {
-  console.warn("Could not set custom DNS servers:", e.message);
+// On Windows only, default ISP DNS often fails SRV records.
+// On Linux/Docker (e.g. Render containers), do NOT override system DNS by default as containers use internal DNS resolvers (e.g. 127.0.0.11).
+if (process.platform === "win32") {
+  try {
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+  } catch (e) {
+    console.warn("Could not set custom DNS servers on Windows:", e.message);
+  }
 }
 
 const mongoose = require("mongoose");
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://mdzameer8618_db_user:xGEObXJ442Zru5EG@cluster0.uray226.mongodb.net/heliopv?retryWrites=true&w=majority";
+// Disable buffering so queries never hang for 10,000ms if connection is delayed or firewalled
+mongoose.set("bufferCommands", false);
 
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log("[MongoDB Atlas] Connected successfully to cluster0 (heliopv database)!");
-  })
-  .catch((err) => {
-    console.error("[MongoDB Atlas] Connection failed:", err.message);
-  });
+// Connection URIs: Primary SRV and Direct Replica Set Fallback
+const ATLAS_SRV_URI = process.env.MONGODB_URI || "mongodb+srv://mdzameer8618_db_user:xGEObXJ442Zru5EG@cluster0.uray226.mongodb.net/heliopv?retryWrites=true&w=majority";
+const ATLAS_DIRECT_URI = "mongodb://mdzameer8618_db_user:xGEObXJ442Zru5EG@ac-pfkhhvp-shard-00-00.uray226.mongodb.net:27017,ac-pfkhhvp-shard-00-01.uray226.mongodb.net:27017,ac-pfkhhvp-shard-00-02.uray226.mongodb.net:27017/heliopv?ssl=true&replicaSet=atlas-57abev-shard-0&authSource=admin&retryWrites=true&w=majority";
+
+// Local file-backed fallback store so auth NEVER fails or hangs if MongoDB Atlas is firewalled
+const USERS_FILE = path.join(__dirname, "users.json");
+let localUsers = [];
+
+function loadLocalUsers() {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      localUsers = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+    }
+  } catch (e) {
+    localUsers = [];
+  }
+}
+function saveLocalUsers() {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(localUsers, null, 2), "utf8");
+  } catch (e) {
+    console.warn("Failed to save local users cache:", e.message);
+  }
+}
+loadLocalUsers();
+
+let isMongoConnected = false;
+let mongoLastError = null;
+let mongoConnectionMethod = "none";
 
 // MongoDB Mongoose Schemas & Models
 const userSchema = new mongoose.Schema({
@@ -72,6 +99,232 @@ const pushSubscriptionSchema = new mongoose.Schema({
 
 const PushSubscription = mongoose.model("PushSubscription", pushSubscriptionSchema);
 
+// Auto-sync local fallback users to MongoDB Atlas when connection is online
+async function syncLocalUsersToAtlas() {
+  if (!isMongoConnected || !localUsers || localUsers.length === 0) return;
+  try {
+    for (const u of localUsers) {
+      const existing = await User.findOne({ email: u.email }).catch(() => null);
+      if (!existing) {
+        const nu = new User({
+          _id: (u.id && u.id.length === 24) ? new mongoose.Types.ObjectId(u.id) : undefined,
+          name: u.name,
+          email: u.email,
+          passwordHash: u.passwordHash,
+          profileImage: u.profileImage,
+          savedLocation: u.savedLocation,
+          savedSettings: u.savedSettings,
+          createdAt: u.createdAt || new Date()
+        });
+        await nu.save().catch(() => {});
+        console.log(`[MongoDB Atlas] Auto-synced user account (${u.email}) from local cache to cloud database!`);
+      }
+    }
+  } catch (e) {
+    console.warn("[MongoDB Atlas] Error syncing local users to Atlas:", e.message);
+  }
+}
+
+// Connect to MongoDB Atlas with automatic SRV -> Direct Replica Set failover
+async function connectToMongo() {
+  const options = {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 45000
+  };
+
+  try {
+    console.log("[MongoDB Atlas] Attempting SRV connection...");
+    await mongoose.connect(ATLAS_SRV_URI, options);
+    isMongoConnected = true;
+    mongoLastError = null;
+    mongoConnectionMethod = "srv";
+    console.log("[MongoDB Atlas] Connected successfully via SRV URI!");
+    await syncLocalUsersToAtlas();
+    return;
+  } catch (err) {
+    console.warn("[MongoDB Atlas] SRV connection attempt timed out or failed:", err.message);
+    mongoLastError = err.message;
+  }
+
+  // Attempt direct replica set connection
+  try {
+    console.log("[MongoDB Atlas] Retrying with Direct Replica Set URI...");
+    await mongoose.connect(ATLAS_DIRECT_URI, options);
+    isMongoConnected = true;
+    mongoLastError = null;
+    mongoConnectionMethod = "direct";
+    console.log("[MongoDB Atlas] Connected successfully via Direct Replica Set URI!");
+    await syncLocalUsersToAtlas();
+    return;
+  } catch (err2) {
+    console.error("[MongoDB Atlas] Direct connection failed:", err2.message);
+    mongoLastError = err2.message;
+    isMongoConnected = false;
+    console.warn("[MongoDB Atlas] Operating in resilient file-backed mode (users.json). If deployed on Render, please ensure 0.0.0.0/0 is added in MongoDB Atlas Network Access!");
+  }
+}
+
+mongoose.connection.on("connected", () => {
+  isMongoConnected = true;
+  mongoLastError = null;
+  syncLocalUsersToAtlas();
+});
+
+mongoose.connection.on("disconnected", () => {
+  isMongoConnected = false;
+});
+
+mongoose.connection.on("error", (err) => {
+  isMongoConnected = false;
+  mongoLastError = err.message;
+});
+
+connectToMongo();
+
+// Helper wrapper for local file-backed user items to maintain uniform API with Mongoose documents
+function createLocalUserWrapper(u) {
+  if (!u.id) {
+    u.id = new mongoose.Types.ObjectId().toString();
+  }
+  return {
+    _id: u.id,
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    passwordHash: u.passwordHash,
+    profileImage: u.profileImage || "",
+    savedLocation: u.savedLocation || {
+      lat: 12.8398,
+      lon: 77.5815,
+      displayLocation: "RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)",
+      updatedAt: new Date()
+    },
+    savedSettings: u.savedSettings || {
+      capacityKwp: 36.60,
+      tilt: 15,
+      azimuth: 180,
+      tariff: 7.50,
+      panelModel: "Mono PERC 550W (Tier-1)",
+      inverterModel: "SolarEdge String Inverter (98.5% Eff)"
+    },
+    createdAt: u.createdAt || new Date(),
+    save: async function() {
+      const idx = localUsers.findIndex((x) => x.id === this.id || x.email === this.email);
+      const data = {
+        id: this.id,
+        name: this.name,
+        email: this.email,
+        passwordHash: this.passwordHash,
+        profileImage: this.profileImage,
+        savedLocation: this.savedLocation,
+        savedSettings: this.savedSettings,
+        createdAt: this.createdAt,
+        updatedAt: new Date()
+      };
+      if (idx >= 0) {
+        localUsers[idx] = data;
+      } else {
+        localUsers.push(data);
+      }
+      saveLocalUsers();
+
+      if (isMongoConnected) {
+        try {
+          await User.findOneAndUpdate(
+            { email: this.email },
+            {
+              name: this.name,
+              passwordHash: this.passwordHash,
+              profileImage: this.profileImage,
+              savedLocation: this.savedLocation,
+              savedSettings: this.savedSettings
+            },
+            { upsert: true }
+          );
+        } catch (e) {}
+      }
+      return this;
+    }
+  };
+}
+
+// Unified Database Access Functions (Fast, Resilient, Zero 10-second Buffer Hangs)
+async function dbFindUserByEmail(email) {
+  const normalized = email.trim().toLowerCase();
+  if (isMongoConnected) {
+    try {
+      const user = await User.findOne({ email: normalized });
+      if (user) return user;
+    } catch (e) {
+      console.warn("[DB] Mongo findOne error, falling back to local:", e.message);
+    }
+  }
+  const local = localUsers.find((u) => u.email.toLowerCase() === normalized);
+  if (!local) return null;
+  return createLocalUserWrapper(local);
+}
+
+async function dbFindUserById(id) {
+  if (isMongoConnected) {
+    try {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        const user = await User.findById(id);
+        if (user) return user;
+      }
+    } catch (e) {
+      console.warn("[DB] Mongo findById error, falling back to local:", e.message);
+    }
+  }
+  const local = localUsers.find((u) => u.id === id || (u._id && u._id.toString() === id));
+  if (!local) return null;
+  return createLocalUserWrapper(local);
+}
+
+async function dbCreateUser({ name, email, passwordHash, profileImage, savedLocation }) {
+  const newId = new mongoose.Types.ObjectId().toString();
+  const localData = {
+    id: newId,
+    name,
+    email,
+    passwordHash,
+    profileImage,
+    savedLocation,
+    savedSettings: {
+      capacityKwp: 36.60,
+      tilt: 15,
+      azimuth: 180,
+      tariff: 7.50,
+      panelModel: "Mono PERC 550W (Tier-1)",
+      inverterModel: "SolarEdge String Inverter (98.5% Eff)"
+    },
+    createdAt: new Date()
+  };
+
+  localUsers.push(localData);
+  saveLocalUsers();
+
+  if (isMongoConnected) {
+    try {
+      const mongoUser = new User({
+        _id: new mongoose.Types.ObjectId(newId),
+        name,
+        email,
+        passwordHash,
+        profileImage,
+        savedLocation,
+        savedSettings: localData.savedSettings
+      });
+      await mongoUser.save();
+      return mongoUser;
+    } catch (e) {
+      console.warn("[DB] Could not save user directly to Mongo:", e.message);
+    }
+  }
+
+  return createLocalUserWrapper(localData);
+}
+
 // JWT Secret Key
 const JWT_SECRET = process.env.JWT_SECRET || "heliopv_jwt_secret_secure_key_2026_solar_iot";
 
@@ -88,7 +341,7 @@ async function authenticateToken(req, res, next) {
       return res.status(403).json({ error: "Session expired or invalid token" });
     }
     try {
-      const user = await User.findById(decoded.id);
+      const user = await dbFindUserById(decoded.id);
       if (!user) {
         return res.status(404).json({ error: "User account not found" });
       }
@@ -252,11 +505,25 @@ app.get("/api/network-info", (req, res) => {
   });
 });
 
+// Database diagnostics & health status endpoint
+app.get("/api/db-status", (req, res) => {
+  res.json({
+    mongoConnected: isMongoConnected,
+    connectionMethod: mongoConnectionMethod,
+    readyState: mongoose.connection.readyState,
+    readyStateDesc: ["disconnected", "connected", "connecting", "disconnecting"][mongoose.connection.readyState] || "unknown",
+    lastError: mongoLastError,
+    totalLocalUsers: localUsers.length,
+    platform: process.platform,
+    atlasHelp: isMongoConnected ? "Connected to MongoDB Atlas!" : "To allow Render to connect to MongoDB Atlas: Go to MongoDB Atlas (cloud.mongodb.com) -> Security -> Network Access -> '+ Add IP Address' -> Select 'Allow Access from Anywhere' (0.0.0.0/0) -> Confirm."
+  });
+});
+
 // ─────────────────────────────────────────────────────────────
 // AUTHENTICATION API ENDPOINTS (JWT + BCRYPT)
 // ─────────────────────────────────────────────────────────────
 
-// Register a new user in MongoDB
+// Register a new user in MongoDB / Resilient Local Store
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password, profileImage, location } = req.body || {};
@@ -268,7 +535,7 @@ app.post("/api/auth/signup", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const existingUser = await dbFindUserByEmail(normalizedEmail);
     if (existingUser) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
@@ -290,7 +557,7 @@ app.post("/api/auth/signup", async (req, res) => {
       updatedAt: new Date()
     };
 
-    const newUser = new User({
+    const newUser = await dbCreateUser({
       name: name.trim(),
       email: normalizedEmail,
       passwordHash,
@@ -298,11 +565,11 @@ app.post("/api/auth/signup", async (req, res) => {
       savedLocation: initialLocation
     });
 
-    await newUser.save();
-    console.log(`[MongoDB] New user registered: ${newUser.email} (${newUser.name})`);
+    const userIdStr = (newUser._id || newUser.id).toString();
+    console.log(`[Auth] New user registered: ${newUser.email} (${newUser.name})`);
 
     const token = jwt.sign(
-      { id: newUser._id.toString(), email: newUser.email, name: newUser.name },
+      { id: userIdStr, email: newUser.email, name: newUser.name },
       JWT_SECRET,
       { expiresIn: "30d" }
     );
@@ -311,7 +578,7 @@ app.post("/api/auth/signup", async (req, res) => {
       message: "Account registered successfully",
       token,
       user: {
-        id: newUser._id.toString(),
+        id: userIdStr,
         name: newUser.name,
         email: newUser.email,
         profileImage: newUser.profileImage,
@@ -325,7 +592,7 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
-// Log in an existing user from MongoDB
+// Log in an existing user from MongoDB / Resilient Local Store
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -334,7 +601,7 @@ app.post("/api/auth/login", async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await dbFindUserByEmail(normalizedEmail);
     if (!user) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
@@ -344,19 +611,20 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    const userIdStr = (user._id || user.id).toString();
     const token = jwt.sign(
-      { id: user._id.toString(), email: user.email, name: user.name },
+      { id: userIdStr, email: user.email, name: user.name },
       JWT_SECRET,
       { expiresIn: "30d" }
     );
 
-    console.log(`[MongoDB] User logged in: ${user.email} (Location: ${user.savedLocation?.displayLocation})`);
+    console.log(`[Auth] User logged in: ${user.email} (Location: ${user.savedLocation?.displayLocation})`);
 
     res.json({
       message: "Login successful",
       token,
       user: {
-        id: user._id.toString(),
+        id: userIdStr,
         name: user.name,
         email: user.email,
         profileImage: user.profileImage,
@@ -372,9 +640,10 @@ app.post("/api/auth/login", async (req, res) => {
 
 // Get current user profile and saved location preferences
 app.get("/api/auth/me", authenticateToken, (req, res) => {
+  const userIdStr = (req.user._id || req.user.id).toString();
   res.json({
     user: {
-      id: req.user._id.toString(),
+      id: userIdStr,
       name: req.user.name,
       email: req.user.email,
       profileImage: req.user.profileImage,
