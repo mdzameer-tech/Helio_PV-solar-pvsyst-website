@@ -519,6 +519,20 @@ app.get("/api/db-status", (req, res) => {
   });
 });
 
+// Reset all users (Fresh slate)
+app.post("/api/auth/fresh-slate", async (req, res) => {
+  try {
+    localUsers = [];
+    saveLocalUsers();
+    if (isMongoConnected) {
+      await User.deleteMany({});
+    }
+    res.json({ success: true, message: "All user accounts cleared for a fresh start." });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────
 // AUTHENTICATION API ENDPOINTS (JWT + BCRYPT)
 // ─────────────────────────────────────────────────────────────
