@@ -116,10 +116,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Hidden status elements preserved for background telemetry handlers -->
-        <span id="nav-gateway-status-text" class="hidden"></span>
-        <span id="nav-fault-summary-text" class="hidden"></span>
       </div>
 
     </div>
@@ -1480,6 +1476,18 @@
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- ESP32 Gateway Hardware Status Statement Tag (Placed just below profile info & above System Controls & Tools) -->
+      <div id="drawer-gateway-status-tag" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-red-500/40 bg-red-950/30 text-red-300 font-mono text-xs shadow-sm transition-all duration-200">
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2 w-2">
+            <span id="drawer-gw-ping-dot" class="hidden animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="drawer-gw-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+          </span>
+          <span id="drawer-gw-state-text" class="font-extrabold text-red-400 tracking-wider">OFFLINE</span>
+        </div>
+        <span id="drawer-gw-statement-text" class="text-[11px] text-amber-300/90 font-sans font-medium">Waiting for ESP32</span>
       </div>
 
       <!-- System & IoT Controls Section -->

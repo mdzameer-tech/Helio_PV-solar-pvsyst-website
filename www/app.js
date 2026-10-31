@@ -1714,63 +1714,150 @@ function setupEventListeners() {
   });
 }
 
+function isPushAlertsEnabled() {
+  return localStorage.getItem('heliopv_push_alerts_enabled') !== 'false';
+}
+
+function updatePushUI(isActive) {
+  const btnToggle = document.getElementById('btn-toggle-push-notif');
+  const lblStatus = document.getElementById('lbl-push-notif-status');
+  const drawerLbl = document.getElementById('drawer-lbl-push-status');
+  const drawerBadge = document.getElementById('drawer-badge-push');
+  const drawerBell = document.getElementById('drawer-icon-push-bell');
+
+  if (lblStatus) {
+    lblStatus.textContent = isActive ? 'Push: Active' : 'Push: Disabled';
+  }
+  if (btnToggle) {
+    if (isActive) {
+      btnToggle.className = 'flex items-center gap-1.5 bg-emerald-900/60 text-emerald-300 border border-emerald-500/60 text-xs px-2.5 py-1.5 rounded-lg font-bold transition shadow-sm';
+    } else {
+      btnToggle.className = 'flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition';
+    }
+  }
+
+  if (drawerLbl) {
+    drawerLbl.textContent = isActive ? 'Active: Alerts enabled (Works in background)' : 'Disabled: Click to enable';
+  }
+  if (drawerBadge) {
+    if (isActive) {
+      drawerBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+      drawerBadge.textContent = 'Active';
+    } else {
+      drawerBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700';
+      drawerBadge.textContent = 'Disabled';
+    }
+  }
+  if (drawerBell) {
+    drawerBell.className = isActive ? 'w-4 h-4 text-emerald-400' : 'w-4 h-4 text-slate-500';
+  }
+}
+
+async function scheduleCapacitorNotification(title, body) {
+  const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
+  if (!LocalNotifications) return false;
+  try {
+    const perm = await LocalNotifications.requestPermissions();
+    if (perm && perm.display === 'granted') {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title: title,
+            body: body,
+            id: Math.floor(Math.random() * 90000) + 1000,
+            schedule: { at: new Date(Date.now() + 100) },
+            sound: null,
+            attachments: null,
+            actionTypeId: '',
+            extra: null
+          }
+        ]
+      });
+      return true;
+    }
+  } catch (e) {
+    console.warn('[Capacitor LocalNotification] schedule error:', e);
+  }
+  return false;
+}
+
+async function showServiceWorkerNotification(title, body) {
+  if (!('serviceWorker' in navigator)) return false;
+  try {
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 1500))
+    ]).catch(() => null);
+
+    if (reg && reg.showNotification) {
+      await reg.showNotification(title, {
+        body: body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
+        badge: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
+        vibrate: [250, 100, 250, 100, 250],
+        tag: 'solar-fault-' + Date.now(),
+        renotify: true,
+        requireInteraction: true,
+        data: { url: '/?view=monitor' }
+      });
+      return true;
+    }
+  } catch (e) {
+    console.warn('[ServiceWorker Notification] error:', e);
+  }
+  return false;
+}
+
+function showWindowNotification(title, body) {
+  if (!('Notification' in window)) return false;
+  try {
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        body: body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
+        vibrate: [250, 100, 250]
+      });
+      return true;
+    }
+  } catch (e) {
+    console.warn('[Window Notification] error:', e);
+  }
+  return false;
+}
+
+async function dispatchSystemNotification(title, body) {
+  // 1. Native Capacitor (Android Mobile App)
+  let dispatched = await scheduleCapacitorNotification(title, body);
+
+  // 2. ServiceWorker notification fallback
+  if (!dispatched) {
+    dispatched = await showServiceWorkerNotification(title, body);
+  }
+
+  // 3. Desktop browser Window Notification fallback
+  if (!dispatched) {
+    dispatched = showWindowNotification(title, body);
+  }
+
+  return dispatched;
+}
+
 async function triggerDirectTestNotification() {
   playFaultAlertAudio();
 
-  // 1. Ensure permission is requested/granted
-  if ('Notification' in window) {
-    if (Notification.permission === 'default') {
-      try {
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-      } catch (e) {
-        return;
-      }
-    } else if (Notification.permission === 'denied') {
-      console.warn('Notifications blocked in browser settings.');
-      return;
-    }
-  }
-
   const title = '⚠️ Solar String Fault Detected! (Test Alert)';
-  const options = {
-    body: 'Wire break simulation at Node 2: Open circuit detected.',
-    icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
-    badge: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
-    vibrate: [250, 100, 250, 100, 250],
-    tag: 'solar-fault-test-' + Date.now(),
-    renotify: true,
-    requireInteraction: true,
-    data: { url: '/?view=monitor' }
-  };
+  const body = 'Wire break simulation at Node 2: Open circuit detected. Real-time background push alert test.';
 
-  // 2. Immediately pop up native system notification on this device (Laptop / Mobile)
-  let directShown = false;
-  try {
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.ready;
-      if (reg && reg.showNotification) {
-        await reg.showNotification(title, options);
-        directShown = true;
-      }
-    }
-  } catch (err) {
-    console.warn('ServiceWorker direct notification error:', err);
-  }
+  // Dispatch across native Capacitor, ServiceWorker, or window Notification
+  await dispatchSystemNotification(title, body);
 
-  if (!directShown && 'Notification' in window && Notification.permission === 'granted') {
-    try {
-      new Notification(title, options);
-      directShown = true;
-    } catch (err) {
-      console.warn('Window Notification fallback error:', err);
-    }
-  }
-
-  // 3. Dispatch to server to broadcast to all other registered devices
+  // Broadcast to server web-push subscribers
   try {
     fetch(`${getBackendBaseUrl()}/api/push-test`, { method: 'POST' }).catch(() => {});
   } catch (e) {}
+
+  // Immediate confirmation alert so user knows test executed
+  alert('🔔 Test Background Push Alert Dispatched!\n\nA system alert was triggered. You will see it in your notification shade and status bar, with alarm audio and vibration.');
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -1784,135 +1871,97 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-async function setupPushNotifications() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.log('Web Push is not supported in this browser environment.');
-    return;
-  }
+async function togglePushNotificationAlerts() {
+  const currentActive = isPushAlertsEnabled();
 
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
+  if (currentActive) {
+    localStorage.setItem('heliopv_push_alerts_enabled', 'false');
+    updatePushUI(false);
 
-    let sub = await reg.pushManager.getSubscription();
-    const btnToggle = document.getElementById('btn-toggle-push-notif');
-    const lblStatus = document.getElementById('lbl-push-notif-status');
-
-    function updatePushUI(isSubscribed) {
-      if (lblStatus) {
-        lblStatus.textContent = isSubscribed ? 'Push: Active' : 'Push Alerts';
-      }
-      if (btnToggle) {
-        if (isSubscribed) {
-          btnToggle.className = 'flex items-center gap-1.5 bg-emerald-900/60 text-emerald-300 border border-emerald-500/60 text-xs px-2.5 py-1.5 rounded-lg font-bold transition shadow-sm';
-        } else {
-          btnToggle.className = 'flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg font-medium border border-slate-700 transition';
-        }
-      }
-
-      // Sync Drawer Notification Status
-      const drawerLblStatus = document.getElementById('drawer-lbl-push-status');
-      const drawerBadge = document.getElementById('drawer-badge-push');
-      if (drawerLblStatus) {
-        drawerLblStatus.textContent = isSubscribed ? 'Active: Alerts enabled' : 'Disabled: Click to enable';
-      }
-      if (drawerBadge) {
-        if (isSubscribed) {
-          drawerBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
-          drawerBadge.textContent = 'Active';
-        } else {
-          drawerBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700';
-          drawerBadge.textContent = 'Disabled';
-        }
-      }
-    }
-
-    updatePushUI(!!sub);
-
-    async function subscribeUser() {
-      const res = await fetch(`${getBackendBaseUrl()}/api/vapid-public-key`);
-      if (!res.ok) throw new Error('Failed to fetch VAPID key');
-      const { publicKey } = await res.json();
-      const convertedKey = urlBase64ToUint8Array(publicKey);
-
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedKey
-      });
-
-      await fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub)
-      });
-
-      updatePushUI(true);
-      return true;
-    }
-
-    btnToggle?.addEventListener('click', async () => {
-      if (Notification.permission === 'denied') {
-        alert('⚠️ Push notifications are blocked in your browser settings. Please click the lock icon next to the URL and set Notifications to "Allow".');
-        return;
-      }
-
-      if (sub) {
-        try {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
           await sub.unsubscribe();
-          await fetch(`${getBackendBaseUrl()}/api/push-unsubscribe`, {
+          fetch(`${getBackendBaseUrl()}/api/push-unsubscribe`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ endpoint: sub.endpoint })
-          });
-        } catch (e) {}
-        sub = null;
-        updatePushUI(false);
-        alert('🔕 Background push notifications have been disabled.');
-      } else {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          try {
-            await subscribeUser();
-            alert('🔔 Background Push Alerts Active!\n\nYou will now receive system notifications on your phone or PC screen whenever an open-circuit wire fault occurs—even when this app is closed or minimized!');
-          } catch (err) {
-            console.error('Subscription error:', err);
-            alert('Could not complete push subscription. Ensure server is running.');
-          }
+          }).catch(() => {});
         }
-      }
-    });
-
-    // Auto-prompt on first open if permission is 'default'
-    if (Notification.permission === 'default') {
+      } catch (e) {}
+    }
+    alert('🔕 Background Push Alerts Disabled.\n\nYou will no longer receive notifications on this device.');
+  } else {
+    // Request Native permissions if in Capacitor
+    if (window.Capacitor?.Plugins?.LocalNotifications) {
       try {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') {
-          await subscribeUser();
-          console.log('[Push] Notification permission granted and subscribed on first launch.');
+        await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
+      } catch (e) {}
+    }
+
+    // Request Web permissions if in browser
+    if ('Notification' in window) {
+      try {
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+      } catch (e) {}
+    }
+
+    // If Web PushManager supported, register subscription
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const res = await fetch(`${getBackendBaseUrl()}/api/vapid-public-key`);
+        if (res.ok) {
+          const { publicKey } = await res.json();
+          const convertedKey = urlBase64ToUint8Array(publicKey);
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedKey
+          });
+          await fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub)
+          });
         }
       } catch (e) {
-        console.warn('[Push] Auto-request failed:', e);
-      }
-    } else if (Notification.permission === 'granted') {
-      if (!sub) {
-        // Permission was granted (e.g. via Android native prompt) but push subscription not yet stored
-        try {
-          await subscribeUser();
-        } catch (e) {
-          console.warn('[Push] Auto-subscribe failed:', e);
-        }
-      } else {
-        // Sync subscription with server to ensure it is registered
-        fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub)
-        }).catch(() => {});
+        console.warn('[WebPush] Subscribe error:', e);
       }
     }
 
-  } catch (err) {
-    console.warn('Push notification service worker init failed:', err);
+    localStorage.setItem('heliopv_push_alerts_enabled', 'true');
+    updatePushUI(true);
+    alert('🔔 Background Push Alerts Active!\n\nYou will now receive system notifications on your phone or PC whenever a wire fault or open-circuit break occurs—even when the app is closed or in the background!');
+  }
+}
+
+async function setupPushNotifications() {
+  // Always initialize UI based on user preference
+  updatePushUI(isPushAlertsEnabled());
+
+  // Attach click listener to both drawer button and hidden header button
+  document.getElementById('btn-toggle-push-notif')?.addEventListener('click', togglePushNotificationAlerts);
+  document.getElementById('drawer-btn-push-alerts')?.addEventListener('click', togglePushNotificationAlerts);
+
+  // If ServiceWorker supported, register sw.js
+  if ('serviceWorker' in navigator) {
+    try {
+      await navigator.serviceWorker.register('/sw.js');
+    } catch (e) {
+      console.warn('Service worker register warning:', e);
+    }
+  }
+
+  // If Capacitor Native app, request local notification permissions
+  if (window.Capacitor?.Plugins?.LocalNotifications) {
+    try {
+      await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
+    } catch (e) {}
   }
 }
 
@@ -2158,25 +2207,66 @@ function playFaultAlertAudio() {
   } catch (e) {}
 }
 
-function sendFaultPushNotification(title, body) {
+async function sendFaultPushNotification(title, body) {
+  if (!isPushAlertsEnabled()) return;
   playFaultAlertAudio();
-  if ('Notification' in window) {
-    if (Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body: body,
-          icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
-          vibrate: [250, 100, 250]
-        });
-      } catch (e) {}
-    } else if (Notification.permission === 'default') {
-      Notification.requestPermission();
+  await dispatchSystemNotification(title, body);
+}
+
+function updateDrawerGatewayStatus(gatewayOnline, faultDescription, faultNodeId, isSimulated, simulationScenario) {
+  const tag = document.getElementById('drawer-gateway-status-tag');
+  const pingDot = document.getElementById('drawer-gw-ping-dot');
+  const statusDot = document.getElementById('drawer-gw-status-dot');
+  const stateText = document.getElementById('drawer-gw-state-text');
+  const statementText = document.getElementById('drawer-gw-statement-text');
+
+  if (!tag || !stateText || !statementText) return;
+
+  if (isSimulated && simulationScenario !== 'live_hardware') {
+    tag.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-blue-500/40 bg-blue-950/30 text-blue-300 font-mono text-xs shadow-sm transition-all duration-200';
+    if (pingDot) pingDot.className = 'hidden';
+    if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-blue-400';
+    stateText.className = 'font-extrabold text-blue-400 tracking-wider';
+    stateText.textContent = 'SIMULATED';
+    statementText.className = 'text-[11px] text-blue-300/90 font-sans font-medium';
+    statementText.textContent = faultDescription ? `Fault at Node ${faultNodeId}` : (simulationScenario ? `Scenario: ${simulationScenario}` : 'Demo Simulation');
+    return;
+  }
+
+  if (gatewayOnline) {
+    if (faultNodeId) {
+      tag.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-red-500/50 bg-red-950/40 text-red-300 font-mono text-xs shadow-sm transition-all duration-200';
+      if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75';
+      if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-red-500';
+      stateText.className = 'font-extrabold text-red-400 tracking-wider';
+      stateText.textContent = 'BREAK DETECTED';
+      statementText.className = 'text-[11px] text-red-300/90 font-sans font-medium truncate max-w-[170px]';
+      statementText.textContent = `Node ${faultNodeId} Open Circuit`;
+    } else {
+      tag.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-300 font-mono text-xs shadow-sm transition-all duration-200';
+      if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+      if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500';
+      stateText.className = 'font-extrabold text-emerald-400 tracking-wider';
+      stateText.textContent = 'ONLINE';
+      statementText.className = 'text-[11px] text-emerald-300/90 font-sans font-medium';
+      statementText.textContent = 'ESP32 Gateway Active';
     }
+  } else {
+    tag.className = 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-red-500/40 bg-red-950/30 text-red-300 font-mono text-xs shadow-sm transition-all duration-200';
+    if (pingDot) pingDot.className = 'hidden';
+    if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-red-500';
+    stateText.className = 'font-extrabold text-red-400 tracking-wider';
+    stateText.textContent = 'OFFLINE';
+    statementText.className = 'text-[11px] text-amber-300/90 font-sans font-medium';
+    statementText.textContent = 'Waiting for ESP32';
   }
 }
 
 // Request permission once on first click on mobile/desktop
 document.addEventListener('click', function initNotifyPermission() {
+  if (window.Capacitor?.Plugins?.LocalNotifications) {
+    window.Capacitor.Plugins.LocalNotifications.requestPermissions().catch(() => {});
+  }
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission().catch(() => {});
   }
@@ -2192,9 +2282,8 @@ function renderIoTMonitor(data) {
   IoTMonitorState.isSimulated = data.isSimulated;
   IoTMonitorState.simulationScenario = data.simulationScenario;
 
-  // 1. Gateway Status Badge & Header Indicators
+  // 1. Gateway Status Badge & Dot Indicators
   const gwBadge = document.getElementById('iot-gateway-status');
-  const navGwText = document.getElementById('nav-gateway-status-text');
   const pingDot = document.getElementById('gateway-ping-dot');
   const statusDot = document.getElementById('gateway-status-dot');
 
@@ -2203,10 +2292,6 @@ function renderIoTMonitor(data) {
       gwBadge.innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="text-emerald-400">ESP32 Gateway: ONLINE</span> ${data.isSimulated ? '<span class="text-[10px] text-blue-300 font-mono">(Simulated)</span>' : ''}`;
       gwBadge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/50 bg-emerald-950/40 text-emerald-300';
     }
-    if (navGwText) {
-      navGwText.textContent = 'ONLINE';
-      navGwText.className = 'font-bold text-emerald-400';
-    }
     if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
     if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500';
   } else {
@@ -2214,17 +2299,15 @@ function renderIoTMonitor(data) {
       gwBadge.innerHTML = '<span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500"></span> <span class="text-red-400">ESP32 Gateway: OFFLINE</span>';
       gwBadge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-red-500/50 bg-red-950/40 text-red-300';
     }
-    if (navGwText) {
-      navGwText.textContent = 'OFFLINE';
-      navGwText.className = 'font-bold text-red-400';
-    }
     if (pingDot) pingDot.className = 'hidden';
     if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-red-500';
   }
 
+  // Update Operator Profile Statement Tag (below profile info & above System Controls & Tools)
+  updateDrawerGatewayStatus(data.gatewayOnline, data.faultDescription, data.faultNodeId, data.isSimulated, data.simulationScenario);
+
   // 2. Alert Box (Root Cause Fault Isolation) & Notifications
   const alertBox = document.getElementById('iot-alert-box');
-  const navFaultText = document.getElementById('nav-fault-summary-text');
   const estIotBadge = document.getElementById('estimation-iot-status-badge');
   const mobileFaultBadge = document.getElementById('mobile-nav-fault-badge');
 
@@ -2251,10 +2334,6 @@ function renderIoTMonitor(data) {
         </div>
       `;
     }
-    if (navFaultText) {
-      navFaultText.textContent = `Fault: Node ${data.faultNodeId} Open`;
-      navFaultText.className = 'text-red-400 font-bold';
-    }
     if (estIotBadge) {
       estIotBadge.textContent = `⚠ Break: ${data.faultDescription}`;
       estIotBadge.className = 'font-mono text-red-700 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-300';
@@ -2268,10 +2347,6 @@ function renderIoTMonitor(data) {
           Gateway has not received packets within the last 15 seconds. Ensure ESP32-C6 is powered and transmitting to <code>/api/data</code>, or click any simulation scenario button above.
         </div>
       `;
-    }
-    if (navFaultText) {
-      navFaultText.textContent = 'Waiting for ESP32';
-      navFaultText.className = 'text-amber-400';
     }
     if (estIotBadge) {
       estIotBadge.textContent = 'ESP32 Offline (Click to view)';
@@ -2288,10 +2363,6 @@ function renderIoTMonitor(data) {
             Voltage below 500 mV on: ${lowV.map(c => (c.type === 'string' ? 'String Node' : 'Panel ' + c.id)).join(', ')}. Check for panel soiling or shade.
           </div>
         `;
-      }
-      if (navFaultText) {
-        navFaultText.textContent = 'Low Voltage Warning';
-        navFaultText.className = 'text-amber-400 font-bold';
       }
       if (estIotBadge) {
         estIotBadge.textContent = '⚠ Low Voltage on Array';
@@ -2314,10 +2385,6 @@ function renderIoTMonitor(data) {
             All 4 nodes reporting intact series connections. Photovoltaic series circuit is complete and conducting.
           </div>
         `;
-      }
-      if (navFaultText) {
-        navFaultText.textContent = 'All Nodes Intact (Continuous)';
-        navFaultText.className = 'text-emerald-400 font-semibold';
       }
       if (estIotBadge) {
         estIotBadge.textContent = '● All 4 Nodes Connected';
@@ -2807,6 +2874,13 @@ function renderIoTMonitorOffline(errMsg) {
     gwBadge.innerHTML = '<span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-500"></span> <span class="text-slate-400">Server Offline (:3000)</span>';
     gwBadge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-slate-700 bg-slate-900 text-slate-400';
   }
+
+  const pingDot = document.getElementById('gateway-ping-dot');
+  const statusDot = document.getElementById('gateway-status-dot');
+  if (pingDot) pingDot.className = 'hidden';
+  if (statusDot) statusDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-red-500';
+
+  updateDrawerGatewayStatus(false, null, null, false, null);
 
   const alertBox = document.getElementById('iot-alert-box');
   if (alertBox) {
@@ -3713,7 +3787,7 @@ function setupAuthEventListeners() {
 
   // Drawer Push Notification Toggle Button
   document.getElementById('drawer-btn-push-alerts')?.addEventListener('click', () => {
-    document.getElementById('btn-toggle-push-notif')?.click();
+    togglePushNotificationAlerts();
   });
 
   // Drawer ESP32 Gateway Setup Button
