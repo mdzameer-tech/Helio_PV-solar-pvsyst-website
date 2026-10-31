@@ -809,11 +809,9 @@ input, button, select, textarea {
   font-family: var(--font-mono) !important;
 }
 
+.compact-hint,
 .string-array-row.schematic-fit-mode .compact-hint {
-  font-size: 0.52rem !important;
-  color: #94A3B8 !important;
-  line-height: 1 !important;
-  margin-top: 2px !important;
+  display: none !important;
 }
 
 .string-array-row.schematic-fit-mode .iot-vals {

@@ -2425,7 +2425,6 @@ function renderIoTMonitor(data) {
           <!-- Primary Metric for Mobile Fit View -->
           <div class="cell-compact-metric">
             <span class="compact-volt">${typeof c.voltage === 'number' ? c.voltage.toFixed(1) + 'V' : '--'}</span>
-            <span class="compact-hint">tap/hold</span>
           </div>
 
           <div class="iot-vals">${renderCellBody(c)}</div>
