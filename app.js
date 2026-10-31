@@ -170,8 +170,22 @@ function loadCachedLocationAndSettings() {
         if (inpTariff) inpTariff.value = s.tariff;
       }
     }
+    updateHardwarePreviewBadge();
   } catch (e) {
     console.warn('Error loading cached location/settings on revisit:', e);
+  }
+}
+
+/**
+ * Update the Hardware Info summary pill in the operator profile drawer
+ */
+function updateHardwarePreviewBadge() {
+  const lbl = document.getElementById('drawer-lbl-hw-preview');
+  if (lbl) {
+    const costK = Math.round((AppState.financials.costPerKwp || 65000) / 1000);
+    const tariff = AppState.financials.tariff || 7.50;
+    const tilt = AppState.pv.tiltDeg || 13;
+    lbl.textContent = `₹${costK}k/kWp • ₹${tariff}/u • Tilt ${tilt}°`;
   }
 }
 
@@ -1326,31 +1340,36 @@ function setupEventListeners() {
   });
 
   // Tilt & Azimuth
-  document.getElementById('input-tilt').addEventListener('input', (e) => {
+  document.getElementById('input-tilt')?.addEventListener('input', (e) => {
     AppState.pv.tiltDeg = parseFloat(e.target.value) || 13;
+    updateHardwarePreviewBadge();
     runSimulation();
   });
 
-  document.getElementById('btn-auto-tilt').addEventListener('click', () => {
+  document.getElementById('btn-auto-tilt')?.addEventListener('click', () => {
     const opt = PVEngine.calculateOptimalTilt(AppState.project.lat);
     AppState.pv.tiltDeg = opt;
-    document.getElementById('input-tilt').value = opt;
+    const inpTilt = document.getElementById('input-tilt');
+    if (inpTilt) inpTilt.value = opt;
+    updateHardwarePreviewBadge();
     runSimulation();
   });
 
-  document.getElementById('select-azimuth').addEventListener('change', (e) => {
+  document.getElementById('select-azimuth')?.addEventListener('change', (e) => {
     AppState.pv.azimuthDeg = parseFloat(e.target.value);
     runSimulation();
   });
 
   // Financial inputs
-  document.getElementById('input-cost-per-kwp').addEventListener('input', (e) => {
+  document.getElementById('input-cost-per-kwp')?.addEventListener('input', (e) => {
     AppState.financials.costPerKwp = parseFloat(e.target.value) || 65000;
+    updateHardwarePreviewBadge();
     runSimulation();
   });
 
-  document.getElementById('input-tariff').addEventListener('input', (e) => {
+  document.getElementById('input-tariff')?.addEventListener('input', (e) => {
     AppState.financials.tariff = parseFloat(e.target.value) || 7.50;
+    updateHardwarePreviewBadge();
     runSimulation();
   });
 
@@ -3492,23 +3511,37 @@ function setupAuthEventListeners() {
     }
   });
 
-  // Drawer: Hardware & CAPEX Accordion Toggle
-  const btnToggleHwCapex = document.getElementById('drawer-btn-toggle-hardware-capex');
-  const hwCapexContent = document.getElementById('drawer-content-hardware-capex');
-  const iconHwChevron = document.getElementById('drawer-icon-hardware-chevron');
+  // Hardware Info Settings Modal (Claude-style centered window)
+  const modalHwInfoModal = document.getElementById('modal-hardware-info');
+  const btnOpenHwInfoDrawer = document.getElementById('drawer-btn-open-hardware-info');
+  const btnCloseHwInfoModal = document.getElementById('btn-close-hw-info-modal');
+  const btnDoneHwInfoModal = document.getElementById('btn-done-hw-info-modal');
 
-  function openHardwareCapexTab() {
-    hwCapexContent?.classList.remove('hidden');
-    iconHwChevron?.classList.add('rotate-180');
+  function openHardwareInfoModal() {
+    closeDrawer(); // Smoothly close operator drawer
+    modalHwInfoModal?.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
   }
 
-  btnToggleHwCapex?.addEventListener('click', () => {
-    const isHidden = hwCapexContent?.classList.contains('hidden');
-    if (isHidden) {
-      openHardwareCapexTab();
-    } else {
-      hwCapexContent?.classList.add('hidden');
-      iconHwChevron?.classList.remove('rotate-180');
+  function closeHardwareInfoModal() {
+    modalHwInfoModal?.classList.add('hidden');
+  }
+
+  btnOpenHwInfoDrawer?.addEventListener('click', openHardwareInfoModal);
+  btnCloseHwInfoModal?.addEventListener('click', closeHardwareInfoModal);
+  btnDoneHwInfoModal?.addEventListener('click', closeHardwareInfoModal);
+
+  // Close when clicking modal backdrop
+  modalHwInfoModal?.addEventListener('click', (e) => {
+    if (e.target === modalHwInfoModal) {
+      closeHardwareInfoModal();
+    }
+  });
+
+  // ESC key closes hardware info modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalHwInfoModal && !modalHwInfoModal.classList.contains('hidden')) {
+      closeHardwareInfoModal();
     }
   });
 
@@ -3518,8 +3551,7 @@ function setupAuthEventListeners() {
   });
 
   document.getElementById('btn-quick-open-hw-capex')?.addEventListener('click', () => {
-    openDrawer();
-    openHardwareCapexTab();
+    openHardwareInfoModal();
   });
 
   // Drawer Push Notification Toggle Button
