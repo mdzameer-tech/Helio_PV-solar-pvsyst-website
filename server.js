@@ -867,6 +867,24 @@ app.post("/api/push-test", async (req, res) => {
   res.json({ success: true, count: pushSubscriptions.length });
 });
 
+// Broadcast client-triggered or hardware-detected fault to all push subscribers
+app.post("/api/push-fault", async (req, res) => {
+  const { title, body, faultNodeId, faultDescription } = req.body || {};
+  const alertTitle = title || "🚨 Solar String Fault Detected!";
+  const alertBody = body || (faultDescription ? `Break at Node ${faultNodeId}: ${faultDescription}` : "Solar PV circuit disconnection detected.");
+
+  console.log(`[Push Notification] Broadcasting fault alert: ${alertTitle} - ${alertBody}`);
+  await sendPushNotification({
+    title: alertTitle,
+    body: alertBody,
+    icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+    badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
+    vibrate: [300, 150, 300, 150, 300],
+    url: "/?view=monitor"
+  });
+  res.json({ success: true, count: pushSubscriptions.length });
+});
+
 // Helper: Compute fault state consistently across endpoints
 let lastFaultState = null;
 
@@ -903,15 +921,15 @@ function computeFaultState() {
 function checkFaultAndNotify() {
   const { gatewayOnline, faultNodeId, faultDescription } = computeFaultState();
 
-  if (faultNodeId !== null && lastFaultState === null) {
-    // A NEW fault just occurred!
+  if (faultNodeId !== null && faultNodeId !== lastFaultState) {
+    // A NEW or CHANGED fault occurred!
     console.log(`[ALERT] 🚨 Solar String Fault at Node ${faultNodeId}! Triggering Native Push...`);
     sendPushNotification({
-      title: "⚠️ Solar String Fault Detected!",
-      body: `Wire break at Node ${faultNodeId}: ${faultDescription}`,
+      title: "🚨 Solar String Fault Detected!",
+      body: `CRITICAL ALERT: Wire break at Node ${faultNodeId}! ${faultDescription}`,
       icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
       badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
-      vibrate: [250, 100, 250, 100, 250],
+      vibrate: [300, 150, 300, 150, 300],
       url: "/?view=monitor"
     });
     lastFaultState = faultNodeId;

@@ -2017,6 +2017,58 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+/**
+ * Ensure device is registered for notifications and subscribed to Web Push backend
+ */
+async function ensurePushSubscription() {
+  if (!isPushAlertsEnabled()) return;
+
+  // 1. Request Native permissions if in Capacitor
+  if (window.Capacitor?.Plugins?.LocalNotifications) {
+    try {
+      await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
+    } catch (e) {}
+  }
+
+  // 2. Request Web permissions if in browser
+  if ('Notification' in window && Notification.permission === 'default') {
+    try {
+      await Notification.requestPermission();
+    } catch (e) {}
+  }
+
+  // 3. Register ServiceWorker and auto-subscribe to backend Web Push
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+
+      if (!sub && ('Notification' in window && Notification.permission === 'granted')) {
+        const res = await fetch(`${getBackendBaseUrl()}/api/vapid-public-key`);
+        if (res.ok) {
+          const { publicKey } = await res.json();
+          const convertedKey = urlBase64ToUint8Array(publicKey);
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedKey
+          });
+        }
+      }
+
+      if (sub) {
+        await fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub)
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('[WebPush] ensurePushSubscription info:', e.message);
+    }
+  }
+}
+
 async function togglePushNotificationAlerts() {
   const currentActive = isPushAlertsEnabled();
 
@@ -2040,48 +2092,11 @@ async function togglePushNotificationAlerts() {
     }
     alert('🔕 Background Push Alerts Disabled.\n\nYou will no longer receive notifications on this device.');
   } else {
-    // Request Native permissions if in Capacitor
-    if (window.Capacitor?.Plugins?.LocalNotifications) {
-      try {
-        await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
-      } catch (e) {}
-    }
-
-    // Request Web permissions if in browser
-    if ('Notification' in window) {
-      try {
-        if (Notification.permission === 'default') {
-          await Notification.requestPermission();
-        }
-      } catch (e) {}
-    }
-
-    // If Web PushManager supported, register subscription
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
-        const res = await fetch(`${getBackendBaseUrl()}/api/vapid-public-key`);
-        if (res.ok) {
-          const { publicKey } = await res.json();
-          const convertedKey = urlBase64ToUint8Array(publicKey);
-          const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: convertedKey
-          });
-          await fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sub)
-          });
-        }
-      } catch (e) {
-        console.warn('[WebPush] Subscribe error:', e);
-      }
-    }
-
     localStorage.setItem('heliopv_push_alerts_enabled', 'true');
     updatePushUI(true);
+
+    await ensurePushSubscription();
+
     alert('🔔 Background Push Alerts Active!\n\nYou will now receive system notifications on your phone or PC whenever a wire fault or open-circuit break occurs—even when the app is closed or in the background!');
   }
 }
@@ -2094,20 +2109,9 @@ async function setupPushNotifications() {
   document.getElementById('btn-toggle-push-notif')?.addEventListener('click', togglePushNotificationAlerts);
   document.getElementById('drawer-btn-push-alerts')?.addEventListener('click', togglePushNotificationAlerts);
 
-  // If ServiceWorker supported, register sw.js
-  if ('serviceWorker' in navigator) {
-    try {
-      await navigator.serviceWorker.register('/sw.js');
-    } catch (e) {
-      console.warn('Service worker register warning:', e);
-    }
-  }
-
-  // If Capacitor Native app, request local notification permissions
-  if (window.Capacitor?.Plugins?.LocalNotifications) {
-    try {
-      await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
-    } catch (e) {}
+  // Auto-register service worker & push subscription if enabled
+  if (isPushAlertsEnabled()) {
+    ensurePushSubscription().catch(() => {});
   }
 }
 
@@ -2357,6 +2361,15 @@ async function sendFaultPushNotification(title, body) {
   if (!isPushAlertsEnabled()) return;
   playFaultAlertAudio();
   await dispatchSystemNotification(title, body);
+
+  // Broadcast to backend Web Push so all subscriber devices get the notification immediately
+  try {
+    fetch(`${getBackendBaseUrl()}/api/push-fault`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body })
+    }).catch(() => {});
+  } catch (e) {}
 }
 
 function updateDrawerGatewayStatus(gatewayOnline, faultDescription, faultNodeId, isSimulated, simulationScenario) {
@@ -2408,13 +2421,10 @@ function updateDrawerGatewayStatus(gatewayOnline, faultDescription, faultNodeId,
   }
 }
 
-// Request permission once on first click on mobile/desktop
+// Request permission once on first click on mobile/desktop and ensure WebPush registration
 document.addEventListener('click', function initNotifyPermission() {
-  if (window.Capacitor?.Plugins?.LocalNotifications) {
-    window.Capacitor.Plugins.LocalNotifications.requestPermissions().catch(() => {});
-  }
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
+  if (isPushAlertsEnabled()) {
+    ensurePushSubscription().catch(() => {});
   }
   document.removeEventListener('click', initNotifyPermission);
 }, { once: true });
@@ -3235,6 +3245,22 @@ function runClientSideSimulation(scenario) {
     isSimulated: true,
     simulationScenario: scenario
   });
+
+  if (faultDescription) {
+    if (lastNotifiedFaultId !== faultNodeId) {
+      lastNotifiedFaultId = faultNodeId;
+      sendFaultPushNotification(
+        '🚨 Solar String Fault Detected!',
+        `Break at Node ${faultNodeId}: ${faultDescription}`
+      );
+    }
+  } else if (lastNotifiedFaultId !== null) {
+    lastNotifiedFaultId = null;
+    sendFaultPushNotification(
+      '✅ Solar String Restored',
+      'All series continuity connections are intact and continuous.'
+    );
+  }
 }
 
 // ==========================================================================

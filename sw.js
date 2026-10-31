@@ -19,13 +19,13 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.title || '⚠️ Solar String Fault Detected!';
+  const title = data.title || '🚨 Solar String Fault Detected!';
   const options = {
     body: data.body || 'A disconnection or wire break was detected.',
     icon: data.icon || 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
     badge: data.badge || 'https://cdn-icons-png.flaticon.com/512/564/564619.png',
-    vibrate: data.vibrate || [250, 100, 250, 100, 250],
-    tag: 'solar-fault-alert',
+    vibrate: data.vibrate || [300, 150, 300, 150, 300],
+    tag: 'solar-fault-' + Date.now(),
     renotify: true,
     requireInteraction: true,
     data: {
