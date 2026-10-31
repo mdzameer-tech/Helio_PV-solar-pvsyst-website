@@ -387,25 +387,25 @@ function updateCoordinates(lat, lon, fetchWeather = false) {
  * Fetch Satellite Solar Irradiance from Open-Meteo
  */
 async function fetchWeatherAndUpdate() {
-  const badge = document.getElementById('weather-badge');
-  if (badge) {
-    badge.textContent = 'Syncing Satellite Solar...';
-    badge.className = 'text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-mono calculating';
-  }
+  const badges = document.querySelectorAll('#weather-badge, #weather-badge-modal');
+  badges.forEach((b) => {
+    b.textContent = 'Syncing Satellite Solar...';
+    b.className = 'text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-mono calculating';
+  });
 
   const res = await WeatherService.fetchSolarData(AppState.project.lat, AppState.project.lon);
   if (res && res.success && res.monthlyData) {
     AppState.weatherData = res.monthlyData;
-    if (badge) {
-      badge.textContent = 'Satellite Solar Active (ERA5)';
-      badge.className = 'text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono';
-    }
+    badges.forEach((b) => {
+      b.textContent = 'Satellite Active';
+      b.className = 'text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono';
+    });
   } else {
     AppState.weatherData = null; // Uses Universal Physics Climatology model
-    if (badge) {
-      badge.textContent = 'PVsyst Climatology Active';
-      badge.className = 'text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded font-mono';
-    }
+    badges.forEach((b) => {
+      b.textContent = 'PVsyst Climatology Active';
+      b.className = 'text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono';
+    });
   }
 
   runSimulation();
@@ -3454,27 +3454,41 @@ function setupAuthEventListeners() {
     }
   });
 
-  // Drawer: Site Location Accordion Toggle
-  const btnToggleSiteLoc = document.getElementById('drawer-btn-toggle-site-location');
-  const siteLocContent = document.getElementById('drawer-content-site-location');
-  const iconLocChevron = document.getElementById('drawer-icon-location-chevron');
+  // Site Location Settings Modal (Claude-style centered window)
+  const modalSiteLoc = document.getElementById('modal-site-location');
+  const btnOpenSiteLocDrawer = document.getElementById('drawer-btn-open-site-location');
+  const btnCloseSiteLocModal = document.getElementById('btn-close-site-loc-modal');
+  const btnDoneSiteLocModal = document.getElementById('btn-done-site-loc-modal');
 
-  function openSiteLocationTab() {
-    siteLocContent?.classList.remove('hidden');
-    iconLocChevron?.classList.add('rotate-180');
+  function openSiteLocationModal() {
+    closeDrawer(); // Smoothly close operator drawer
+    modalSiteLoc?.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
     setTimeout(() => {
       if (AppState.map) AppState.map.invalidateSize();
       if (AppState.googleMap && window.google) google.maps.event.trigger(AppState.googleMap, 'resize');
     }, 150);
   }
 
-  btnToggleSiteLoc?.addEventListener('click', () => {
-    const isHidden = siteLocContent?.classList.contains('hidden');
-    if (isHidden) {
-      openSiteLocationTab();
-    } else {
-      siteLocContent?.classList.add('hidden');
-      iconLocChevron?.classList.remove('rotate-180');
+  function closeSiteLocationModal() {
+    modalSiteLoc?.classList.add('hidden');
+  }
+
+  btnOpenSiteLocDrawer?.addEventListener('click', openSiteLocationModal);
+  btnCloseSiteLocModal?.addEventListener('click', closeSiteLocationModal);
+  btnDoneSiteLocModal?.addEventListener('click', closeSiteLocationModal);
+
+  // Close when clicking modal backdrop
+  modalSiteLoc?.addEventListener('click', (e) => {
+    if (e.target === modalSiteLoc) {
+      closeSiteLocationModal();
+    }
+  });
+
+  // ESC key closes modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalSiteLoc && !modalSiteLoc.classList.contains('hidden')) {
+      closeSiteLocationModal();
     }
   });
 
@@ -3500,8 +3514,7 @@ function setupAuthEventListeners() {
 
   // Quick Action Buttons from Solar Estimation View
   document.getElementById('btn-quick-open-site-loc')?.addEventListener('click', () => {
-    openDrawer();
-    openSiteLocationTab();
+    openSiteLocationModal();
   });
 
   document.getElementById('btn-quick-open-hw-capex')?.addEventListener('click', () => {
