@@ -831,53 +831,35 @@ input, button, select, textarea {
   padding: 0 !important;
 }
 
-.string-array-row.schematic-fit-mode .wire-junction-column {
-  flex: 0 0 clamp(24px, 4.5vw, 56px) !important;
-  width: clamp(24px, 4.5vw, 56px) !important;
-  gap: 2px !important;
+.string-array-row.schematic-fit-mode .wire-junction-column,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-junction-column {
+  flex: 0 0 clamp(20px, 4vw, 48px) !important;
+  width: clamp(20px, 4vw, 48px) !important;
+  gap: 3px !important;
   padding: 0 !important;
 }
 
-.string-array-row.schematic-fit-mode .wire-role-label {
-  font-size: 0.5rem !important;
-  padding: 0.5px 2px !important;
-  margin-bottom: 1px !important;
-  letter-spacing: 0 !important;
+/* Hide wire role labels (Power +, String +, Sense GND, Sense In) in Fit Screen mode */
+.string-array-row.schematic-fit-mode .wire-role-label,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-role-label {
+  display: none !important;
 }
 
-.string-array-row.schematic-fit-mode .wire-svg {
+.string-array-row.schematic-fit-mode .wire-svg,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-svg {
   width: 100% !important;
   height: auto !important;
   max-height: 18px !important;
 }
 
-.string-array-row.schematic-fit-mode .wire-status-text {
+.string-array-row.schematic-fit-mode .wire-status-text,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-status-text {
   display: none !important;
 }
 
-.string-array-row.schematic-fit-mode .ground-return-bus-wrap {
-  padding: 6px 10px !important;
-  margin-top: 6px !important;
-}
-
-.string-array-row.schematic-fit-mode .ground-terminal {
-  font-size: 0.65rem !important;
-}
-
-.string-array-row.schematic-fit-mode .ground-bus-header {
-  font-size: 0.65rem !important;
-}
-
-.string-array-row.schematic-fit-mode .ground-switch-center {
-  min-width: 70px !important;
-}
-
-.string-array-row.schematic-fit-mode .ground-switch-center .wire-svg {
-  width: 52px !important;
-  height: 18px !important;
-}
-
-.string-array-row.schematic-fit-mode .ground-switch-center .wire-status-text {
+/* Hide Direct Ground Return Bus box in Fit Screen mode */
+.string-array-row.schematic-fit-mode .ground-return-bus-wrap,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .ground-return-bus-wrap {
   display: none !important;
 }
 
@@ -949,6 +931,14 @@ input, button, select, textarea {
   width: 76px !important;
   flex: 0 0 76px !important;
   gap: 8px !important;
+}
+
+.string-array-row.schematic-zoom-mode .wire-role-label {
+  display: inline-block !important;
+}
+
+.string-array-row.schematic-zoom-mode .ground-return-bus-wrap {
+  display: flex !important;
 }
 
 .string-array-row.schematic-zoom-mode .wire-svg {
