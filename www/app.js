@@ -108,7 +108,153 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize JWT User Authentication Guard & Hamburger Profile Drawer
   initAuth();
+
+  // Initialize Native-Feel Mobile Pull-to-Refresh Gesture
+  setupPullToRefresh();
 });
+
+/**
+ * Mobile Native-Feel Pull-To-Refresh Gesture
+ * When user is at the top of the screen and drags down, displays a sleek floating spinner
+ * and smoothly reloads the app upon release.
+ */
+function setupPullToRefresh() {
+  const indicator = document.getElementById('pull-refresh-indicator');
+  const iconWrap = document.getElementById('pull-refresh-icon-wrap');
+  const textEl = document.getElementById('pull-refresh-text');
+  if (!indicator || !iconWrap || !textEl) return;
+
+  let startY = 0;
+  let startX = 0;
+  let currentY = 0;
+  let isPulling = false;
+  let isRefreshing = false;
+  const PULL_THRESHOLD = 58; // px threshold to trigger refresh
+
+  window.addEventListener('touchstart', (e) => {
+    if (isRefreshing) return;
+
+    // Only allow pull-to-refresh if user is at the very top of the window
+    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+    if (scrollTop > 4) return;
+
+    // Do not trigger if touching interactive modals or form inputs
+    const target = e.target;
+    if (target.closest('input, textarea, select, button, #map-container, .leaflet-container')) return;
+
+    // Check if an open modal or the drawer is currently open
+    const openModal = document.querySelector('.fixed:not(.hidden):not(#pull-refresh-indicator)');
+    if (openModal && (openModal.id === 'modal-site-location' || openModal.id === 'modal-hardware-info' || openModal.id === 'modal-panel-detail' || openModal.id === 'modal-auth')) {
+      return;
+    }
+    const drawer = document.getElementById('user-account-drawer');
+    if (drawer && !drawer.classList.contains('translate-x-full')) {
+      return;
+    }
+
+    const touch = e.touches[0];
+    startY = touch.clientY;
+    startX = touch.clientX;
+    isPulling = false;
+    indicator.style.transition = 'none';
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (isRefreshing || startY === 0) return;
+
+    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+    if (scrollTop > 4) {
+      if (isPulling) {
+        isPulling = false;
+        resetIndicator();
+      }
+      return;
+    }
+
+    const touch = e.touches[0];
+    const diffY = touch.clientY - startY;
+    const diffX = touch.clientX - startX;
+
+    // Must be dragging downwards primarily vertically
+    if (diffY > 8 && diffY > Math.abs(diffX) * 1.2) {
+      isPulling = true;
+      currentY = diffY;
+
+      // Apply parabolic damping so pull feels weighted and natural
+      const pullDist = Math.min(Math.pow(diffY, 0.85) * 1.35, 78);
+      const rotateDeg = Math.min(pullDist * 5, 360);
+      const opacity = Math.min(pullDist / 28, 1);
+
+      indicator.style.transform = `translate(-50%, ${pullDist - 55}px)`;
+      indicator.style.opacity = opacity.toString();
+      iconWrap.style.transform = `rotate(${rotateDeg}deg)`;
+
+      if (pullDist >= PULL_THRESHOLD) {
+        textEl.textContent = 'Release to refresh';
+        indicator.classList.add('border-amber-400');
+        iconWrap.classList.add('text-amber-300');
+      } else {
+        textEl.textContent = 'Pull to refresh';
+        indicator.classList.remove('border-amber-400');
+        iconWrap.classList.remove('text-amber-300');
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', () => {
+    if (isRefreshing || !isPulling) {
+      startY = 0;
+      return;
+    }
+
+    const pullDist = Math.min(Math.pow(currentY, 0.85) * 1.35, 78);
+
+    if (pullDist >= PULL_THRESHOLD) {
+      isRefreshing = true;
+      indicator.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
+      indicator.style.transform = 'translate(-50%, 14px)';
+      indicator.style.opacity = '1';
+      textEl.textContent = 'Refreshing...';
+      iconWrap.classList.add('animate-spin');
+
+      if (navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (e) {}
+      }
+
+      // Smooth brief delay so user sees spinner before page reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 350);
+    } else {
+      resetIndicator();
+    }
+
+    startY = 0;
+    currentY = 0;
+    isPulling = false;
+  }, { passive: true });
+
+  window.addEventListener('touchcancel', () => {
+    if (!isRefreshing) resetIndicator();
+    startY = 0;
+    currentY = 0;
+    isPulling = false;
+  }, { passive: true });
+
+  function resetIndicator() {
+    indicator.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+    indicator.style.transform = 'translate(-50%, -65px)';
+    indicator.style.opacity = '0';
+    setTimeout(() => {
+      if (!isRefreshing) {
+        textEl.textContent = 'Pull to refresh';
+        indicator.classList.remove('border-amber-400');
+        iconWrap.classList.remove('text-amber-300', 'animate-spin');
+        iconWrap.style.transform = 'rotate(0deg)';
+      }
+    }, 250);
+  }
+}
 
 /**
  * Load cached location and project settings from localStorage on revisit
