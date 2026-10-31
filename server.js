@@ -1098,35 +1098,79 @@ app.get("/api/status", (req, res) => {
     };
   });
 
-  // 3. Compute wire states between adjacent nodes (P1-P2, P2-P3, P3-String)
-  const wires = [
-    { from: 1, to: 2, monitoredBy: 2 },
-    { from: 2, to: 3, monitoredBy: 3 },
-    { from: 3, to: 4, monitoredBy: 4 }
-  ].map((w) => {
+  // 3. Compute 7 distinct physical wires across the array
+  const stringNodeData = latest.nodes.find((x) => x.id === 4);
+  const stringCurrent_mA = stringNodeData ? (stringNodeData.current_mA || 0) : 0;
+  const isPowerFlowing = stringCurrent_mA > 15;
+
+  let brokenWireId = null;
+  let faultType = "none";
+
+  if (faultNodeId === 2) {
+    brokenWireId = "W_P1_P2_PWR";
+    faultType = "power";
+  } else if (faultNodeId === 3) {
+    brokenWireId = "W_P2_P3_PWR";
+    faultType = "power";
+  } else if (faultNodeId === 4) {
+    brokenWireId = "W_P3_STR_PWR";
+    faultType = "power";
+  }
+
+  const rawWires = [
+    { id: "W_P1_P2_PWR",   from: 1, to: 2, role: "power" },
+    { id: "W_P1_P2_SENSE", from: 1, to: 2, role: "sensing_gnd" },
+    { id: "W_P1_STR_RET",  from: 1, to: 4, role: "return_gnd" },
+    { id: "W_P2_P3_PWR",   from: 2, to: 3, role: "power" },
+    { id: "W_P2_P3_SENSE", from: 2, to: 3, role: "sensing_gnd" },
+    { id: "W_P3_STR_PWR",  from: 3, to: 4, role: "power" },
+    { id: "W_P3_STR_SENSE",from: 3, to: 4, role: "sensing_wire" }
+  ];
+
+  const wires = rawWires.map((w) => {
     if (!gatewayOnline) return { ...w, state: "no_signal" };
 
     if (faultNodeId === null) {
       return { ...w, state: "closed" };
     }
-    if (w.monitoredBy < faultNodeId) {
-      return { ...w, state: "closed" };
+
+    if (faultNodeId === 2) {
+      if (w.id === "W_P1_P2_PWR") return { ...w, state: "open" };
+      if (w.id === "W_P1_P2_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
+      return { ...w, state: "gray_zone" };
     }
-    if (w.monitoredBy === faultNodeId) {
-      return { ...w, state: "open" }; // Physical break point!
+
+    if (faultNodeId === 3) {
+      if (w.from === 1 && w.to === 2) return { ...w, state: "closed" };
+      if (w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
+      if (w.id === "W_P2_P3_PWR") return { ...w, state: "open" };
+      if (w.id === "W_P2_P3_SENSE") return { ...w, state: "closed" };
+      return { ...w, state: "gray_zone" };
     }
-    return { ...w, state: "gray_zone" }; // Downstream of break
+
+    if (faultNodeId === 4) {
+      if (w.from < 3) return { ...w, state: "closed" };
+      if (w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
+      if (w.id === "W_P3_STR_PWR") return { ...w, state: "open" };
+      return { ...w, state: "gray_zone" };
+    }
+
+    return { ...w, state: "closed" };
   });
 
   res.json({
     gatewayOnline,
     faultNodeId,
+    brokenWireId,
+    faultType,
     faultDescription,
-    wires,
+    isPowerFlowing,
+    stringCurrent_mA,
+    serverTime: Date.now(),
     cells,
+    wires,
     isSimulated: latest.isSimulated,
-    simulationScenario: latest.simulationScenario,
-    serverTime: Date.now()
+    simulationScenario: latest.simulationScenario
   });
 });
 

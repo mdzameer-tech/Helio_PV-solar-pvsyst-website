@@ -345,13 +345,21 @@ input, button, select, textarea {
 /* Interactive String Array Row */
 .string-array-row {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1.25rem 0.5rem;
+  scrollbar-width: thin;
+}
+
+.schematic-cards-flex {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 0;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding: 1.25rem 0.5rem;
-  scrollbar-width: thin;
+  width: 100%;
 }
 
 /* Panel & String Node Cards */
@@ -485,10 +493,9 @@ input, button, select, textarea {
   font-weight: 600;
 }
 
-/* Inter-Panel Circuit Switch Connectors */
+/* Inter-Panel Multi-Wire Circuit Switch Connectors */
 .wire-box {
   width: 72px;
-  height: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -498,18 +505,67 @@ input, button, select, textarea {
   user-select: none;
 }
 
-.wire-svg {
+.wire-junction-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.wire-junction-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  height: 36px;
+}
+
+.wire-role-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.wire-role-label.power {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.wire-role-label.sense {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.wire-role-label.ret {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.wire-svg {
+  width: 72px;
+  height: 24px;
   overflow: visible;
 }
 
 .wire-status-text {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  margin-top: 0.2rem;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .wire-status-text.closed { color: #3FB950; }
@@ -517,20 +573,95 @@ input, button, select, textarea {
 .wire-status-text.gray_zone { color: #8B949E; }
 .wire-status-text.no_signal { color: #484F58; }
 
-/* Open switch spark animation */
+/* Direct Return Ground Bus (W_P1_STR_RET) */
+.ground-return-bus-wrap {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ground-bus-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #94A3B8;
+}
+
+.ground-bus-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.ground-terminal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #E2E8F0;
+  white-space: nowrap;
+}
+
+.terminal-node-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3FB950;
+  box-shadow: 0 0 6px rgba(63, 185, 80, 0.6);
+}
+
+.ground-bus-wire-lead {
+  flex: 1;
+  height: 2px;
+  background: #3FB950;
+  transition: all 0.2s ease;
+}
+
+.ground-bus-wire-lead.open {
+  background: #F85149;
+  box-shadow: 0 0 4px rgba(248, 81, 73, 0.8);
+}
+
+.ground-bus-wire-lead.gray_zone {
+  background: repeating-linear-gradient(90deg, #6E7681 0, #6E7681 4px, transparent 4px, transparent 8px);
+}
+
+.ground-bus-wire-lead.no_signal {
+  background: #30363D;
+}
+
+.ground-switch-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+/* Animations from specification */
 @keyframes spark-pulse {
-  0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 5px #F85149); }
-  50% { opacity: 0.35; filter: drop-shadow(0 0 1px #F85149); }
+  0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px #f85149); }
+  50% { opacity: 0.3; filter: drop-shadow(0 0 1px #f85149); }
 }
 
 .wire-open-arm {
   animation: spark-pulse 1s infinite;
 }
 
-/* Gray zone switch blink */
 @keyframes gray-blink {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 0.3; }
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.25; }
 }
 
 .wire-gray-arm {
@@ -591,18 +722,28 @@ input, button, select, textarea {
 /* 1. Fit Screen Mode (All nodes scaled to fit screen width without overflow) */
 .string-array-row.schematic-fit-mode {
   display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  overflow-x: hidden !important;
+  padding: 0.6rem 0.25rem !important;
+  gap: 8px !important;
+}
+
+.string-array-row.schematic-fit-mode .schematic-cards-flex {
+  display: flex !important;
   width: 100% !important;
   justify-content: space-between !important;
   align-items: center !important;
   overflow-x: hidden !important;
-  padding: 0.6rem 0.25rem !important;
-  gap: 4px !important;
+  gap: 3px !important;
 }
 
 .string-array-row.schematic-fit-mode .iot-cell {
   width: auto !important;
   flex: 1 1 0 !important;
-  max-width: 23% !important;
+  max-width: 22% !important;
   min-width: 0 !important;
   min-height: 112px !important;
   padding: 0.5rem 0.25rem !important;
@@ -637,8 +778,8 @@ input, button, select, textarea {
 }
 
 .string-array-row.schematic-fit-mode .iot-badge {
-  font-size: 0.55rem !important;
-  padding: 0.12rem 0.25rem !important;
+  font-size: 0.52rem !important;
+  padding: 0.12rem 0.2rem !important;
   letter-spacing: 0 !important;
   border-radius: 0.25rem !important;
   font-weight: 700 !important;
@@ -690,28 +831,79 @@ input, button, select, textarea {
   padding: 0 !important;
 }
 
+.string-array-row.schematic-fit-mode .wire-junction-column {
+  flex: 0 0 clamp(24px, 4.5vw, 56px) !important;
+  width: clamp(24px, 4.5vw, 56px) !important;
+  gap: 2px !important;
+  padding: 0 !important;
+}
+
+.string-array-row.schematic-fit-mode .wire-role-label {
+  font-size: 0.5rem !important;
+  padding: 0.5px 2px !important;
+  margin-bottom: 1px !important;
+  letter-spacing: 0 !important;
+}
+
 .string-array-row.schematic-fit-mode .wire-svg {
   width: 100% !important;
   height: auto !important;
-  max-height: 22px !important;
+  max-height: 18px !important;
 }
 
 .string-array-row.schematic-fit-mode .wire-status-text {
   display: none !important;
 }
 
+.string-array-row.schematic-fit-mode .ground-return-bus-wrap {
+  padding: 6px 10px !important;
+  margin-top: 6px !important;
+}
+
+.string-array-row.schematic-fit-mode .ground-terminal {
+  font-size: 0.65rem !important;
+}
+
+.string-array-row.schematic-fit-mode .ground-bus-header {
+  font-size: 0.65rem !important;
+}
+
+.string-array-row.schematic-fit-mode .ground-switch-center {
+  min-width: 70px !important;
+}
+
+.string-array-row.schematic-fit-mode .ground-switch-center .wire-svg {
+  width: 52px !important;
+  height: 18px !important;
+}
+
+.string-array-row.schematic-fit-mode .ground-switch-center .wire-status-text {
+  display: none !important;
+}
+
 /* 2. Zoomed PC View Mode (Full size panels with metrics directly inside) */
 .string-array-row.schematic-zoom-mode {
   display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  padding: 1.25rem 0.5rem !important;
+  gap: 12px !important;
+}
+
+.string-array-row.schematic-zoom-mode .schematic-cards-flex {
+  display: flex !important;
+  align-items: center !important;
   justify-content: flex-start !important;
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
-  padding: 1.25rem 0.5rem !important;
-  gap: 0 !important;
+  padding: 0.5rem 0.25rem !important;
+  gap: 8px !important;
 }
 
 @media (min-width: 1100px) {
-  .string-array-row.schematic-zoom-mode {
+  .string-array-row.schematic-zoom-mode .schematic-cards-flex {
     justify-content: center !important;
   }
 }
@@ -753,9 +945,15 @@ input, button, select, textarea {
   flex: 0 0 68px !important;
 }
 
+.string-array-row.schematic-zoom-mode .wire-junction-column {
+  width: 76px !important;
+  flex: 0 0 76px !important;
+  gap: 8px !important;
+}
+
 .string-array-row.schematic-zoom-mode .wire-svg {
-  width: 68px !important;
-  height: 34px !important;
+  width: 72px !important;
+  height: 24px !important;
 }
 
 .string-array-row.schematic-zoom-mode .wire-status-text {

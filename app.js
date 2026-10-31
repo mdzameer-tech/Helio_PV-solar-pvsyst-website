@@ -2239,11 +2239,15 @@ function renderIoTMonitor(data) {
     }
     if (alertBox) {
       alertBox.className = 'monitor-alert-box danger';
+      const wireDetail = data.brokenWireId
+        ? `<div class="mt-1 font-mono text-[11px] text-red-200">Severed Wire: <strong>${data.brokenWireId}</strong> (${data.faultType === 'power' ? 'Power Flow Severed' : 'Continuity / Ground'})</div>`
+        : '';
       alertBox.innerHTML = `
         <div class="alert-title">&#9888; ROOT CAUSE FAULT DETECTED: ${data.faultDescription}</div>
+        ${wireDetail}
         <div class="text-xs mt-1">
           <strong>Fault Isolation Analysis:</strong> Node ${data.faultNodeId} is the <em>lowest numbered node</em> reporting broken continuity.
-          All subsequent downstream nodes (shaded in gray) cannot verify continuity until this upstream open circuit is repaired.
+          All subsequent downstream nodes (shaded in gray unverified zone) cannot verify continuity until this upstream open circuit is repaired.
         </div>
       `;
     }
@@ -2322,20 +2326,27 @@ function renderIoTMonitor(data) {
     }
   }
 
-  // 3. Render Visual Schematic Array with SVG switches
+  // 3. Render Visual Schematic Array with SVG switches & Multi-Wire Topology
   const container = document.getElementById('iot-string-row');
   if (container && data.cells && data.cells.length > 0) {
     latestSchematicCells = data.cells;
-    let html = '';
     const wires = data.wires || [];
 
-    data.cells.forEach((c, i) => {
+    const p1 = data.cells.find(c => c.id === 1) || data.cells[0];
+    const p2 = data.cells.find(c => c.id === 2) || data.cells[1];
+    const p3 = data.cells.find(c => c.id === 3) || data.cells[2];
+    const str = data.cells.find(c => c.id === 4) || data.cells[3];
+
+    const retState = getWireState(wires, 'W_P1_STR_RET');
+
+    function renderCellHtml(c) {
+      if (!c) return '';
       const isString = (c.type === 'string');
       const label = isString ? 'String Monitor' : (`Panel ${c.id}`);
       const shortLabel = isString ? 'String' : (`P${c.id}`);
       const cardClass = isString ? 'string-node' : 'panel';
 
-      html += `
+      return `
         <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" title="${label}: hold or tap for details">
           <!-- Desktop Full View Title -->
           <h3 class="cell-title-full">${label}</h3>
@@ -2354,16 +2365,84 @@ function renderIoTMonitor(data) {
           <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${IOT_NOTES[c.state] || ''}</div>
         </div>
       `;
+    }
 
-      if (i < data.cells.length - 1) {
-        const wireState = (wires[i] && wires[i].state) ? wires[i].state : 'no_signal';
-        html += `
-          <div class="wire-box" title="Series connection between Node ${c.id} and ${c.id + 1}">
-            ${renderSwitchSvg(wireState)}
+    const html = `
+      <div class="schematic-cards-flex">
+        ${renderCellHtml(p1)}
+
+        <!-- Inter-Panel Wire Junction 1-2 -->
+        <div class="wire-junction-column" title="Panel 1 to Panel 2 Multi-Wire Junction">
+          <div class="wire-junction-item" title="W_P1_P2_PWR: Main Power (+) Line">
+            <span class="wire-role-label power">Power +</span>
+            ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_PWR'))}
           </div>
-        `;
-      }
-    });
+          <div class="wire-junction-item" title="W_P1_P2_SENSE: Optocoupler Sensing GND">
+            <span class="wire-role-label sense">Sense GND</span>
+            ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_SENSE'))}
+          </div>
+        </div>
+
+        ${renderCellHtml(p2)}
+
+        <!-- Inter-Panel Wire Junction 2-3 -->
+        <div class="wire-junction-column" title="Panel 2 to Panel 3 Multi-Wire Junction">
+          <div class="wire-junction-item" title="W_P2_P3_PWR: Main Power (+) Line">
+            <span class="wire-role-label power">Power +</span>
+            ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_PWR'))}
+          </div>
+          <div class="wire-junction-item" title="W_P2_P3_SENSE: Daisy-Chained Sensing GND">
+            <span class="wire-role-label sense">Sense GND</span>
+            ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_SENSE'))}
+          </div>
+        </div>
+
+        ${renderCellHtml(p3)}
+
+        <!-- Inter-Panel Wire Junction 3-String -->
+        <div class="wire-junction-column" title="Panel 3 to String Module Junction">
+          <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
+            <span class="wire-role-label power">String +</span>
+            ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_PWR'))}
+          </div>
+          <div class="wire-junction-item" title="W_P3_STR_SENSE: Continuity Signal Wire">
+            <span class="wire-role-label sense">Sense In</span>
+            ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_SENSE'))}
+          </div>
+        </div>
+
+        ${renderCellHtml(str)}
+      </div>
+
+      <!-- Direct Ground Return Bus (W_P1_STR_RET) -->
+      <div class="ground-return-bus-wrap" title="Direct Ground Return Bus: Panel 1(-) directly to String Node (-)">
+        <div class="ground-bus-header">
+          <div class="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Direct Return Ground Bus (Continuous Ground)
+          </div>
+          <div class="text-[11px] font-mono text-slate-400">
+            Topology: Optocoupler EL817 Multi-Wire Array
+          </div>
+        </div>
+        <div class="ground-bus-track">
+          <div class="ground-terminal">
+            <span class="terminal-node-dot"></span>
+            <span>P1 (-) Ground Lead</span>
+          </div>
+          <div class="ground-bus-wire-lead ${retState}"></div>
+          <div class="ground-switch-center">
+            <span class="wire-role-label ret">W_P1_STR_RET (Return GND)</span>
+            ${renderSwitchSvg(retState)}
+          </div>
+          <div class="ground-bus-wire-lead ${retState}"></div>
+          <div class="ground-terminal">
+            <span>String Node (-) Input</span>
+            <span class="terminal-node-dot"></span>
+          </div>
+        </div>
+      </div>
+    `;
 
     container.innerHTML = html;
     setupCellTouchEvents();
@@ -2408,6 +2487,31 @@ function renderIoTMonitor(data) {
   }
 }
 
+function getWireState(wires, wireId) {
+  if (!wires || !Array.isArray(wires)) return 'no_signal';
+  const match = wires.find(w => w.id === wireId);
+  if (match && match.state) return match.state;
+
+  // Fallback for legacy 3-wire format:
+  if (wireId === 'W_P1_P2_PWR' || wireId === 'W_P1_P2_SENSE') {
+    const leg = wires.find(w => w.from === 1 && w.to === 2);
+    return leg ? (leg.state || 'no_signal') : 'no_signal';
+  }
+  if (wireId === 'W_P2_P3_PWR' || wireId === 'W_P2_P3_SENSE') {
+    const leg = wires.find(w => w.from === 2 && w.to === 3);
+    return leg ? (leg.state || 'no_signal') : 'no_signal';
+  }
+  if (wireId === 'W_P3_STR_PWR' || wireId === 'W_P3_STR_SENSE') {
+    const leg = wires.find(w => w.from === 3 && w.to === 4);
+    return leg ? (leg.state || 'no_signal') : 'no_signal';
+  }
+  if (wireId === 'W_P1_STR_RET') {
+    const leg = wires.find(w => w.id === 'W_P1_STR_RET');
+    return leg ? (leg.state || 'closed') : 'closed';
+  }
+  return 'no_signal';
+}
+
 function renderCellBody(c) {
   if (c.state === 'no_signal') return '<span class="text-slate-500">No packet data</span>';
   if (c.type === 'string') {
@@ -2426,46 +2530,49 @@ function renderCellBody(c) {
 }
 
 function renderSwitchSvg(state) {
-  if (state === 'closed') {
+  // SVG Dimensions: 72 x 24. Contact terminals at x=14 and x=58 (y=12).
+  if (state === "closed") {
     return `
-      <svg class="wire-svg" viewBox="0 0 68 34">
-        <line x1="0" y1="17" x2="16" y2="17" stroke="#3FB950" stroke-width="3" />
-        <line x1="52" y1="17" x2="68" y2="17" stroke="#3FB950" stroke-width="3" />
-        <circle cx="16" cy="17" r="4.5" fill="#3FB950" />
-        <circle cx="52" cy="17" r="4.5" fill="#3FB950" />
-        <line x1="16" y1="17" x2="52" y2="17" stroke="#3FB950" stroke-width="3.5" stroke-linecap="round" />
+      <svg class="wire-svg" viewBox="0 0 72 24">
+        <line x1="0" y1="12" x2="14" y2="12" stroke="#3fb950" stroke-width="2.5" />
+        <line x1="58" y1="12" x2="72" y2="12" stroke="#3fb950" stroke-width="2.5" />
+        <circle cx="14" cy="12" r="3.5" fill="#3fb950" />
+        <circle cx="58" cy="12" r="3.5" fill="#3fb950" />
+        <line x1="14" y1="12" x2="58" y2="12" stroke="#3fb950" stroke-width="3" stroke-linecap="round" />
       </svg>
-      <div class="wire-status-text closed">&#10003; CLOSED</div>
+      <div class="wire-status-text closed">✔️ CLOSED</div>
     `;
-  } else if (state === 'open') {
+  } else if (state === "open") {
     return `
-      <svg class="wire-svg" viewBox="0 0 68 34">
-        <line x1="0" y1="17" x2="16" y2="17" stroke="#F85149" stroke-width="3" />
-        <line x1="52" y1="17" x2="68" y2="17" stroke="#F85149" stroke-width="3" />
-        <circle cx="16" cy="17" r="4.5" fill="#F85149" />
-        <circle cx="52" cy="17" r="4.5" fill="#F85149" />
-        <line class="wire-open-arm" x1="16" y1="17" x2="44" y2="4" stroke="#F85149" stroke-width="3.5" stroke-linecap="round" />
-        <line x1="42" y1="9" x2="48" y2="15" stroke="#FFEB3B" stroke-width="1.5" stroke-dasharray="2,2" />
+      <svg class="wire-svg" viewBox="0 0 72 24">
+        <line x1="0" y1="12" x2="14" y2="12" stroke="#f85149" stroke-width="2.5" />
+        <line x1="58" y1="12" x2="72" y2="12" stroke="#f85149" stroke-width="2.5" />
+        <circle cx="14" cy="12" r="3.5" fill="#f85149" />
+        <circle cx="58" cy="12" r="3.5" fill="#f85149" />
+        <!-- Blade swung up 45 degrees -->
+        <line class="wire-open-arm" x1="14" y1="12" x2="48" y2="2" stroke="#f85149" stroke-width="3" stroke-linecap="round" />
+        <!-- Yellow spark indicator -->
+        <line x1="44" y1="6" x2="50" y2="11" stroke="#ffeb3b" stroke-width="1.5" stroke-dasharray="2,2" />
       </svg>
-      <div class="wire-status-text open">&#9888; OPEN CKT</div>
+      <div class="wire-status-text open">⚠️ OPEN CKT</div>
     `;
-  } else if (state === 'gray_zone') {
+  } else if (state === "gray_zone") {
     return `
-      <svg class="wire-svg" viewBox="0 0 68 34">
-        <line x1="0" y1="17" x2="16" y2="17" stroke="#6E7681" stroke-width="2.5" stroke-dasharray="3,3" />
-        <line x1="52" y1="17" x2="68" y2="17" stroke="#6E7681" stroke-width="2.5" stroke-dasharray="3,3" />
-        <circle cx="16" cy="17" r="4" fill="#6E7681" />
-        <circle cx="52" cy="17" r="4" fill="#6E7681" />
-        <line class="wire-gray-arm" x1="16" y1="17" x2="52" y2="17" stroke="#8B949E" stroke-width="2" stroke-dasharray="4,4" />
+      <svg class="wire-svg" viewBox="0 0 72 24">
+        <line x1="0" y1="12" x2="14" y2="12" stroke="#6e7681" stroke-width="2" stroke-dasharray="3,3" />
+        <line x1="58" y1="12" x2="72" y2="12" stroke="#6e7681" stroke-width="2" stroke-dasharray="3,3" />
+        <circle cx="14" cy="12" r="3" fill="#6e7681" />
+        <circle cx="58" cy="12" r="3" fill="#6e7681" />
+        <line class="wire-gray-arm" x1="14" y1="12" x2="58" y2="12" stroke="#8b949e" stroke-width="2" stroke-dasharray="3,3" />
       </svg>
-      <div class="wire-status-text gray_zone">&#63; BLOCKED</div>
+      <div class="wire-status-text gray_zone">? UNVERIFIED</div>
     `;
   } else {
     return `
-      <svg class="wire-svg" viewBox="0 0 68 34">
-        <line x1="0" y1="17" x2="68" y2="17" stroke="#30363D" stroke-width="2" stroke-dasharray="4,4" />
+      <svg class="wire-svg" viewBox="0 0 72 24">
+        <line x1="0" y1="12" x2="72" y2="12" stroke="#30363d" stroke-width="2" stroke-dasharray="3,3" />
       </svg>
-      <div class="wire-status-text no_signal">&mdash;</div>
+      <div class="wire-status-text no_signal">—</div>
     `;
   }
 }
@@ -2803,9 +2910,9 @@ function runClientSideSimulation(scenario) {
     const n = mockNodes.find(x => x.id === id);
     if (n && n.continuity === false) {
       faultNodeId = id;
-      if (id === 2) faultDescription = "Disconnection detected between Panel 1 and Panel 2";
-      else if (id === 3) faultDescription = "Disconnection detected between Panel 2 and Panel 3";
-      else if (id === 4) faultDescription = "Disconnection detected between Panel 3 and String Node";
+      if (id === 2) faultDescription = "Disconnection detected between Panel 1 and Panel 2! String current dropped to 0.";
+      else if (id === 3) faultDescription = "Disconnection detected between Panel 2 and Panel 3! String current dropped to 0.";
+      else if (id === 4) faultDescription = "Disconnection detected between Panel 3 and String Node! String current dropped to 0.";
       break;
     }
   }
@@ -2823,7 +2930,7 @@ function runClientSideSimulation(scenario) {
       const v = n.voltage_mV / 1000;
       const t = n.temp_c10 === -999 ? null : n.temp_c10 / 10;
       if (state === 'ok' && n.voltage_mV < 500) state = 'low_voltage';
-      return { id, type: typeName, state, temp: t, voltage: v };
+      return { id, type: typeName, state, temp: t, voltage: v, continuity: n.continuity };
     }
 
     const cur = n.current_mA / 1000;
@@ -2835,27 +2942,77 @@ function runClientSideSimulation(scenario) {
       voltage: volt,
       current: cur,
       power: Number((volt * cur).toFixed(2)),
+      continuity: n.continuity,
       ldr: n.ldr_raw
     };
   });
 
-  const wires = [
-    { from: 1, to: 2, monitoredBy: 2 },
-    { from: 2, to: 3, monitoredBy: 3 },
-    { from: 3, to: 4, monitoredBy: 4 }
-  ].map(w => {
+  const stringNode = mockNodes.find(x => x.id === 4);
+  const stringCurrent_mA = stringNode ? (stringNode.current_mA || 0) : 0;
+  const isPowerFlowing = stringCurrent_mA > 15;
+
+  let brokenWireId = null;
+  let faultType = 'none';
+
+  if (faultNodeId === 2) {
+    brokenWireId = 'W_P1_P2_PWR';
+    faultType = 'power';
+  } else if (faultNodeId === 3) {
+    brokenWireId = 'W_P2_P3_PWR';
+    faultType = 'power';
+  } else if (faultNodeId === 4) {
+    brokenWireId = 'W_P3_STR_PWR';
+    faultType = 'power';
+  }
+
+  const rawWires = [
+    { id: 'W_P1_P2_PWR',    from: 1, to: 2, role: 'power' },
+    { id: 'W_P1_P2_SENSE',  from: 1, to: 2, role: 'sensing_gnd' },
+    { id: 'W_P1_STR_RET',   from: 1, to: 4, role: 'return_gnd' },
+    { id: 'W_P2_P3_PWR',    from: 2, to: 3, role: 'power' },
+    { id: 'W_P2_P3_SENSE',  from: 2, to: 3, role: 'sensing_gnd' },
+    { id: 'W_P3_STR_PWR',   from: 3, to: 4, role: 'power' },
+    { id: 'W_P3_STR_SENSE', from: 3, to: 4, role: 'sensing_wire' }
+  ];
+
+  const wires = rawWires.map(w => {
     if (faultNodeId === null) return { ...w, state: 'closed' };
-    if (w.monitoredBy < faultNodeId) return { ...w, state: 'closed' };
-    if (w.monitoredBy === faultNodeId) return { ...w, state: 'open' };
-    return { ...w, state: 'gray_zone' };
+
+    if (faultNodeId === 2) {
+      if (w.id === 'W_P1_P2_PWR') return { ...w, state: 'open' };
+      if (w.id === 'W_P1_P2_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      return { ...w, state: 'gray_zone' };
+    }
+
+    if (faultNodeId === 3) {
+      if (w.from === 1 && w.to === 2) return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P2_P3_PWR') return { ...w, state: 'open' };
+      if (w.id === 'W_P2_P3_SENSE') return { ...w, state: 'closed' };
+      return { ...w, state: 'gray_zone' };
+    }
+
+    if (faultNodeId === 4) {
+      if (w.from < 3) return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P3_STR_PWR') return { ...w, state: 'open' };
+      return { ...w, state: 'gray_zone' };
+    }
+
+    return { ...w, state: 'closed' };
   });
 
   renderIoTMonitor({
     gatewayOnline: true,
     faultNodeId,
+    brokenWireId,
+    faultType,
     faultDescription,
+    isPowerFlowing,
+    stringCurrent_mA,
     wires,
     cells,
+    serverTime: Date.now(),
     isSimulated: true,
     simulationScenario: scenario
   });
