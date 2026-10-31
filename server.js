@@ -445,8 +445,8 @@ app.use((req, res, next) => {
 // Serve static project files directly (HTML, JS, CSS, images)
 app.use(express.static(path.join(__dirname, ".")));
 
-const NODE_TIMEOUT_MS = 15000;    // 15 seconds margin
-const GATEWAY_TIMEOUT_MS = 15000; // 15 seconds margin
+const NODE_TIMEOUT_MS = 7000;     // 7 seconds margin for faster stale detection
+const GATEWAY_TIMEOUT_MS = 7000;  // 7 seconds margin for faster offline detection
 const LOW_VOLTAGE_MV = 500;       // Threshold in mV
 
 const NODE_TYPE_NAME = { 0: "panel_basic", 1: "panel_full", 2: "string" };

@@ -204,8 +204,6 @@ void postToBackend()
         json += ",\"ageMs\":"      + String(age) + "}";
     }
 
-    if (first) return;   /* no fresh data — don't POST an empty list */
-
     json += "]}";
 
     HTTPClient http;
@@ -328,11 +326,10 @@ void setup()
 }
 
 /* ════════════════════════════════════════════════════════
-   LOOP
+   Check & drain incoming nRF24 radio packets
    ════════════════════════════════════════════════════════ */
-void loop()
+void checkIncomingRadioPackets()
 {
-    /* ── Check for incoming packets in background ───────── */
     uint8_t pipeNum;
     while (radio.available(&pipeNum)) {
 
@@ -360,6 +357,15 @@ void loop()
         nodes[idx].lastMs  = millis();
         nodes[idx].rxCount++;
     }
+}
+
+/* ════════════════════════════════════════════════════════
+   LOOP
+   ════════════════════════════════════════════════════════ */
+void loop()
+{
+    /* ── Check for incoming packets in background ───────── */
+    checkIncomingRadioPackets();
 
     /* ── Predictable 2-Second Sequential Display ───────── */
     /* Cycles strictly: Node 1 -> Node 2 -> Node 3 -> Node 4 -> Summary */
@@ -377,11 +383,12 @@ void loop()
         displayStep = (displayStep + 1) % 5;
     }
 
-    /* ── Post to backend periodically (every 2 s) ──────── */
+    /* ── Post to backend periodically (every 1 s for responsive real-time streaming) ──────── */
     static unsigned long lastPostMs = 0;
-    if (millis() - lastPostMs >= 2000) {
+    if (millis() - lastPostMs >= 1000) {
         lastPostMs = millis();
         postToBackend();
+        checkIncomingRadioPackets(); // Catch any packet that arrived during HTTP post
     }
 
     /* ── WiFi reconnect watchdog ────────────────────────── */

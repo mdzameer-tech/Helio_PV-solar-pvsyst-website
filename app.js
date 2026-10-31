@@ -2318,7 +2318,8 @@ function openPopoutWindow(targetView) {
 function startIoTMonitoring() {
   if (IoTMonitorState.pollIntervalId) clearInterval(IoTMonitorState.pollIntervalId);
   pollIoTStatus();
-  IoTMonitorState.pollIntervalId = setInterval(() => pollIoTStatus(false), 800);
+  // High-frequency responsive polling (350ms) for real-time ESP32 telemetry updates
+  IoTMonitorState.pollIntervalId = setInterval(() => pollIoTStatus(false), 350);
   fetchNetworkInfo();
 
   // Set initial schematic mode: Fit on mobile, Zoom (PC View) on laptop/desktop
@@ -2643,7 +2644,7 @@ function renderIoTMonitor(data) {
           </div>
 
           <div class="iot-vals">${renderCellBody(c)}</div>
-          <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${IOT_NOTES[c.state] || ''}</div>
+          <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${(c.id === 1 && c.state === 'ok') ? 'String Origin (+/-). Reference Lead.' : (IOT_NOTES[c.state] || '')}</div>
         </div>
       `;
     }
@@ -2994,7 +2995,9 @@ function updateModalTelemetryValues(cell) {
     badge.className = `px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between iot-badge ${cell.state}`;
   }
 
-  const noteStr = IOT_NOTES[cell.state] || 'All series connections continuous and active.';
+  const noteStr = (cell.id === 1 && cell.state === 'ok')
+    ? 'String Origin (+/-). Positive & Return Ground Reference.'
+    : (IOT_NOTES[cell.state] || 'All series connections continuous and active.');
   if (noteText) noteText.textContent = noteStr;
 }
 
