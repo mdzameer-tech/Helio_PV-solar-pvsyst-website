@@ -94,6 +94,7 @@ const pushSubscriptionSchema = new mongoose.Schema({
     auth: { type: String }
   },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  userEmail: { type: String, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -383,28 +384,37 @@ function saveSubscriptions() {
 }
 loadSubscriptions();
 
-// Broadcast push notification to all subscribed mobile & desktop devices
-async function sendPushNotification(payload) {
+// Broadcast push notification to all subscribed mobile & desktop devices (or account devices)
+async function sendPushNotification(payload, targetEmail = null) {
   try {
     let allSubs = [...pushSubscriptions];
     try {
       const mongoSubs = await PushSubscription.find({});
       mongoSubs.forEach((ms) => {
         if (!allSubs.some((s) => s.endpoint === ms.endpoint)) {
-          allSubs.push({ endpoint: ms.endpoint, keys: ms.keys });
+          allSubs.push({ endpoint: ms.endpoint, keys: ms.keys, userEmail: ms.userEmail });
         }
       });
     } catch (e) {}
 
-    if (!allSubs || allSubs.length === 0) {
+    // If targetEmail is specified, filter to devices for that account, but fallback to all if none matched
+    let targetSubs = allSubs;
+    if (targetEmail) {
+      const userSubs = allSubs.filter((s) => s.userEmail && s.userEmail.toLowerCase() === targetEmail.toLowerCase());
+      if (userSubs.length > 0) {
+        targetSubs = userSubs;
+      }
+    }
+
+    if (!targetSubs || targetSubs.length === 0) {
       console.log(`[Push Notification] No active subscribers. Notification queued in logs: ${payload.title}`);
       return;
     }
 
-    console.log(`[Push Notification] Broadcasting to ${allSubs.length} device(s): ${payload.title}`);
+    console.log(`[Push Notification] Broadcasting to ${targetSubs.length} device(s)${targetEmail ? ` for account: ${targetEmail}` : ""}: ${payload.title}`);
     const payloadString = JSON.stringify(payload);
 
-    for (const sub of allSubs) {
+    for (const sub of targetSubs) {
       try {
         await webpush.sendNotification(sub, payloadString);
       } catch (err) {
@@ -813,24 +823,50 @@ app.post("/api/push-subscribe", async (req, res) => {
       return res.status(400).json({ error: "Invalid subscription payload" });
     }
 
+    let userEmail = subscription.userEmail || null;
+    let userId = subscription.userId || null;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      try {
+        const token = req.headers.authorization.split(" ")[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded) {
+          if (!userId) userId = decoded.userId;
+          if (!userEmail) userEmail = decoded.email;
+        }
+      } catch (e) {}
+    }
+
     // Upsert into MongoDB
     await PushSubscription.findOneAndUpdate(
       { endpoint: subscription.endpoint },
       {
         endpoint: subscription.endpoint,
         keys: subscription.keys,
+        userEmail: userEmail,
+        userId: userId,
         createdAt: new Date()
       },
       { upsert: true, new: true }
     ).catch(() => {});
 
-    const exists = pushSubscriptions.some((s) => s.endpoint === subscription.endpoint);
-    if (!exists) {
-      pushSubscriptions.push(subscription);
-      saveSubscriptions();
+    const subItem = {
+      endpoint: subscription.endpoint,
+      keys: subscription.keys,
+      userEmail: userEmail,
+      userId: userId
+    };
+
+    const idx = pushSubscriptions.findIndex((s) => s.endpoint === subscription.endpoint);
+    if (idx >= 0) {
+      pushSubscriptions[idx] = subItem;
+    } else {
+      pushSubscriptions.push(subItem);
     }
+    saveSubscriptions();
+
     const count = await PushSubscription.countDocuments().catch(() => pushSubscriptions.length);
-    console.log(`[Push Notification] New device subscribed! Total active devices: ${count}`);
+    console.log(`[Push Notification] Device subscribed (Account: ${userEmail || "anonymous"})! Total active devices: ${count}`);
     res.status(201).json({ success: true, count });
   } catch (err) {
     console.error("Push subscribe error:", err.message);
@@ -854,17 +890,50 @@ app.post("/api/push-unsubscribe", async (req, res) => {
   }
 });
 
+// Active pending test alert state (for cross-device synchronization between laptop and mobile)
+let pendingTestAlert = null;
+
 // Immediate test push notification endpoint (test while app/tab is closed)
 app.post("/api/push-test", async (req, res) => {
+  const { title, body, testId, userEmail, userId } = req.body || {};
+  const alertTitle = title || "⚠️ Solar String Fault Detected! (Test Alert)";
+  const alertBody = body || "Wire break simulation at Node 2: Open circuit detected.";
+
+  let callerEmail = userEmail || null;
+  let callerUserId = userId || null;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    try {
+      const token = req.headers.authorization.split(" ")[1];
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded) {
+        if (!callerUserId) callerUserId = decoded.userId;
+        if (!callerEmail) callerEmail = decoded.email;
+      }
+    } catch (e) {}
+  }
+
+  pendingTestAlert = {
+    id: testId || Date.now(),
+    title: alertTitle,
+    body: alertBody,
+    userEmail: callerEmail,
+    userId: callerUserId,
+    timestamp: Date.now()
+  };
+
+  console.log(`[Push Notification] Test alert dispatched for account: ${callerEmail || "All devices"}`);
+
   await sendPushNotification({
-    title: "⚠️ Solar String Fault Detected! (Test Alert)",
-    body: "Wire break simulation at Node 2: Open circuit detected.",
+    title: alertTitle,
+    body: alertBody,
     icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
     badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
     vibrate: [250, 100, 250, 100, 250],
     url: "/?view=monitor"
-  });
-  res.json({ success: true, count: pushSubscriptions.length });
+  }, callerEmail);
+
+  res.json({ success: true, count: pushSubscriptions.length, pendingAlert: pendingTestAlert });
 });
 
 // Broadcast client-triggered or hardware-detected fault to all push subscribers
@@ -1176,6 +1245,17 @@ app.get("/api/status", (req, res) => {
     return { ...w, state: "closed" };
   });
 
+  let activeAlert = null;
+  if (pendingTestAlert && (Date.now() - pendingTestAlert.timestamp < 45000)) {
+    activeAlert = {
+      id: pendingTestAlert.id,
+      title: pendingTestAlert.title,
+      body: pendingTestAlert.body,
+      userEmail: pendingTestAlert.userEmail,
+      timestamp: pendingTestAlert.timestamp
+    };
+  }
+
   res.json({
     gatewayOnline,
     faultNodeId,
@@ -1187,6 +1267,7 @@ app.get("/api/status", (req, res) => {
     serverTime: Date.now(),
     cells,
     wires,
+    pendingAlert: activeAlert,
     isSimulated: latest.isSimulated,
     simulationScenario: latest.simulationScenario
   });

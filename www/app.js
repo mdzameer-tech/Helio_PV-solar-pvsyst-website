@@ -1988,22 +1988,50 @@ async function dispatchSystemNotification(title, body) {
   return dispatched;
 }
 
+let lastSeenTestAlertId = null;
+
 async function triggerDirectTestNotification() {
   playFaultAlertAudio();
 
   const title = '⚠️ Solar String Fault Detected! (Test Alert)';
   const body = 'Wire break simulation at Node 2: Open circuit detected. Real-time background push alert test.';
 
-  // Dispatch across native Capacitor, ServiceWorker, or window Notification
+  // Dispatch locally on this triggering device (laptop)
   await dispatchSystemNotification(title, body);
 
-  // Broadcast to server web-push subscribers
+  const testId = Date.now();
+  lastSeenTestAlertId = testId;
+
+  const payload = {
+    testId: testId,
+    title: title,
+    body: body,
+    userEmail: AuthState.user ? AuthState.user.email : null,
+    userId: AuthState.user ? (AuthState.user._id || AuthState.user.id) : null
+  };
+
+  const headers = getAuthHeaders();
+
+  // 1. Broadcast to local/current backend
   try {
-    fetch(`${getBackendBaseUrl()}/api/push-test`, { method: 'POST' }).catch(() => {});
+    fetch(`${getBackendBaseUrl()}/api/push-test`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+
+    // 2. If running locally on localhost, ALSO forward to cloud Render backend so the phone gets it!
+    if (!window.location.hostname.includes('onrender.com')) {
+      fetch('https://heliopv-solar.onrender.com/api/push-test', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }
   } catch (e) {}
 
   // Immediate confirmation alert so user knows test executed
-  alert('🔔 Test Background Push Alert Dispatched!\n\nA system alert was triggered. You will see it in your notification shade and status bar, with alarm audio and vibration.');
+  alert('🔔 Test Background Push Alert Dispatched!\n\nA system alert was triggered. Because your account is synced, this alert is now landing on your mobile phone as well!');
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -2057,11 +2085,28 @@ async function ensurePushSubscription() {
       }
 
       if (sub) {
+        const subData = sub.toJSON ? sub.toJSON() : sub;
+        const payload = {
+          endpoint: sub.endpoint,
+          keys: subData.keys,
+          userEmail: AuthState.user ? AuthState.user.email : null,
+          userId: AuthState.user ? (AuthState.user._id || AuthState.user.id) : null
+        };
+        const headers = getAuthHeaders();
         await fetch(`${getBackendBaseUrl()}/api/push-subscribe`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub)
+          headers: headers,
+          body: JSON.stringify(payload)
         }).catch(() => {});
+
+        // Also sync subscription to Cloud backend if running locally
+        if (!window.location.hostname.includes('onrender.com')) {
+          fetch('https://heliopv-solar.onrender.com/api/push-subscribe', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+          }).catch(() => {});
+        }
       }
     } catch (e) {
       console.warn('[WebPush] ensurePushSubscription info:', e.message);
@@ -2466,6 +2511,20 @@ function renderIoTMonitor(data) {
   const alertBox = document.getElementById('iot-alert-box');
   const estIotBadge = document.getElementById('estimation-iot-status-badge');
   const mobileFaultBadge = document.getElementById('mobile-nav-fault-badge');
+
+  // Cross-device test alert synchronization (e.g. from laptop to mobile with same account)
+  if (data.pendingAlert && data.pendingAlert.id) {
+    const alertId = data.pendingAlert.id;
+    const alertAge = Date.now() - (data.pendingAlert.timestamp || 0);
+    if (alertId !== lastSeenTestAlertId && alertAge < 45000) {
+      lastSeenTestAlertId = alertId;
+      playFaultAlertAudio();
+      dispatchSystemNotification(
+        data.pendingAlert.title || '⚠️ Solar String Fault Detected! (Test Alert)',
+        data.pendingAlert.body || 'Wire break simulation at Node 2: Open circuit detected.'
+      );
+    }
+  }
 
   if (data.faultDescription) {
     if (mobileFaultBadge) mobileFaultBadge.classList.remove('hidden');
@@ -3405,6 +3464,7 @@ async function initAuth() {
       updateAuthUI(AuthState.user);
       applyUserSavedLocation(AuthState.user);
       unlockAuthWall();
+      ensurePushSubscription().catch(() => {});
       return;
     }
   } catch (e) {
@@ -3684,6 +3744,7 @@ function setupAuthEventListeners() {
       updateAuthUI(data.user);
       applyUserSavedLocation(data.user);
       unlockAuthWall();
+      ensurePushSubscription().catch(() => {});
     } catch (err) {
       showAuthError(err.message);
     } finally {
@@ -3730,6 +3791,7 @@ function setupAuthEventListeners() {
       updateAuthUI(data.user);
       applyUserSavedLocation(data.user);
       unlockAuthWall();
+      ensurePushSubscription().catch(() => {});
     } catch (err) {
       showAuthError(err.message);
     } finally {

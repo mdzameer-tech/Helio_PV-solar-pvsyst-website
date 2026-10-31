@@ -26,6 +26,7 @@ import org.json.JSONObject;
 public class MainActivity extends BridgeActivity {
     private static final String CHANNEL_ID = "solar_fault_alerts";
     private static int lastNotifiedFaultNodeId = 0;
+    private static long lastHandledTestAlertId = 0;
     private ScheduledExecutorService scheduler;
 
     @Override
@@ -129,6 +130,19 @@ public class MainActivity extends BridgeActivity {
                                 "✅ Solar String Restored",
                                 "All series continuity connections are intact and continuous."
                             );
+                        }
+
+                        // Check for pending test alert dispatched from laptop or another device
+                        JSONObject pendingAlert = json.optJSONObject("pendingAlert");
+                        if (pendingAlert != null) {
+                            long alertId = pendingAlert.optLong("id", 0);
+                            long timestamp = pendingAlert.optLong("timestamp", 0);
+                            if (alertId > 0 && alertId != lastHandledTestAlertId && (System.currentTimeMillis() - timestamp < 45000)) {
+                                lastHandledTestAlertId = alertId;
+                                String alertTitle = pendingAlert.optString("title", "⚠️ Solar String Fault Detected! (Test Alert)");
+                                String alertBody = pendingAlert.optString("body", "Wire break simulation at Node 2: Open circuit detected.");
+                                showNativeNotification(alertTitle, alertBody);
+                            }
                         }
                     }
                 } catch (Exception ignored) {
