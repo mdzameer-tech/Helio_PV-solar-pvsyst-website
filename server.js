@@ -63,6 +63,9 @@ let isMongoConnected = false;
 let mongoLastError = null;
 let mongoConnectionMethod = "none";
 
+// Prevent Mongoose from buffering queries in memory during reconnects
+mongoose.set("bufferCommands", false);
+
 // MongoDB Mongoose Schemas & Models
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -129,9 +132,10 @@ async function syncLocalUsersToAtlas() {
 // Connect to MongoDB Atlas with automatic SRV -> Direct Replica Set failover
 async function connectToMongo() {
   const options = {
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 10000,
-    socketTimeoutMS: 45000
+    serverSelectionTimeoutMS: 4000,
+    connectTimeoutMS: 5000,
+    socketTimeoutMS: 20000,
+    bufferCommands: false
   };
 
   try {
@@ -250,15 +254,23 @@ function createLocalUserWrapper(u) {
   };
 }
 
-// Unified Database Access Functions (Fast, Resilient, Zero 10-second Buffer Hangs)
+// Helper to enforce strict database operation timeouts so requests NEVER hang indefinitely
+function withDbTimeout(promise, ms = 3000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Database operation timed out")), ms))
+  ]);
+}
+
+// Unified Database Access Functions (Fast, Resilient, Zero Buffer Hangs)
 async function dbFindUserByEmail(email) {
   const normalized = email.trim().toLowerCase();
-  if (isMongoConnected) {
+  if (isMongoConnected && mongoose.connection.readyState === 1) {
     try {
-      const user = await User.findOne({ email: normalized });
+      const user = await withDbTimeout(User.findOne({ email: normalized }), 3500);
       if (user) return user;
     } catch (e) {
-      console.warn("[DB] Mongo findOne error, falling back to local:", e.message);
+      console.warn("[DB] Mongo findOne error/timeout, falling back to local:", e.message);
     }
   }
   const local = localUsers.find((u) => u.email.toLowerCase() === normalized);
@@ -267,14 +279,14 @@ async function dbFindUserByEmail(email) {
 }
 
 async function dbFindUserById(id) {
-  if (isMongoConnected) {
+  if (isMongoConnected && mongoose.connection.readyState === 1) {
     try {
       if (mongoose.Types.ObjectId.isValid(id)) {
-        const user = await User.findById(id);
+        const user = await withDbTimeout(User.findById(id), 3500);
         if (user) return user;
       }
     } catch (e) {
-      console.warn("[DB] Mongo findById error, falling back to local:", e.message);
+      console.warn("[DB] Mongo findById error/timeout, falling back to local:", e.message);
     }
   }
   const local = localUsers.find((u) => u.id === id || (u._id && u._id.toString() === id));
@@ -305,7 +317,7 @@ async function dbCreateUser({ name, email, passwordHash, profileImage, savedLoca
   localUsers.push(localData);
   saveLocalUsers();
 
-  if (isMongoConnected) {
+  if (isMongoConnected && mongoose.connection.readyState === 1) {
     try {
       const mongoUser = new User({
         _id: new mongoose.Types.ObjectId(newId),
@@ -316,7 +328,7 @@ async function dbCreateUser({ name, email, passwordHash, profileImage, savedLoca
         savedLocation,
         savedSettings: localData.savedSettings
       });
-      await mongoUser.save();
+      await withDbTimeout(mongoUser.save(), 4000);
       return mongoUser;
     } catch (e) {
       console.warn("[DB] Could not save user directly to Mongo:", e.message);
@@ -329,7 +341,7 @@ async function dbCreateUser({ name, email, passwordHash, profileImage, savedLoca
 // JWT Secret Key
 const JWT_SECRET = process.env.JWT_SECRET || "heliopv_jwt_secret_secure_key_2026_solar_iot";
 
-// Middleware to authenticate JWT
+// Middleware to authenticate JWT - Resilient & never kicks logged-in users out
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
@@ -339,17 +351,28 @@ async function authenticateToken(req, res, next) {
 
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
-      return res.status(403).json({ error: "Session expired or invalid token" });
+      return res.status(401).json({ error: "Session expired or invalid token" });
     }
     try {
-      const user = await dbFindUserById(decoded.id);
+      let user = await dbFindUserById(decoded.id);
       if (!user) {
-        return res.status(404).json({ error: "User account not found" });
+        // Fallback: If MongoDB or local store is recovering or syncing,
+        // trust the cryptographically signed JWT payload so the session NEVER drops
+        user = createLocalUserWrapper({
+          id: decoded.id,
+          email: decoded.email,
+          name: decoded.name || "Solar User"
+        });
       }
       req.user = user;
       next();
     } catch (e) {
-      return res.status(500).json({ error: "Database error during authentication: " + e.message });
+      req.user = createLocalUserWrapper({
+        id: decoded.id,
+        email: decoded.email,
+        name: decoded.name || "Solar User"
+      });
+      next();
     }
   });
 }
@@ -595,7 +618,7 @@ app.post("/api/auth/signup", async (req, res) => {
     const token = jwt.sign(
       { id: userIdStr, email: newUser.email, name: newUser.name },
       JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "3650d" }
     );
 
     res.status(201).json({
@@ -639,7 +662,7 @@ app.post("/api/auth/login", async (req, res) => {
     const token = jwt.sign(
       { id: userIdStr, email: user.email, name: user.name },
       JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "3650d" }
     );
 
     console.log(`[Auth] User logged in: ${user.email} (Location: ${user.savedLocation?.displayLocation})`);
@@ -785,7 +808,7 @@ app.post("/api/auth/update-profile", authenticateToken, async (req, res) => {
     const token = jwt.sign(
       { id: req.user._id.toString(), email: req.user.email, name: req.user.name },
       JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: "3650d" }
     );
 
     res.json({

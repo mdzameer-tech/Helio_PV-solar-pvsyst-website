@@ -3442,6 +3442,7 @@ async function initAuth() {
     AuthState.token = null;
     AuthState.user = null;
     localStorage.removeItem('heliopv_jwt_token');
+    localStorage.removeItem('heliopv_user_profile');
     updateAuthUI(null);
     lockAuthWall('login', 'You have been signed out. Please sign in to continue.');
     return;
@@ -3449,42 +3450,56 @@ async function initAuth() {
 
   const requestedAuthMode = authParam === 'signup' ? 'signup' : 'login';
 
-  // If NO token is stored, immediately guard all views and present the Login/Signup screen
-  if (!AuthState.token) {
-    updateAuthUI(null);
-    lockAuthWall(requestedAuthMode, 'Authentication Required: Please sign in or create an account to access the dashboard.');
+  // 1. Permanent Session & Offline-First Restore
+  // If token is stored locally, the user NEVER gets logged out across browser/app restarts
+  const storedToken = localStorage.getItem('heliopv_jwt_token');
+  const storedUserJson = localStorage.getItem('heliopv_user_profile');
+  let cachedUser = null;
+  if (storedUserJson) {
+    try {
+      cachedUser = JSON.parse(storedUserJson);
+    } catch (e) {}
+  }
+
+  if (storedToken) {
+    AuthState.token = storedToken;
+    AuthState.user = cachedUser || { name: 'Solar User', email: '' };
+
+    // Instantly unlock the dashboard! No loading spinners, no lock screen!
+    updateAuthUI(AuthState.user);
+    if (AuthState.user && AuthState.user.savedLocation) {
+      applyUserSavedLocation(AuthState.user);
+    }
+    unlockAuthWall();
+    ensurePushSubscription().catch(() => {});
+
+    // In the background, gently sync and refresh profile from server without disturbing user
+    fetch(`${getBackendBaseUrl()}/api/auth/me`, {
+      headers: getAuthHeaders()
+    }).then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.user) {
+          AuthState.user = data.user;
+          localStorage.setItem('heliopv_user_profile', JSON.stringify(data.user));
+          updateAuthUI(data.user);
+          if (data.user.savedLocation) {
+            applyUserSavedLocation(data.user);
+          }
+        }
+      }
+      // If server returns error, 502, 503, or cold-starts: DO NOTHING!
+      // The session remains permanently active!
+    }).catch(() => {
+      // Offline / network disconnect: keep active session intact!
+    });
+
     return;
   }
 
-  // If token IS stored, verify it with the backend server
-  try {
-    const res = await fetch(`${getBackendBaseUrl()}/api/auth/me`, {
-      headers: getAuthHeaders()
-    });
-    if (res.ok) {
-      const data = await res.json();
-      AuthState.user = data.user;
-      updateAuthUI(AuthState.user);
-      applyUserSavedLocation(AuthState.user);
-      unlockAuthWall();
-      ensurePushSubscription().catch(() => {});
-      return;
-    }
-  } catch (e) {
-    console.warn('Session verification network issue; retaining active session:', e);
-    // Offline / network fallback: if a valid local token exists, allow access
-    if (AuthState.token) {
-      unlockAuthWall();
-      return;
-    }
-  }
-
-  // Token is expired, invalid, or account removed
-  AuthState.token = null;
-  AuthState.user = null;
-  localStorage.removeItem('heliopv_jwt_token');
+  // If NO token exists, guard all views and present the Login/Signup screen
   updateAuthUI(null);
-  lockAuthWall('login', 'Your session has expired. Please sign in again.');
+  lockAuthWall(requestedAuthMode, 'Authentication Required: Please sign in or create an account to access the dashboard.');
 }
 
 // Debounced auto-save of chosen location to user profile in MongoDB Atlas
@@ -3725,31 +3740,52 @@ function setupAuthEventListeners() {
   formLogin?.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearAuthError();
-    const email = document.getElementById('login-email').value;
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const btnSubmit = document.getElementById('btn-submit-login');
 
     btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span>Signing In...</span>';
+    btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Connecting...</span>';
+
+    // Timer to notify user if Render is waking from sleep (> 3.5s)
+    const wakeTimer = setTimeout(() => {
+      if (btnSubmit && btnSubmit.disabled) {
+        btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5 text-amber-300" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Waking server up... (few sec)</span>';
+      }
+    }, 3500);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 28000); // 28s timeout
 
     try {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      if (!res.ok) throw new Error(data.error || 'Invalid email or password');
 
       AuthState.token = data.token;
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
+      localStorage.setItem('heliopv_user_profile', JSON.stringify(data.user));
       updateAuthUI(data.user);
       applyUserSavedLocation(data.user);
       unlockAuthWall();
       ensurePushSubscription().catch(() => {});
     } catch (err) {
-      showAuthError(err.message);
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+      if (err.name === 'AbortError') {
+        showAuthError('Connection timed out. The cloud server may be cold-starting; please tap "Sign In" once more.');
+      } else {
+        showAuthError(err.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i><span>Sign In to Dashboard</span>';
@@ -3761,13 +3797,22 @@ function setupAuthEventListeners() {
   formSignup?.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearAuthError();
-    const name = document.getElementById('signup-name').value;
-    const email = document.getElementById('signup-email').value;
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
     const btnSubmit = document.getElementById('btn-submit-signup');
 
     btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span>Creating Account...</span>';
+    btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Creating Account...</span>';
+
+    const wakeTimer = setTimeout(() => {
+      if (btnSubmit && btnSubmit.disabled) {
+        btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5 text-amber-300" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Waking server up... (few sec)</span>';
+      }
+    }, 3500);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 28000);
 
     try {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/signup`, {
@@ -3783,20 +3828,31 @@ function setupAuthEventListeners() {
             lon: AppState.project.lon,
             displayLocation: AppState.project.displayLocation
           }
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Registration failed');
 
       AuthState.token = data.token;
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
+      localStorage.setItem('heliopv_user_profile', JSON.stringify(data.user));
       updateAuthUI(data.user);
       applyUserSavedLocation(data.user);
       unlockAuthWall();
       ensurePushSubscription().catch(() => {});
     } catch (err) {
-      showAuthError(err.message);
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+      if (err.name === 'AbortError') {
+        showAuthError('Connection timed out. Please check your connection and tap "Create Account" again.');
+      } else {
+        showAuthError(err.message || 'Registration failed. Please try again.');
+      }
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i><span>Create Account &amp; Sign In</span>';
@@ -4069,6 +4125,7 @@ function setupAuthEventListeners() {
       AuthState.token = null;
       AuthState.user = null;
       localStorage.removeItem('heliopv_jwt_token');
+      localStorage.removeItem('heliopv_user_profile');
       updateAuthUI(null);
       closeDrawer();
       lockAuthWall('login', 'You have been signed out. Please sign in to continue.');
