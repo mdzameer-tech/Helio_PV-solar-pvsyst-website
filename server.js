@@ -1045,7 +1045,7 @@ function checkFaultAndNotify() {
 // ==========================================================================
 // ML Solar Forecasting Microservice Integration (FastAPI / LightGBM / RF)
 // ==========================================================================
-const ML_SERVICE_URL = process.env.ML_API_URL || "https://solar-ml-api.onrender.com";
+const ML_SERVICE_URL = process.env.ML_API_URL || "https://solar-ml-api-z414.onrender.com";
 
 // Health check for ML Microservice
 app.get("/api/ml/health", async (req, res) => {
