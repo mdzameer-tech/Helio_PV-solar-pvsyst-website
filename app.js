@@ -1004,8 +1004,25 @@ function renderForecastTab(res) {
       timeLabel = `${timeStr} – ${h === 23 ? '12:00 AM' : (h >= 12 ? (h === 12 ? 1 : h - 11) + ':00 PM' : (h + 1) + ':00 AM')}`;
     }
 
+    // Check if ML model prediction has an entry for this hour
+    let mlPowerKw = null;
+    if (AppState.mlPrediction && (isToday || isTomorrow)) {
+      const targetHourStr = `${(h === 24 ? 0 : h).toString().padStart(2, '0')}:00:00`;
+      const mlItem = AppState.mlPrediction.next_24h_physics?.find(x => x.hour_ending && x.hour_ending.includes(targetHourStr));
+      if (mlItem && mlItem.p50_w !== undefined) {
+        mlPowerKw = mlItem.p50_w / 1000;
+      }
+      // For the immediate next hour, use the LightGBM ML model directly
+      if (isToday && (h === currentHour || h === currentHour + 1) && mlNextHour?.p50_w !== undefined && mlNextHour.p50_w > 0) {
+        mlPowerKw = mlNextHour.p50_w / 1000;
+      }
+    }
+
     let ghi = 0;
-    if (h >= 6 && h <= 18) {
+    if (mlPowerKw !== null) {
+      // Powered directly by ML model output
+      ghi = mlPowerKw > 0 ? Math.round((mlPowerKw / Math.max(0.1, capacityKwp * pr)) * 1000) : 0;
+    } else if (h >= 6 && h <= 18) {
       const solarTime = (isToday && h === currentHour) ? (h + currentMinute / 60) : (h + 0.5);
       const angle = ((solarTime - 6) / 12) * Math.PI;
       if (angle > 0 && angle < Math.PI) {
@@ -1016,7 +1033,7 @@ function renderForecastTab(res) {
     }
 
     const hourFraction = (isToday && h === currentHour) ? Math.max(0.05, (60 - currentMinute) / 60) : 1.0;
-    const powerKw = Math.max(0, capacityKwp * (ghi / 1000) * pr);
+    const powerKw = (mlPowerKw !== null) ? mlPowerKw : Math.max(0, capacityKwp * (ghi / 1000) * pr);
     const energyKwh = powerKw * hourFraction;
     const savings = energyKwh * tariff;
 
