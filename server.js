@@ -1042,6 +1042,88 @@ function checkFaultAndNotify() {
   }
 }
 
+// ==========================================================================
+// ML Solar Forecasting Microservice Integration (FastAPI / LightGBM / RF)
+// ==========================================================================
+const ML_SERVICE_URL = process.env.ML_API_URL || "https://solar-ml-api.onrender.com";
+
+// Health check for ML Microservice
+app.get("/api/ml/health", async (req, res) => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const r = await fetch(`${ML_SERVICE_URL}/health`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    res.json({ online: true, serviceUrl: ML_SERVICE_URL, ...data });
+  } catch (err) {
+    res.json({ online: false, serviceUrl: ML_SERVICE_URL, error: err.message });
+  }
+});
+
+// Proxy prediction request to ML Microservice with graceful fallback to PVsyst engine
+app.get("/api/ml/predict", async (req, res) => {
+  const lat = parseFloat(req.query.lat) || 12.8342;
+  const lon = parseFloat(req.query.lon) || 77.5891;
+  const kw = parseFloat(req.query.kw) || 36.60;
+  const monthly = req.query.monthly !== "false";
+
+  // Check distance to Bengaluru center (12.9716, 77.5946)
+  const dLat = (lat - 12.9716) * 111.0;
+  const dLon = (lon - 77.5946) * 111.0 * Math.cos(12.9716 * Math.PI / 180);
+  const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
+
+  // If outside ML model training boundary (> 25 km), report fallback
+  if (distKm > 25.0) {
+    return res.json({
+      success: false,
+      isFallback: true,
+      reason: `Site is ${Math.round(distKm)} km from Bengaluru centre. ML ensemble is trained within 25 km radius; using Universal PVsyst engine.`
+    });
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+    const url = `${ML_SERVICE_URL}/predict?lat=${lat}&lon=${lon}&kw=${kw}&monthly=${monthly}`;
+
+    let mlRes = null;
+    try {
+      mlRes = await fetch(url, { signal: controller.signal });
+    } catch (netErr) {
+      // Local fallback for offline / lab testing
+      const localUrl = `http://127.0.0.1:8000/predict?lat=${lat}&lon=${lon}&kw=${kw}&monthly=${monthly}`;
+      const localCtrl = new AbortController();
+      const localTimeout = setTimeout(() => localCtrl.abort(), 2000);
+      try {
+        mlRes = await fetch(localUrl, { signal: localCtrl.signal });
+      } catch (localErr) {}
+      clearTimeout(localTimeout);
+    }
+    clearTimeout(timeout);
+
+    if (mlRes && mlRes.ok) {
+      const data = await mlRes.json();
+      return res.json({
+        success: true,
+        isFallback: false,
+        source: "ml_ensemble",
+        ...data
+      });
+    }
+
+    throw new Error(`ML Service returned status ${mlRes ? mlRes.status : "offline"}`);
+  } catch (err) {
+    console.warn(`[ML Service] Prediction unavailable (${err.message}), falling back to PVsyst engine.`);
+    return res.json({
+      success: false,
+      isFallback: true,
+      reason: "ML service is cold-starting or offline; using calibrated PVsyst physics engine."
+    });
+  }
+});
+
 // ESP32 posts telemetry packets here
 app.post("/api/data", (req, res) => {
   const nodes = (req.body && req.body.nodes) || [];

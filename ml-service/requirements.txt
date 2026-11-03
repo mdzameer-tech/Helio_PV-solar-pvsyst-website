@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+numpy
+pandas
+scipy
+requests
+joblib
+pvlib
+lightgbm==4.6.0
+scikit-learn==1.6.1

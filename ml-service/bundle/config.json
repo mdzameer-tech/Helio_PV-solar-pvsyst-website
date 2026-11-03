@@ -1,0 +1,285 @@
+{
+ "trained_through": "2026-10-25",
+ "versions": {
+  "lightgbm": "4.6.0",
+  "sklearn": "1.6.1"
+ },
+ "location": {
+  "city": "Bengaluru",
+  "centre_lat": 12.9716,
+  "centre_lon": 77.5946,
+  "max_distance_km": 25,
+  "note": "Elevation must be supplied for the GPS point (latitude, longitude, elevation are features)."
+ },
+ "pv_reference_system": {
+  "kw": 1.0,
+  "tilt": 13,
+  "azimuth": 180,
+  "pdc0_w": 1000.0,
+  "gamma": -0.004,
+  "losses": 0.14,
+  "albedo": 0.2,
+  "transposition": "haydavies",
+  "cell_temp_model": "sapm/open_rack_glass_glass",
+  "clear_sky_air_temp_c": 27.0,
+  "clear_sky_wind_ms": 2.0,
+  "forecast_ghi_decomposition": "erbs",
+  "wind_units_input": "km/h"
+ },
+ "hourly": {
+  "features": [
+   "csi_lag0",
+   "cloud_lag0",
+   "temp_lag0",
+   "power_lag0",
+   "csi_lag1",
+   "cloud_lag1",
+   "temp_lag1",
+   "power_lag1",
+   "csi_lag2",
+   "cloud_lag2",
+   "temp_lag2",
+   "power_lag2",
+   "csi_lag3",
+   "cloud_lag3",
+   "temp_lag3",
+   "power_lag3",
+   "csi_lag4",
+   "cloud_lag4",
+   "temp_lag4",
+   "power_lag4",
+   "csi_lag5",
+   "cloud_lag5",
+   "temp_lag5",
+   "power_lag5",
+   "csi_same_hour_yday",
+   "power_same_hour_yday",
+   "csi_roll24",
+   "solar_elev_next",
+   "clearsky_ghi_next",
+   "power_clear_next",
+   "hour_sin",
+   "hour_cos",
+   "doy_sin",
+   "doy_cos",
+   "latitude",
+   "longitude",
+   "elevation"
+  ],
+  "model": "hourly_A_lgbm.joblib",
+  "q10": "hourly_A_q10.txt",
+  "q90": "hourly_A_q90.txt",
+  "conformal_offset_w": 4.965477359132432,
+  "band_rule": "lo = max(min(q10,q90) - Q, 0), hi = max(q10,q90) + Q; point = max(pred, 0)",
+  "daylight_only": "predict only when solar_elev_next > 0"
+ },
+ "daily": {
+  "leads": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "A_features": [
+   "clear_energy_kwh",
+   "energy_yday",
+   "energy_roll7",
+   "doy_sin",
+   "doy_cos",
+   "latitude",
+   "longitude",
+   "elevation"
+  ],
+  "B_features": [
+   "clear_energy_kwh",
+   "cloud_mean",
+   "temp_max",
+   "temp_min",
+   "humidity_mean",
+   "wind_mean",
+   "precip_sum",
+   "energy_yday",
+   "energy_roll7",
+   "doy_sin",
+   "doy_cos",
+   "latitude",
+   "longitude",
+   "elevation"
+  ],
+  "B_extras_from_forecast": [
+   "cloud_mean",
+   "temp_max",
+   "temp_min",
+   "humidity_mean",
+   "wind_mean",
+   "precip_sum"
+  ],
+  "A_models": {
+   "1": "daily_A_L1.joblib",
+   "2": "daily_A_L2.joblib",
+   "3": "daily_A_L3.joblib",
+   "4": "daily_A_L4.joblib",
+   "5": "daily_A_L5.joblib",
+   "6": "daily_A_L6.joblib",
+   "7": "daily_A_L7.joblib"
+  },
+  "B_models": {
+   "1": "daily_B_RF_L1.joblib",
+   "2": "daily_B_RF_L2.joblib",
+   "3": "daily_B_RF_L3.joblib",
+   "4": "daily_B_RF_L4.joblib",
+   "5": "daily_B_RF_L5.joblib",
+   "6": "daily_B_RF_L6.joblib",
+   "7": "daily_B_RF_L7.joblib"
+  },
+  "ensemble": "mean of A prediction, B (RF fed real forecast for the target day) and forecast-physics energy",
+  "interval_offsets": {
+   "1": {
+    "lo": -0.47248716799936546,
+    "hi": 0.6797173932962295
+   },
+   "2": {
+    "lo": -0.5843870017581422,
+    "hi": 0.689468958494381
+   },
+   "3": {
+    "lo": -0.6080081210408439,
+    "hi": 0.6836973757044397
+   },
+   "4": {
+    "lo": -0.7330336439625872,
+    "hi": 0.6944041283613387
+   },
+   "5": {
+    "lo": -0.7666832527197975,
+    "hi": 0.7156123173373914
+   },
+   "6": {
+    "lo": -0.8250347389914331,
+    "hi": 0.7362576393377845
+   },
+   "7": {
+    "lo": -0.8131217845738187,
+    "hi": 0.8053190239362517
+   }
+  },
+  "interval_rule": "P10 = max(mean + lo, 0), P90 = mean + hi (kWh per kW)"
+ },
+ "monthly": {
+  "climatology": {
+   "1": {
+    "mean": 154.42617348076354,
+    "std": 8.011762211701523,
+    "p10": 146.0506065257967,
+    "p50": 155.13161089903983,
+    "p90": 162.77756370010317,
+    "n_years": 21
+   },
+   "2": {
+    "mean": 152.34812563722923,
+    "std": 6.491158676999998,
+    "p10": 144.46967415221462,
+    "p50": 152.1570468691539,
+    "p90": 160.24180730433756,
+    "n_years": 21
+   },
+   "3": {
+    "mean": 162.64230097595103,
+    "std": 6.222381098042792,
+    "p10": 156.90473929131127,
+    "p50": 161.85701825938787,
+    "p90": 169.88464358511527,
+    "n_years": 21
+   },
+   "4": {
+    "mean": 146.7988778954906,
+    "std": 5.382925054527103,
+    "p10": 141.2591133269138,
+    "p50": 146.57438075103218,
+    "p90": 153.6173785534198,
+    "n_years": 21
+   },
+   "5": {
+    "mean": 136.1751976261588,
+    "std": 6.204330447317173,
+    "p10": 128.28940217751716,
+    "p50": 137.29380596867284,
+    "p90": 143.4351624128378,
+    "n_years": 21
+   },
+   "6": {
+    "mean": 112.38820326020084,
+    "std": 9.367464408320725,
+    "p10": 102.37606250575648,
+    "p50": 112.10696342448043,
+    "p90": 124.73208180524361,
+    "n_years": 21
+   },
+   "7": {
+    "mean": 105.16316046925756,
+    "std": 8.763471822244565,
+    "p10": 93.95561269252862,
+    "p50": 105.54377557803166,
+    "p90": 112.80697542907383,
+    "n_years": 21
+   },
+   "8": {
+    "mean": 111.81318599707558,
+    "std": 12.032319310562999,
+    "p10": 99.56950994955997,
+    "p50": 108.79951884391895,
+    "p90": 120.5215533626742,
+    "n_years": 21
+   },
+   "9": {
+    "mean": 119.03049624736316,
+    "std": 9.921860708391591,
+    "p10": 108.40203693743351,
+    "p50": 119.50350960705055,
+    "p90": 128.1320349600153,
+    "n_years": 21
+   },
+   "10": {
+    "mean": 128.22616781398588,
+    "std": 10.952982783134873,
+    "p10": 118.20336670808922,
+    "p50": 124.78911132161127,
+    "p90": 144.85496680292627,
+    "n_years": 20
+   },
+   "11": {
+    "mean": 121.19088702463,
+    "std": 15.280162620005441,
+    "p10": 98.76620910357046,
+    "p50": 126.38952760440648,
+    "p90": 134.17822949892508,
+    "n_years": 20
+   },
+   "12": {
+    "mean": 134.54289220945947,
+    "std": 10.608448073069797,
+    "p10": 123.05910924850912,
+    "p50": 134.73400392743372,
+    "p90": 149.3965006865828,
+    "n_years": 20
+   }
+  },
+  "interval_rule": "t-interval: mean +/- t(0.9, n-1) * std * sqrt(1 + 1/n); under-covers ~7 points on 2021-25"
+ },
+ "app_inputs": "Hourly: last 6 h of csi, cloud_cover, temperature_2m, power_w (pvlib from observed radiation), plus csi 23 h ago, power 23 h ago, 24 h mean csi, next-hour sun elevation, clear-sky GHI and clean clear-sky power (fixed 27C, 2 m/s). Daily: energy L days ago, mean of energy 7 days before that, clean clear-sky energy of the target day, doy sin/cos, lat/lon/elev; model B needs the L-day-ahead forecast of cloud mean, temp max/min, humidity mean, wind mean, precip sum (daily aggregates of hourly forecast).",
+ "training_rows": {
+  "hourly": 240044,
+  "daily_by_lead": {
+   "1": 19720,
+   "2": 19715,
+   "3": 19710,
+   "4": 19705,
+   "5": 19700,
+   "6": 19695,
+   "7": 19690
+  }
+ }
+}

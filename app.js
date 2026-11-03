@@ -55,6 +55,7 @@ const AppState = {
   },
   forecastSelectedDayOffset: 0,
   forecastUnit: 'kW',
+  mlPrediction: null,
   googleApiKey: localStorage.getItem('heliopv_google_api_key') || DEFAULT_GOOGLE_API_KEY
 };
 
@@ -544,7 +545,27 @@ function updateCoordinates(lat, lon, fetchWeather = false) {
 }
 
 /**
- * Fetch Satellite Solar Irradiance from Open-Meteo
+ * Fetch ML Model Predictions from FastAPI Microservice (LightGBM + Random Forest)
+ */
+async function fetchMLPrediction(lat, lon, capacityKwp) {
+  try {
+    const res = await fetch(`${getBackendBaseUrl()}/api/ml/predict?lat=${lat}&lon=${lon}&kw=${capacityKwp}&monthly=true`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.success && !data.isFallback) {
+      AppState.mlPrediction = data;
+      console.log('[HelioPV] ML Ensemble predictions loaded:', data);
+      return data;
+    }
+  } catch (e) {
+    console.warn('[HelioPV] ML prediction fetch error, using PVsyst engine:', e);
+  }
+  AppState.mlPrediction = null;
+  return null;
+}
+
+/**
+ * Fetch Satellite Solar Irradiance from Open-Meteo & ML Model
  */
 async function fetchWeatherAndUpdate() {
   const badges = document.querySelectorAll('#weather-badge, #weather-badge-modal');
@@ -553,20 +574,26 @@ async function fetchWeatherAndUpdate() {
     b.className = 'text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-mono calculating';
   });
 
-  const res = await WeatherService.fetchSolarData(AppState.project.lat, AppState.project.lon);
-  if (res && res.success && res.monthlyData) {
-    AppState.weatherData = res.monthlyData;
-    badges.forEach((b) => {
-      b.textContent = 'Satellite Active';
-      b.className = 'text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono';
-    });
-  } else {
-    AppState.weatherData = null; // Uses Universal Physics Climatology model
-    badges.forEach((b) => {
-      b.textContent = 'PVsyst Climatology Active';
-      b.className = 'text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono';
-    });
-  }
+  // Concurrently fetch Satellite ERA5 Data and Python ML Predictions
+  await Promise.allSettled([
+    (async () => {
+      const res = await WeatherService.fetchSolarData(AppState.project.lat, AppState.project.lon);
+      if (res && res.success && res.monthlyData) {
+        AppState.weatherData = res.monthlyData;
+        badges.forEach((b) => {
+          b.textContent = 'Satellite Active';
+          b.className = 'text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono';
+        });
+      } else {
+        AppState.weatherData = null; // Uses Universal Physics Climatology model
+        badges.forEach((b) => {
+          b.textContent = 'PVsyst Climatology Active';
+          b.className = 'text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono';
+        });
+      }
+    })(),
+    fetchMLPrediction(AppState.project.lat, AppState.project.lon, AppState.pv.capacityKwp)
+  ]);
 
   runSimulation();
 }
@@ -916,6 +943,29 @@ function renderForecastTab(res) {
     timeBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Current Time: ${timeStr}`;
   }
 
+  // Update ML Status & Next-Hour Prediction Badge
+  const mlBadge = document.getElementById('forecast-ml-badge');
+  const mlBadgeText = document.getElementById('forecast-ml-badge-text');
+  const mlNextHour = AppState.mlPrediction?.next_hour;
+
+  if (mlBadge && mlBadgeText) {
+    if (AppState.mlPrediction && mlNextHour) {
+      mlBadge.classList.remove('hidden');
+      mlBadge.classList.add('flex');
+      if (isToday) {
+        const p50Str = isWatt ? `${Math.round(mlNextHour.p50_w).toLocaleString()} W` : `${(mlNextHour.p50_w / 1000).toFixed(2)} kW`;
+        const p10Str = isWatt ? `${Math.round(mlNextHour.p10_w).toLocaleString()} W` : `${(mlNextHour.p10_w / 1000).toFixed(2)} kW`;
+        const p90Str = isWatt ? `${Math.round(mlNextHour.p90_w).toLocaleString()} W` : `${(mlNextHour.p90_w / 1000).toFixed(2)} kW`;
+        mlBadgeText.textContent = `AI Next Hour: ${p50Str} (Conf: ${p10Str}–${p90Str})`;
+      } else {
+        mlBadgeText.textContent = 'AI Ensemble Active';
+      }
+    } else {
+      mlBadge.classList.add('hidden');
+      mlBadge.classList.remove('flex');
+    }
+  }
+
   // 2. Build Hourly Data
   const dailyVariances = [1.03, 0.97, 1.05, 0.98, 1.02, 0.99, 1.01];
   const variance = isToday ? 1.0 : (dailyVariances[selectedDayOffset - 1] || 1.0);
@@ -1144,11 +1194,27 @@ function renderForecastTab(res) {
     const shortLabel = `${dayNames[dDate.getDay()]} ${dDate.getDate()}`;
     const isSelected = selectedDayOffset === d;
 
-    const factor = dailyVariances[d - 1];
     const cond = weatherConditions[d - 1];
 
-    const dayYieldKwhPerKwp = Math.round(baseDailyGhi * factor * 100) / 100;
-    const dayKwh = Math.round(capacityKwp * dayYieldKwhPerKwp * pr * 10) / 10;
+    let dayYieldKwhPerKwp = 0;
+    let dayKwh = 0;
+    let mlSubtitle = cond.text;
+    let mlBandHtml = '';
+
+    const mlDay = AppState.mlPrediction?.daily?.find(x => x.lead_days === d);
+    if (mlDay) {
+      dayKwh = Math.round(mlDay.p50_kwh * 10) / 10;
+      dayYieldKwhPerKwp = Math.round((dayKwh / capacityKwp) * 100) / 100;
+      mlSubtitle = 'AI Ensemble: Lags + RF + Physics';
+      const loVal = isWatt ? Math.round(mlDay.p10_kwh * 1000).toLocaleString() : mlDay.p10_kwh.toFixed(1);
+      const hiVal = isWatt ? Math.round(mlDay.p90_kwh * 1000).toLocaleString() : mlDay.p90_kwh.toFixed(1);
+      mlBandHtml = `<div class="text-[9px] text-purple-700 font-medium mt-0.5">80% Conf: ${loVal}–${hiVal}</div>`;
+    } else {
+      const factor = dailyVariances[d - 1];
+      dayYieldKwhPerKwp = Math.round(baseDailyGhi * factor * 100) / 100;
+      dayKwh = Math.round(capacityKwp * dayYieldKwhPerKwp * pr * 10) / 10;
+    }
+
     const daySavings = Math.round(dayKwh * tariff);
 
     total7DayKwh += dayKwh;
@@ -1173,8 +1239,9 @@ function renderForecastTab(res) {
             <span class="text-xs font-bold ${isSelected ? 'text-blue-900 font-black' : 'text-slate-800'}">${shortLabel}</span>
             <i data-lucide="${cond.icon}" class="w-4 h-4 ${cond.color}"></i>
           </div>
-          <span class="text-[10px] text-slate-500 block mb-1.5">${cond.text}</span>
+          <span class="text-[10px] text-slate-500 block mb-1">${mlSubtitle}</span>
           <div class="text-lg font-black text-emerald-600 font-mono">${cardEnergyDisp} <span class="text-[10px] font-normal text-slate-500">${cardUnitDisp}</span></div>
+          ${mlBandHtml}
         </div>
         <div class="pt-2 border-t border-slate-200 mt-2 text-[11px] font-mono">
           <div class="text-slate-600 flex justify-between">
