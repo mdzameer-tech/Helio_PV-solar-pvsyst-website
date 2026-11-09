@@ -468,8 +468,8 @@ app.use((req, res, next) => {
 // Serve static project files directly (HTML, JS, CSS, images)
 app.use(express.static(path.join(__dirname, ".")));
 
-const NODE_TIMEOUT_MS = 7000;     // 7 seconds margin for faster stale detection
-const GATEWAY_TIMEOUT_MS = 7000;  // 7 seconds margin for faster offline detection
+const NODE_TIMEOUT_MS = 10000;    // 10 seconds margin for stale detection
+const GATEWAY_TIMEOUT_MS = 15000; // 15 seconds margin for faster offline detection with cloud latency tolerance
 const LOW_VOLTAGE_MV = 500;       // Threshold in mV
 
 const NODE_TYPE_NAME = { 0: "panel_basic", 1: "panel_full", 2: "string" };
@@ -989,10 +989,11 @@ function computeFaultState() {
 
   if (gatewayOnline) {
     for (let id = 2; id <= 4; id++) {
-      const n = latest.nodes.find((x) => x.id === id);
+      const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
       if (n) {
         const age = (n.ageMs || 0) + gatewayAge;
-        if (age <= NODE_TIMEOUT_MS && n.continuity === false) {
+        const isContinuityBroken = (n.continuity === false || n.continuity === "false" || n.continuity === 0);
+        if (age <= NODE_TIMEOUT_MS && isContinuityBroken) {
           faultNodeId = id;
           if (id === 2) {
             faultDescription = "Disconnection detected between Panel 1 and Panel 2";
@@ -1126,9 +1127,49 @@ app.get("/api/ml/predict", async (req, res) => {
 
 // ESP32 posts telemetry packets here
 app.post("/api/data", (req, res) => {
-  const nodes = (req.body && req.body.nodes) || [];
+  const rawNodes = (req.body && req.body.nodes) || [];
+  const normalizedNodes = rawNodes.map((raw) => {
+    const id = raw.id !== undefined ? Number(raw.id) : (raw.node_id !== undefined ? Number(raw.node_id) : null);
+    let node_type = 0;
+    if (typeof raw.node_type === "number") {
+      node_type = raw.node_type;
+    } else if (typeof raw.node_type === "string") {
+      if (raw.node_type === "string") node_type = 2;
+      else if (raw.node_type === "panel_full") node_type = 1;
+      else node_type = 0;
+    } else {
+      node_type = id === 4 ? 2 : (id === 1 ? 0 : 1);
+    }
+
+    let continuity = true;
+    if (raw.continuity === false || raw.continuity === "false" || raw.continuity === 0) {
+      continuity = false;
+    }
+
+    let temp_c10 = -999;
+    if (raw.temp_c10 !== undefined) {
+      temp_c10 = Number(raw.temp_c10);
+    } else if (raw.temp_c !== undefined) {
+      const tc = Number(raw.temp_c);
+      temp_c10 = (tc <= -90) ? -999 : Math.round(tc * 10);
+    }
+
+    return {
+      id,
+      node_id: id,
+      node_type,
+      continuity,
+      temp_c10,
+      temp_c: temp_c10 === -999 ? null : temp_c10 / 10,
+      voltage_mV: Number(raw.voltage_mV) || 0,
+      current_mA: Number(raw.current_mA) || 0,
+      ldr_raw: Number(raw.ldr_raw) || 0,
+      ageMs: Number(raw.ageMs) || 0
+    };
+  });
+
   latest = {
-    nodes,
+    nodes: normalizedNodes,
     receivedAt: Date.now(),
     isSimulated: false,
     simulationScenario: null
@@ -1136,7 +1177,7 @@ app.post("/api/data", (req, res) => {
 
   if (Date.now() - lastLog > 2000) {
     lastLog = Date.now();
-    console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${nodes.length} active node(s)`);
+    console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${normalizedNodes.length} active node(s)`);
   }
 
   // Trigger alert if open circuit fault was detected
@@ -1233,8 +1274,13 @@ app.get("/api/status", (req, res) => {
 
   // 2. Build cell statuses with cascade / gray zone support
   const cells = [1, 2, 3, 4].map((id) => {
-    const n = latest.nodes.find((x) => x.id === id);
-    const nodeType = n ? n.node_type : (id <= 3 ? (id === 1 ? 0 : 1) : 2);
+    const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
+    let nodeType = n ? n.node_type : (id <= 3 ? (id === 1 ? 0 : 1) : 2);
+    if (typeof nodeType === "string") {
+      if (nodeType === "string") nodeType = 2;
+      else if (nodeType === "panel_full") nodeType = 1;
+      else nodeType = 0;
+    }
     const typeName = NODE_TYPE_NAME[nodeType] || "unknown";
 
     if (!n || !gatewayOnline) {
@@ -1257,21 +1303,26 @@ app.get("/api/status", (req, res) => {
     }
 
     if (typeName === "panel_basic" || typeName === "panel_full") {
-      const voltage = n.voltage_mV / 1000;
-      const temp = n.temp_c10 === -999 ? null : n.temp_c10 / 10;
-      if (state === "ok" && n.voltage_mV < LOW_VOLTAGE_MV) state = "low_voltage";
+      const voltage = (n.voltage_mV || 0) / 1000;
+      let temp = null;
+      if (typeof n.temp_c === "number") {
+        temp = (n.temp_c <= -90) ? null : n.temp_c;
+      } else if (typeof n.temp_c10 === "number") {
+        temp = (n.temp_c10 <= -900) ? null : n.temp_c10 / 10;
+      }
+      if (state === "ok" && (n.voltage_mV || 0) < LOW_VOLTAGE_MV) state = "low_voltage";
       return { id, type: typeName, state, temp, voltage };
     }
 
     // String node: continuity + current + LDR + string voltage + power
-    const current = n.current_mA / 1000;
+    const current = (n.current_mA || 0) / 1000;
 
     let stringVoltage = 0;
     if (n.voltage_mV && n.voltage_mV > 0) {
       stringVoltage = n.voltage_mV / 1000;
     } else {
       for (let pId = 1; pId <= 3; pId++) {
-        const pNode = latest.nodes.find((x) => x.id === pId);
+        const pNode = latest.nodes.find((x) => (x.id === pId || x.node_id === pId));
         if (pNode && pNode.voltage_mV > 0) {
           stringVoltage += pNode.voltage_mV / 1000;
         }
@@ -1286,12 +1337,12 @@ app.get("/api/status", (req, res) => {
       voltage: Number(stringVoltage.toFixed(2)),
       current: Number(current.toFixed(3)),
       power: Number(power.toFixed(2)),
-      ldr: n.ldr_raw
+      ldr: n.ldr_raw || 0
     };
   });
 
   // 3. Compute 7 distinct physical wires across the array
-  const stringNodeData = latest.nodes.find((x) => x.id === 4);
+  const stringNodeData = latest.nodes.find((x) => (x.id === 4 || x.node_id === 4));
   const stringCurrent_mA = stringNodeData ? (stringNodeData.current_mA || 0) : 0;
   const isPowerFlowing = stringCurrent_mA > 15;
 
