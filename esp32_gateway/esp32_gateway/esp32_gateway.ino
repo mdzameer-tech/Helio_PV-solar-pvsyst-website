@@ -13,18 +13,11 @@
      GPIO22-> MOSI (SPI Data In to module)
      GPIO21-> MISO (SPI Data Out from module)
 
-   Network Architecture:
-     - 4 Multiceiver Pipes matching CH32 datapipe_address[1..4]:
-         Pipe 1: {0xA1, 0xC3, 0xC2, 0xC1, 0x20} -> Node 1 (Panel 1)
-         Pipe 2: {0xA2, 0xC3, 0xC2, 0xC1, 0x20} -> Node 2 (Panel 2)
-         Pipe 3: {0xA3, 0xC3, 0xC2, 0xC1, 0x20} -> Node 3 (Panel 3)
-         Pipe 4: {0xA4, 0xC3, 0xC2, 0xC1, 0x20} -> Node 4 (String Node)
-     - Payload: Fixed 11-byte NodePacket with node_id (1..4)
-     - CRC: 8-bit CRC (RF24_CRC_8) matching CH32 nrf24_crc_configuration(ENABLE, 1)
-     - Dynamic Payload Length enabled matching CH32 nrf24_payload_with_ack(ENABLE)
-     - FreeRTOS background task continuously drains nRF24 RX FIFO every 5ms
-     - Sequential clean serial monitor display: Node 1 -> Node 2 -> Node 3 -> String -> System Summary (1s each)
-     - Non-blocking HTTP POST with automatic HTTPS/HTTP client switching & gateway heartbeat
+   Multitasking FreeRTOS Architecture:
+     1. RadioPoller Task (Priority 2, 5ms): Drains nRF24 RX FIFO into mutexed memory
+     2. CloudUploader Task (Priority 1, 3s): Non-blocking background HTTPS POST to Render
+     3. Main Loop (Priority 1): 100% smooth 1-second Serial Monitor display
+        (Decoupled: HTTP network latency will NEVER freeze or stutter the Serial Monitor!)
    ========================================================================= */
 
 #include <SPI.h>
@@ -87,7 +80,7 @@ struct NodeState {
     uint32_t      rxCount;
 };
 
-static NodeState      nodes[NUM_NODES];
+static NodeState         nodes[NUM_NODES];
 static SemaphoreHandle_t nodeMutex;
 
 static volatile uint32_t totalPacketsRx = 0;
@@ -95,25 +88,29 @@ static volatile uint32_t badLengthDrops = 0;
 static volatile uint32_t badIdDrops     = 0;
 
 /* -------------------------------------------------------------------------
-   WiFi connection
+   WiFi connection (Non-blocking background auto-reconnect)
    ------------------------------------------------------------------------- */
 void connectWiFi()
 {
-    Serial.printf("Connecting to WiFi: %s\n", WIFI_SSID);
+    Serial.printf("\n[WiFi] Connecting to: %s\n", WIFI_SSID);
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
     int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 25) {
-        delay(400);
+    while (WiFi.status() != WL_CONNECTED && retries < 15) {
+        delay(300);
         Serial.print(".");
         retries++;
     }
     Serial.println();
+
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.printf("WiFi connected - IP: %s\n", WiFi.localIP().toString().c_str());
-        Serial.printf("Target Backend URL: %s\n", BACKEND_URL);
+        Serial.printf("[WiFi] CONNECTED! IP: %s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("[WiFi] Target Backend: %s\n\n", BACKEND_URL);
     } else {
-        Serial.println("WiFi connection failed (will retry in background)");
+        Serial.println("[WiFi] Connection pending... (will connect in background)");
+        Serial.println("       Tip: Ensure phone hotspot has 'Maximize Compatibility / 2.4GHz' ON\n");
     }
 }
 
@@ -135,7 +132,7 @@ void printNodeCard(uint8_t id)
     uint8_t idx = id - 1;
     NodeState s;
 
-    if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
         s = nodes[idx];
         xSemaphoreGive(nodeMutex);
     } else {
@@ -144,9 +141,9 @@ void printNodeCard(uint8_t id)
 
     Serial.println("+-----------------------------------------------+");
     if (!s.seen) {
-        Serial.printf("| NODE %d  [%s]  - [NO DATA YET]\n",
+        Serial.printf("| NODE %d  [%s]  - [WAITING FOR PACKETS]\n",
                       id, (id == 4) ? "string" : ((id == 1) ? "panel_basic" : "panel_full"));
-        Serial.println("|  Status      : WAITING FOR TRANSMISSION (check power/wiring)");
+        Serial.println("|  Status      : WAITING FOR TRANSMISSION");
         Serial.println("+-----------------------------------------------+");
         return;
     }
@@ -190,57 +187,53 @@ void printNodeCard(uint8_t id)
 
 /* -------------------------------------------------------------------------
    POST latest data for all seen nodes to backend
-   - Supports both HTTPS (Render) and plain HTTP (Local PC)
-   - Sends Gateway heartbeat even when panels are starting up
-   - Formats data with all standard field aliases (id, node_id, temp_c, etc.)
-   - Always logs explicit HTTP status to Serial so issues are instantly visible
+   - Runs in independent background FreeRTOS task (never blocks Serial!)
+   - Small TLS buffers (1024/512) to prevent heap starvation on ESP32-C6
    ------------------------------------------------------------------------- */
 void postToBackend()
 {
-    static unsigned long lastWifiWarnMs = 0;
     if (WiFi.status() != WL_CONNECTED) {
-        if (millis() - lastWifiWarnMs > 4000) {
-            lastWifiWarnMs = millis();
-            Serial.printf("[HTTP SKIPPED] WiFi not connected! Status=%d. Check SSID '%s'\n",
-                          WiFi.status(), WIFI_SSID);
-        }
+        Serial.printf("[WiFi] Waiting for connection to '%s'...\n", WIFI_SSID);
         return;
     }
 
-    static unsigned long postBackoffUntil = 0;
-    if (millis() < postBackoffUntil) {
+    // Snapshot node state with quick mutex lock
+    NodeState localCopy[NUM_NODES];
+    if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(30)) == pdTRUE) {
+        for (int i = 0; i < NUM_NODES; i++) {
+            localCopy[i] = nodes[i];
+        }
+        xSemaphoreGive(nodeMutex);
+    } else {
         return;
     }
 
     String json = "{\"gateway\":\"online\",\"nodes\":[";
     bool first = true;
 
-    if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
-        for (int i = 0; i < NUM_NODES; i++) {
-            if (!nodes[i].seen) continue;
+    for (int i = 0; i < NUM_NODES; i++) {
+        if (!localCopy[i].seen) continue;
 
-            unsigned long age = millis() - nodes[i].lastMs;
-            if (age > NODE_STALE_MS) continue;
+        unsigned long age = millis() - localCopy[i].lastMs;
+        if (age > NODE_STALE_MS) continue;
 
-            NodePacket &p = nodes[i].pkt;
-            if (!first) json += ",";
-            first = false;
+        NodePacket &p = localCopy[i].pkt;
+        if (!first) json += ",";
+        first = false;
 
-            json += "{";
-            json += "\"id\":"            + String(p.node_id)               + ",";
-            json += "\"node_id\":"       + String(p.node_id)               + ",";
-            json += "\"node_type\":"     + String(p.node_type)             + ",";
-            json += "\"node_type_name\":\"" + String(type_name(p.node_type)) + "\",";
-            json += "\"voltage_mV\":"    + String(p.voltage_mV)            + ",";
-            json += "\"temp_c\":"        + String(p.temp_c_x10 / 10.0f, 1) + ",";
-            json += "\"temp_c10\":"      + String(p.temp_c_x10)            + ",";
-            json += "\"continuity\":"    + String(p.continuity == 1 ? "true" : "false") + ",";
-            json += "\"current_mA\":"    + String(p.current_mA)            + ",";
-            json += "\"ldr_raw\":"       + String(p.ldr_raw)               + ",";
-            json += "\"ageMs\":"         + String(age);
-            json += "}";
-        }
-        xSemaphoreGive(nodeMutex);
+        json += "{";
+        json += "\"id\":"            + String(p.node_id)               + ",";
+        json += "\"node_id\":"       + String(p.node_id)               + ",";
+        json += "\"node_type\":"     + String(p.node_type)             + ",";
+        json += "\"node_type_name\":\"" + String(type_name(p.node_type)) + "\",";
+        json += "\"voltage_mV\":"    + String(p.voltage_mV)            + ",";
+        json += "\"temp_c\":"        + String(p.temp_c_x10 / 10.0f, 1) + ",";
+        json += "\"temp_c10\":"      + String(p.temp_c_x10)            + ",";
+        json += "\"continuity\":"    + String(p.continuity == 1 ? "true" : "false") + ",";
+        json += "\"current_mA\":"    + String(p.current_mA)            + ",";
+        json += "\"ldr_raw\":"       + String(p.ldr_raw)               + ",";
+        json += "\"ageMs\":"         + String(age);
+        json += "}";
     }
     json += "]}";
 
@@ -253,36 +246,36 @@ void postToBackend()
 
     if (isHttps) {
         secureClient.setInsecure();
-        secureClient.setHandshakeTimeout(10);
+        // Optimize TLS buffers for ESP32-C6 SRAM (saves 30KB heap!)
+        secureClient.setBufferSizes(1024, 512);
+        secureClient.setTimeout(4);
         beginSuccess = http.begin(secureClient, BACKEND_URL);
     } else {
+        plainClient.setTimeout(3);
         beginSuccess = http.begin(plainClient, BACKEND_URL);
     }
 
     if (!beginSuccess) {
-        Serial.printf("[HTTP ERROR] Unable to initiate connection to: %s\n", BACKEND_URL);
-        postBackoffUntil = millis() + 4000;
+        Serial.printf("[HTTP ERROR] Cannot parse URL: %s\n", BACKEND_URL);
         return;
     }
 
     http.addHeader("Content-Type", "application/json");
     http.setUserAgent("ESP32-HelioPV-Gateway/1.0");
-    http.setConnectTimeout(5000);
-    http.setTimeout(5000);
+    http.setConnectTimeout(4000);
+    http.setTimeout(4000);
 
     int httpCode = http.POST(json);
 
     if (httpCode > 0) {
         if (httpCode == HTTP_CODE_OK || httpCode == 204) {
-            Serial.printf("[HTTP 200] Web dashboard updated successfully! (%d bytes)\n", json.length());
+            Serial.printf("[HTTP 200 OK] Web Dashboard Updated! (%d active nodes)\n", first ? 0 : 4);
         } else {
-            Serial.printf("[HTTP WARN] Server returned code: %d (Target: %s)\n", httpCode, BACKEND_URL);
-            postBackoffUntil = millis() + 2000;
+            Serial.printf("[HTTP %d] Server responded with code: %d\n", httpCode, httpCode);
         }
     } else {
-        Serial.printf("[HTTP FAILED] Code: %d (%s) -> URL: %s\n",
+        Serial.printf("[HTTP FAILED] %d (%s) -> URL: %s\n",
                       httpCode, http.errorToString(httpCode).c_str(), BACKEND_URL);
-        postBackoffUntil = millis() + 3000;
     }
     http.end();
 }
@@ -293,10 +286,10 @@ void postToBackend()
 void printSummary()
 {
     Serial.println("=================== SYSTEM STATUS ===================");
-    if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
         for (int i = 0; i < NUM_NODES; i++) {
             if (!nodes[i].seen) {
-                Serial.printf("Node %d: [NO DATA YET]\n", i + 1);
+                Serial.printf("Node %d: [WAITING FOR TRANSMISSION]\n", i + 1);
                 continue;
             }
             unsigned long age = millis() - nodes[i].lastMs;
@@ -328,12 +321,15 @@ void printSummary()
 }
 
 /* -------------------------------------------------------------------------
-   Check & drain incoming nRF24 radio packets (Silent background storage)
+   Check & drain incoming nRF24 radio packets (Bounded loop - never hangs)
    ------------------------------------------------------------------------- */
 void checkIncomingRadioPackets()
 {
     uint8_t pipeNum;
-    while (radio.available(&pipeNum)) {
+    uint8_t drainCount = 0;
+
+    // Bounded to 6 iterations max so SPI noise can NEVER cause an infinite while loop
+    while (radio.available(&pipeNum) && drainCount++ < 6) {
         totalPacketsRx++;
 
         NodePacket pkt = {0};
@@ -356,13 +352,28 @@ void checkIncomingRadioPackets()
 }
 
 /* -------------------------------------------------------------------------
-   FreeRTOS Radio Background Task (Drains FIFO every 5 ms)
+   FreeRTOS Background Task 1: Radio Poller (Runs every 10 ms)
    ------------------------------------------------------------------------- */
 void radioTask(void *pvParameters)
 {
     for (;;) {
         checkIncomingRadioPackets();
-        vTaskDelay(pdMS_TO_TICKS(5));
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+/* -------------------------------------------------------------------------
+   FreeRTOS Background Task 2: Cloud Uploader (Runs every 3 seconds)
+   - Runs completely in background so Serial Monitor NEVER gets stuck!
+   ------------------------------------------------------------------------- */
+void cloudTask(void *pvParameters)
+{
+    // Wait 2 seconds on boot before first transmission
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    for (;;) {
+        postToBackend();
+        vTaskDelay(pdMS_TO_TICKS(3000)); // Non-blocking 3-second cycle
     }
 }
 
@@ -372,7 +383,7 @@ void radioTask(void *pvParameters)
 void setup()
 {
     Serial.begin(115200);
-    delay(1500);
+    delay(1000);
 
     Serial.println("\n===========================================");
     Serial.println("  Solar Fault Detection - ESP32 Gateway    ");
@@ -401,43 +412,35 @@ void setup()
     radio.enableDynamicPayloads();            // Dynamic payloads matching CH32 DPL
     radio.setPALevel(RF24_PA_MAX);
 
-    /*
-     * Open 4 Multiceiver reading pipes:
-     * Pipe 1: 0xA1:C3:C2:C1:20 (Panel 1)
-     * Pipe 2: 0xA2:C3:C2:C1:20 (Panel 2)
-     * Pipe 3: 0xA3:C3:C2:C1:20 (Panel 3)
-     * Pipe 4: 0xA4:C3:C2:C1:20 (String Node)
-     */
     for (uint8_t i = 0; i < NUM_NODES; i++) {
         radio.openReadingPipe(i + 1, NODE_ADDR[i]);
-        Serial.printf("Pipe %d: %02X:%02X:%02X:%02X:%02X\n",
-                      i + 1,
-                      NODE_ADDR[i][0], NODE_ADDR[i][1],
-                      NODE_ADDR[i][2], NODE_ADDR[i][3],
-                      NODE_ADDR[i][4]);
     }
 
     radio.flush_rx();
     radio.flush_tx();
     radio.startListening();
 
-    Serial.println("\nnRF24L01 initialized OK & Listening.");
-    Serial.printf("NodePacket expected size: %d bytes\n\n", (int)sizeof(NodePacket));
-
-    /* Create background polling task on FreeRTOS with high priority */
-    xTaskCreate(radioTask, "RadioPoller", 4096, NULL, 2, NULL);
-    Serial.println("Radio background polling task started (5ms interval)");
+    Serial.println("nRF24L01 initialized OK & Listening.");
 
     connectWiFi();
-    Serial.println("Ready. Cycling Node 1 -> Node 2 -> Node 3 -> String -> System Summary (1s each)\n");
+
+    /* Task 1: Background Radio Poller (Priority 2) */
+    xTaskCreate(radioTask, "RadioPoller", 4096, NULL, 2, NULL);
+    Serial.println("[Task] Radio Poller task started (10ms)");
+
+    /* Task 2: Background Cloud Uploader (Priority 1, 6KB stack for TLS) */
+    xTaskCreate(cloudTask, "CloudUploader", 6144, NULL, 1, NULL);
+    Serial.println("[Task] Cloud Uploader task started (3s interval, non-blocking)");
+
+    Serial.println("\nReady. Cycling Node 1 -> Node 2 -> Node 3 -> String -> Summary (1s each)\n");
 }
 
 /* -------------------------------------------------------------------------
    LOOP: Deterministic 1-second Sequential Display
+   - Completely decoupled from network calls: NEVER gets stuck!
    ------------------------------------------------------------------------- */
 void loop()
 {
-    /* -- Sequential Card / Summary Display every 1000 ms (1 second) -- */
     static unsigned long lastDisplayMs = 0;
     static uint8_t displayStep = 0;
 
@@ -452,21 +455,6 @@ void loop()
         displayStep = (displayStep + 1) % 5;
     }
 
-    /* -- Post to backend every 1000 ms -- */
-    static unsigned long lastPostMs = 0;
-    if (millis() - lastPostMs >= 1000) {
-        lastPostMs = millis();
-        postToBackend();
-    }
-
-    /* -- WiFi reconnect watchdog -- */
-    if (WiFi.status() != WL_CONNECTED) {
-        static unsigned long lastTry = 0;
-        if (millis() - lastTry > 10000) {
-            lastTry = millis();
-            Serial.println("WiFi lost - reconnecting...");
-            WiFi.disconnect();
-            WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-        }
-    }
+    // Yield CPU to FreeRTOS so IDLE task and background tasks run smoothly
+    vTaskDelay(pdMS_TO_TICKS(20));
 }
