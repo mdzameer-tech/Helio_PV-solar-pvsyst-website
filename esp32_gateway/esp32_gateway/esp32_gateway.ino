@@ -246,12 +246,8 @@ void postToBackend()
 
     if (isHttps) {
         secureClient.setInsecure();
-        // Optimize TLS buffers for ESP32-C6 SRAM (saves 30KB heap!)
-        secureClient.setBufferSizes(1024, 512);
-        secureClient.setTimeout(4);
         beginSuccess = http.begin(secureClient, BACKEND_URL);
     } else {
-        plainClient.setTimeout(3);
         beginSuccess = http.begin(plainClient, BACKEND_URL);
     }
 

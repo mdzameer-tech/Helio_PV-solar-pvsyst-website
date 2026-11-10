@@ -2559,8 +2559,17 @@ document.addEventListener('click', function initNotifyPermission() {
   document.removeEventListener('click', initNotifyPermission);
 }, { once: true });
 
+let lastGatewayOnlineTimestamp = 0;
+const GATEWAY_OFFLINE_GRACE_MS = 7000; // 7-second grace delay before showing offline
+
 function renderIoTMonitor(data) {
-  IoTMonitorState.gatewayOnline = data.gatewayOnline;
+  if (data.gatewayOnline) {
+    lastGatewayOnlineTimestamp = Date.now();
+  }
+  const isWithin7sGrace = (lastGatewayOnlineTimestamp > 0 && (Date.now() - lastGatewayOnlineTimestamp < GATEWAY_OFFLINE_GRACE_MS));
+  const effectiveGatewayOnline = data.gatewayOnline || isWithin7sGrace;
+
+  IoTMonitorState.gatewayOnline = effectiveGatewayOnline;
   IoTMonitorState.faultNodeId = data.faultNodeId;
   IoTMonitorState.faultDescription = data.faultDescription;
   IoTMonitorState.wires = data.wires || [];
@@ -2573,9 +2582,12 @@ function renderIoTMonitor(data) {
   const pingDot = document.getElementById('gateway-ping-dot');
   const statusDot = document.getElementById('gateway-status-dot');
 
-  if (data.gatewayOnline) {
+  if (effectiveGatewayOnline) {
     if (gwBadge) {
-      gwBadge.innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="text-emerald-400">ESP32 Gateway: ONLINE</span> ${data.isSimulated ? '<span class="text-[10px] text-blue-300 font-mono">(Simulated)</span>' : ''}`;
+      const extraTag = data.isSimulated
+        ? '<span class="text-[10px] text-blue-300 font-mono">(Simulated)</span>'
+        : (!data.gatewayOnline && isWithin7sGrace ? '<span class="text-[10px] text-emerald-300/80 font-mono">(Syncing)</span>' : '');
+      gwBadge.innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="text-emerald-400">ESP32 Gateway: ONLINE</span> ${extraTag}`;
       gwBadge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/50 bg-emerald-950/40 text-emerald-300';
     }
     if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
@@ -2590,7 +2602,7 @@ function renderIoTMonitor(data) {
   }
 
   // Update Operator Profile Statement Tag (below profile info & above System Controls & Tools)
-  updateDrawerGatewayStatus(data.gatewayOnline, data.faultDescription, data.faultNodeId, data.isSimulated, data.simulationScenario);
+  updateDrawerGatewayStatus(effectiveGatewayOnline, data.faultDescription, data.faultNodeId, data.isSimulated, data.simulationScenario);
 
   // 2. Alert Box (Root Cause Fault Isolation) & Notifications
   const alertBox = document.getElementById('iot-alert-box');
@@ -3170,6 +3182,11 @@ function setupCellTouchEvents() {
 }
 
 function renderIoTMonitorOffline(errMsg) {
+  // If the gateway was seen online within the last 7 seconds, give it a 7-second grace period before switching to offline
+  if (lastGatewayOnlineTimestamp > 0 && (Date.now() - lastGatewayOnlineTimestamp < GATEWAY_OFFLINE_GRACE_MS)) {
+    return;
+  }
+
   const gwBadge = document.getElementById('iot-gateway-status');
   if (gwBadge) {
     gwBadge.innerHTML = '<span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-500"></span> <span class="text-slate-400">Server Offline (:3000)</span>';

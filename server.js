@@ -469,7 +469,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, ".")));
 
 const NODE_TIMEOUT_MS = 10000;    // 10 seconds margin for stale detection
-const GATEWAY_TIMEOUT_MS = 15000; // 15 seconds margin for faster offline detection with cloud latency tolerance
+const GATEWAY_TIMEOUT_MS = 7000;  // Exactly 7 seconds delay before declaring ESP32 offline
 const LOW_VOLTAGE_MV = 500;       // Threshold in mV
 
 const NODE_TYPE_NAME = { 0: "panel_basic", 1: "panel_full", 2: "string" };
@@ -480,6 +480,8 @@ let latest = {
   isSimulated: false,
   simulationScenario: "normal"
 };
+// History of last 2 polled ESP32 packets for 2-consecutive-poll fault confirmation
+let packetHistory = [];
 let lastLog = 0;
 
 // Helper: Get active local IPv4 addresses
@@ -989,21 +991,50 @@ function computeFaultState() {
 
   if (gatewayOnline) {
     for (let id = 2; id <= 4; id++) {
-      const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
-      if (n) {
-        const age = (n.ageMs || 0) + gatewayAge;
-        const isContinuityBroken = (n.continuity === false || n.continuity === "false" || n.continuity === 0);
-        if (age <= NODE_TIMEOUT_MS && isContinuityBroken) {
-          faultNodeId = id;
-          if (id === 2) {
-            faultDescription = "Disconnection detected between Panel 1 and Panel 2";
-          } else if (id === 3) {
-            faultDescription = "Disconnection detected between Panel 2 and Panel 3";
-          } else if (id === 4) {
-            faultDescription = "Disconnection detected between Panel 3 and String Node";
+      let isConfirmedBroken = false;
+
+      if (latest.isSimulated) {
+        // In simulation mode, evaluate mock nodes directly
+        const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
+        if (n) {
+          const age = (n.ageMs || 0) + gatewayAge;
+          const isContinuityBroken = (n.continuity === false || n.continuity === "false" || n.continuity === 0);
+          if (age <= NODE_TIMEOUT_MS && isContinuityBroken) {
+            isConfirmedBroken = true;
           }
-          break; // Stop at LOWEST numbered node
         }
+      } else {
+        // LIVE HARDWARE: Require previous TWO polled values from ESP32 to BOTH show the same disconnection
+        // This eliminates single-packet transient glitches/noise.
+        if (packetHistory.length >= 2) {
+          const prevPacket = packetHistory[packetHistory.length - 2];
+          const currPacket = packetHistory[packetHistory.length - 1];
+
+          const prevNode = prevPacket.find((x) => (x.id === id || x.node_id === id));
+          const currNode = currPacket.find((x) => (x.id === id || x.node_id === id));
+
+          if (prevNode && currNode) {
+            const prevBroken = (prevNode.continuity === false || prevNode.continuity === "false" || prevNode.continuity === 0);
+            const currBroken = (currNode.continuity === false || currNode.continuity === "false" || currNode.continuity === 0);
+
+            // Both consecutive polled values must report disconnection
+            if (prevBroken && currBroken) {
+              isConfirmedBroken = true;
+            }
+          }
+        }
+      }
+
+      if (isConfirmedBroken) {
+        faultNodeId = id;
+        if (id === 2) {
+          faultDescription = "Disconnection detected between Panel 1 and Panel 2";
+        } else if (id === 3) {
+          faultDescription = "Disconnection detected between Panel 2 and Panel 3";
+        } else if (id === 4) {
+          faultDescription = "Disconnection detected between Panel 3 and String Node";
+        }
+        break; // Stop at LOWEST numbered node
       }
     }
   }
@@ -1175,9 +1206,15 @@ app.post("/api/data", (req, res) => {
     simulationScenario: null
   };
 
+  // Maintain last 2 polled ESP32 packets for 2-consecutive-poll fault confirmation
+  packetHistory.push(normalizedNodes);
+  if (packetHistory.length > 2) {
+    packetHistory.shift();
+  }
+
   if (Date.now() - lastLog > 2000) {
     lastLog = Date.now();
-    console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${normalizedNodes.length} active node(s)`);
+    console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${normalizedNodes.length} active node(s) (History depth: ${packetHistory.length})`);
   }
 
   // Trigger alert if open circuit fault was detected
@@ -1190,6 +1227,7 @@ app.post("/api/simulate", (req, res) => {
   const scenario = (req.body && req.body.scenario) || "normal";
 
   if (scenario === "live_hardware") {
+    packetHistory = [];
     latest = {
       nodes: [],
       receivedAt: 0,
@@ -1262,6 +1300,7 @@ app.post("/api/simulate", (req, res) => {
     isSimulated: true,
     simulationScenario: scenario
   };
+  packetHistory = [mockNodes, mockNodes];
 
   console.log(`[${new Date().toLocaleTimeString()}] Simulation Scenario Active: ${scenario}`);
   checkFaultAndNotify();
