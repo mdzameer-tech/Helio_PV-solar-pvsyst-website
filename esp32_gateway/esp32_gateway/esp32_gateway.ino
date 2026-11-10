@@ -12,19 +12,6 @@
      GPIO23-> SCK  (SPI Clock)
      GPIO22-> MOSI (SPI Data In to module)
      GPIO21-> MISO (SPI Data Out from module)
-
-   Network Architecture:
-     - 4 Multiceiver Pipes matching CH32 datapipe_address[1..4]:
-         Pipe 1: {0xA1, 0xC3, 0xC2, 0xC1, 0x20} -> Node 1 (Panel 1)
-         Pipe 2: {0xA2, 0xC3, 0xC2, 0xC1, 0x20} -> Node 2 (Panel 2)
-         Pipe 3: {0xA3, 0xC3, 0xC2, 0xC1, 0x20} -> Node 3 (Panel 3)
-         Pipe 4: {0xA4, 0xC3, 0xC2, 0xC1, 0x20} -> Node 4 (String Node)
-     - Payload: Fixed 11-byte NodePacket with node_id (1..4)
-     - CRC: 8-bit CRC (RF24_CRC_8) matching CH32 nrf24_crc_configuration(ENABLE, 1)
-     - Dynamic Payload Length enabled matching CH32 nrf24_payload_with_ack(ENABLE)
-     - FreeRTOS background task continuously drains nRF24 RX FIFO every 5ms
-     - Sequential clean serial monitor display: Node 1 -> Node 2 -> Node 3 -> String -> System Summary (1s each)
-     - Non-blocking HTTP POST with automatic HTTPS/HTTP client switching & gateway heartbeat
    ========================================================================= */
 
 #include <SPI.h>
@@ -42,10 +29,8 @@
 /* -- Radio configuration -------------------------------------------------- */
 #define RF_CHANNEL   32
 #define RF_DATARATE  RF24_1MBPS
-
 #define NUM_NODES    4
 
-/* Receive addresses MUST match datapipe_address[] in nrf24l01.c on CH32 side */
 const uint8_t NODE_ADDR[NUM_NODES][5] = {
     {0xA1, 0xC3, 0xC2, 0xC1, 0x20},  // Pipe 1 -> Node 1 (Panel 1)
     {0xA2, 0xC3, 0xC2, 0xC1, 0x20},  // Pipe 2 -> Node 2 (Panel 2)
@@ -54,22 +39,22 @@ const uint8_t NODE_ADDR[NUM_NODES][5] = {
 };
 
 RF24 radio(CE_PIN, CSN_PIN);
+static bool radioHardwareReady = false;
 
 /* -- WiFi & Backend ------------------------------------------------------- */
 const char* WIFI_SSID     = "Hasheer's M35";
 const char* WIFI_PASSWORD = "123456789";
 
-/* Choose either Render cloud URL (worldwide) OR local PC dashboard (on same router): */
-// Option A: Live Worldwide Cloud Backend (Render)
+/* Choose either Render Cloud (Worldwide) OR Local PC (Same Wi-Fi): */
+// Option A: Live Worldwide Cloud Backend (Render) - Recommended
 const char* BACKEND_URL   = "https://heliopv-solar.onrender.com/api/data";
 
-// Option B: Local PC Backend (Update IP with your laptop's current Wi-Fi IP from `ipconfig`)
+// Option B: Local PC Backend (Check laptop IP via 'ipconfig')
 // const char* BACKEND_URL   = "http://10.98.235.70:3000/api/data";
 
 /* -- Data structures ------------------------------------------------------ */
 #define NODE_STALE_MS   8000
 
-/* Must match CH32 struct byte-for-byte (11 bytes total): */
 typedef struct __attribute__((packed)) {
     uint8_t  node_id;       /* 1 = Panel 1, 2 = Panel 2, 3 = Panel 3, 4 = String */
     uint8_t  node_type;     /* 0 = panel_basic, 1 = panel_full, 2 = string      */
@@ -87,34 +72,38 @@ struct NodeState {
     uint32_t      rxCount;
 };
 
-static NodeState      nodes[NUM_NODES];
+static NodeState         nodes[NUM_NODES];
 static SemaphoreHandle_t nodeMutex;
 
 static volatile uint32_t totalPacketsRx = 0;
 static volatile uint32_t badLengthDrops = 0;
 static volatile uint32_t badIdDrops     = 0;
 
-/* -------------------------------------------------------------------------
-   WiFi connection
-   ------------------------------------------------------------------------- */
 void connectWiFi()
 {
-    Serial.printf("Connecting to WiFi: %s\n", WIFI_SSID);
+    Serial.println("\n-------------------------------------------");
+    Serial.printf("[WiFi] Connecting to SSID: '%s'...\n", WIFI_SSID);
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
     int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 25) {
+    while (WiFi.status() != WL_CONNECTED && retries < 30) {
         delay(400);
         Serial.print(".");
         retries++;
     }
     Serial.println();
+
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.printf("WiFi connected - IP: %s\n", WiFi.localIP().toString().c_str());
-        Serial.printf("Target Backend URL: %s\n", BACKEND_URL);
+        Serial.println("[WiFi] *** SUCCESS: CONNECTED! ***");
+        Serial.printf("[WiFi] ESP32 IP Address : %s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("[WiFi] Signal (RSSI)    : %d dBm\n", WiFi.RSSI());
+        Serial.printf("[WiFi] Target Backend   : %s\n", BACKEND_URL);
     } else {
-        Serial.println("WiFi connection failed (will retry in background)");
+        Serial.printf("[WiFi] *** ERROR: Failed to connect to '%s' (Status=%d) ***\n", WIFI_SSID, WiFi.status());
+        Serial.println("[WiFi] Please check: 1. Is phone hotspot ON? 2. Is 2.4GHz band enabled? 3. Is password correct?");
     }
+    Serial.println("-------------------------------------------\n");
 }
 
 static const char *type_name(uint8_t t)
@@ -127,9 +116,6 @@ static const char *type_name(uint8_t t)
     }
 }
 
-/* -------------------------------------------------------------------------
-   Deterministic Clean Node Card Display
-   ------------------------------------------------------------------------- */
 void printNodeCard(uint8_t id)
 {
     uint8_t idx = id - 1;
@@ -146,7 +132,7 @@ void printNodeCard(uint8_t id)
     if (!s.seen) {
         Serial.printf("| NODE %d  [%s]  - [NO DATA YET]\n",
                       id, (id == 4) ? "string" : ((id == 1) ? "panel_basic" : "panel_full"));
-        Serial.println("|  Status      : WAITING FOR TRANSMISSION (check power/wiring)");
+        Serial.println("|  Status      : WAITING FOR TRANSMISSION (check CH32 power/wiring)");
         Serial.println("+-----------------------------------------------+");
         return;
     }
@@ -188,15 +174,12 @@ void printNodeCard(uint8_t id)
     Serial.println("+-----------------------------------------------+");
 }
 
-/* -------------------------------------------------------------------------
-   POST latest data for all seen nodes to backend
-   - Supports both HTTPS (Render) and plain HTTP (Local PC)
-   - Sends Gateway heartbeat even when panels are starting up
-   - Formats data with all standard field aliases (id, node_id, temp_c, etc.)
-   ------------------------------------------------------------------------- */
+/* POST latest telemetry to backend with full HTTP/HTTPS fallback & Gateway Heartbeat */
 void postToBackend()
 {
-    if (WiFi.status() != WL_CONNECTED) return;
+    if (WiFi.status() != WL_CONNECTED) {
+        return;
+    }
 
     static unsigned long postBackoffUntil = 0;
     if (millis() < postBackoffUntil) {
@@ -205,6 +188,7 @@ void postToBackend()
 
     String json = "{\"gateway\":\"online\",\"nodes\":[";
     bool first = true;
+    int nodeCount = 0;
 
     if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         for (int i = 0; i < NUM_NODES; i++) {
@@ -216,6 +200,7 @@ void postToBackend()
             NodePacket &p = nodes[i].pkt;
             if (!first) json += ",";
             first = false;
+            nodeCount++;
 
             json += "{";
             json += "\"id\":"            + String(p.node_id)               + ",";
@@ -243,14 +228,14 @@ void postToBackend()
     WiFiClient       plainClient;
 
     if (isHttps) {
-        secureClient.setInsecure(); // Connect to Render cloud without hardcoded certificate
+        secureClient.setInsecure(); // No certificate check needed for cloud
         beginSuccess = http.begin(secureClient, BACKEND_URL);
     } else {
         beginSuccess = http.begin(plainClient, BACKEND_URL);
     }
 
     if (!beginSuccess) {
-        Serial.println("[HTTP] Unable to connect to backend URL");
+        Serial.printf("[HTTP] Failed to initiate connection to: %s\n", BACKEND_URL);
         postBackoffUntil = millis() + 4000;
         return;
     }
@@ -260,34 +245,32 @@ void postToBackend()
     http.setTimeout(4000);
 
     int httpCode = http.POST(json);
-    static bool backendWasOffline = false;
 
     if (httpCode > 0) {
         if (httpCode == HTTP_CODE_OK || httpCode == 204) {
-            if (backendWasOffline) {
-                Serial.printf("[HTTP] Connected to backend! (POST -> HTTP %d)\n", httpCode);
-                backendWasOffline = false;
+            static unsigned long lastSuccessLog = 0;
+            if (millis() - lastSuccessLog > 3000) {
+                lastSuccessLog = millis();
+                Serial.printf("[HTTP] POST OK (200) -> Web Gateway ONLINE | Active Nodes: %d\n", nodeCount);
             }
         } else {
             Serial.printf("[HTTP] Server responded with code: %d\n", httpCode);
         }
     } else {
-        if (!backendWasOffline) {
-            Serial.printf("[HTTP] POST failed: %d (%s) -> URL: %s\n",
-                          httpCode, http.errorToString(httpCode).c_str(), BACKEND_URL);
-            backendWasOffline = true;
-        }
+        Serial.printf("[HTTP] POST FAILED: %d (%s) -> URL: %s\n",
+                      httpCode, http.errorToString(httpCode).c_str(), BACKEND_URL);
         postBackoffUntil = millis() + 3000;
     }
     http.end();
 }
 
-/* -------------------------------------------------------------------------
-   System Status Summary Table
-   ------------------------------------------------------------------------- */
 void printSummary()
 {
     Serial.println("=================== SYSTEM STATUS ===================");
+    if (!radioHardwareReady) {
+        Serial.println("RADIO HARDWARE WARNING: nRF24L01 did not respond on SPI boot!");
+        Serial.println("Check: 3.3V power, GND, SCK=23, MOSI=22, MISO=21, CSN=20, CE=19");
+    }
     if (xSemaphoreTake(nodeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         for (int i = 0; i < NUM_NODES; i++) {
             if (!nodes[i].seen) {
@@ -319,14 +302,15 @@ void printSummary()
     }
     Serial.printf("Radio Stats: TotalRx=%lu | BadLen=%lu | BadId=%lu\n",
                   totalPacketsRx, badLengthDrops, badIdDrops);
+    Serial.printf("WiFi Status: %s | Backend: %s\n",
+                  (WiFi.status() == WL_CONNECTED) ? "CONNECTED" : "DISCONNECTED", BACKEND_URL);
     Serial.println("=====================================================");
 }
 
-/* -------------------------------------------------------------------------
-   Check & drain incoming nRF24 radio packets (Silent background storage)
-   ------------------------------------------------------------------------- */
 void checkIncomingRadioPackets()
 {
+    if (!radioHardwareReady) return;
+
     uint8_t pipeNum;
     while (radio.available(&pipeNum)) {
         totalPacketsRx++;
@@ -350,9 +334,6 @@ void checkIncomingRadioPackets()
     }
 }
 
-/* -------------------------------------------------------------------------
-   FreeRTOS Radio Background Task (Drains FIFO every 5 ms)
-   ------------------------------------------------------------------------- */
 void radioTask(void *pvParameters)
 {
     for (;;) {
@@ -361,9 +342,6 @@ void radioTask(void *pvParameters)
     }
 }
 
-/* -------------------------------------------------------------------------
-   SETUP
-   ------------------------------------------------------------------------- */
 void setup()
 {
     Serial.begin(115200);
@@ -380,46 +358,33 @@ void setup()
     SPI.setFrequency(2000000);
 
     if (!radio.begin()) {
-        Serial.println("FATAL: nRF24L01 not responding! Check wiring:");
-        Serial.printf("  CE=%d, CSN=%d, SCK=%d, MOSI=%d, MISO=%d\n",
+        Serial.println("\n[ERROR] nRF24L01 not responding! Check SPI wiring:");
+        Serial.printf("  CE=%d, CSN=%d, SCK=%d, MOSI=%d, MISO=%d, VCC=3.3V\n",
                       CE_PIN, CSN_PIN, SCK_PIN, MOSI_PIN, MISO_PIN);
-        while (1) { delay(1000); }
+        Serial.println("[INFO] Gateway will continue to connect to Wi-Fi...\n");
+        radioHardwareReady = false;
+    } else {
+        radioHardwareReady = true;
+        radio.setChannel(RF_CHANNEL);
+        radio.setDataRate(RF_DATARATE);
+        radio.setAddressWidth(5);
+        radio.setCRCLength(RF24_CRC_8);
+        radio.setAutoAck(true);
+        radio.setPayloadSize(sizeof(NodePacket));
+        radio.enableDynamicPayloads();
+        radio.setPALevel(RF24_PA_MAX);
+
+        for (uint8_t i = 0; i < NUM_NODES; i++) {
+            radio.openReadingPipe(i + 1, NODE_ADDR[i]);
+        }
+
+        radio.flush_rx();
+        radio.flush_tx();
+        radio.startListening();
+
+        Serial.println("nRF24L01 initialized OK & Listening.");
     }
 
-    /* Radio Configuration - MUST MATCH CH32 NODES */
-    radio.setChannel(RF_CHANNEL);             // Channel 32 (2432 MHz)
-    radio.setDataRate(RF_DATARATE);           // 1 Mbps
-    radio.setAddressWidth(5);                 // 5 bytes address
-    radio.setCRCLength(RF24_CRC_8);           // 8-bit CRC to match CH32 nrf24_crc_configuration(ENABLE, 1)
-    radio.setAutoAck(true);                   // Auto-ACK enabled
-    radio.setPayloadSize(sizeof(NodePacket)); // Static fallback 11-byte payload
-    radio.enableDynamicPayloads();            // Dynamic payloads matching CH32 DPL
-    radio.setPALevel(RF24_PA_MAX);
-
-    /*
-     * Open 4 Multiceiver reading pipes:
-     * Pipe 1: 0xA1:C3:C2:C1:20 (Panel 1)
-     * Pipe 2: 0xA2:C3:C2:C1:20 (Panel 2)
-     * Pipe 3: 0xA3:C3:C2:C1:20 (Panel 3)
-     * Pipe 4: 0xA4:C3:C2:C1:20 (String Node)
-     */
-    for (uint8_t i = 0; i < NUM_NODES; i++) {
-        radio.openReadingPipe(i + 1, NODE_ADDR[i]);
-        Serial.printf("Pipe %d: %02X:%02X:%02X:%02X:%02X\n",
-                      i + 1,
-                      NODE_ADDR[i][0], NODE_ADDR[i][1],
-                      NODE_ADDR[i][2], NODE_ADDR[i][3],
-                      NODE_ADDR[i][4]);
-    }
-
-    radio.flush_rx();
-    radio.flush_tx();
-    radio.startListening();
-
-    Serial.println("\nnRF24L01 initialized OK & Listening.");
-    Serial.printf("NodePacket expected size: %d bytes\n\n", (int)sizeof(NodePacket));
-
-    /* Create background polling task on FreeRTOS with high priority */
     xTaskCreate(radioTask, "RadioPoller", 4096, NULL, 2, NULL);
     Serial.println("Radio background polling task started (5ms interval)");
 
@@ -427,39 +392,32 @@ void setup()
     Serial.println("Ready. Cycling Node 1 -> Node 2 -> Node 3 -> String -> System Summary (1s each)\n");
 }
 
-/* -------------------------------------------------------------------------
-   LOOP: Deterministic 1-second Sequential Display
-   ------------------------------------------------------------------------- */
 void loop()
 {
-    /* -- Sequential Card / Summary Display every 1000 ms (1 second) -- */
     static unsigned long lastDisplayMs = 0;
     static uint8_t displayStep = 0;
 
     if (millis() - lastDisplayMs >= 1000) {
         lastDisplayMs = millis();
-
         if (displayStep < 4) {
-            printNodeCard(displayStep + 1);  /* 0->Node 1, 1->Node 2, 2->Node 3, 3->String */
+            printNodeCard(displayStep + 1);
         } else {
-            printSummary();                  /* 4->System Status Summary */
+            printSummary();
         }
         displayStep = (displayStep + 1) % 5;
     }
 
-    /* -- Post to backend every 1000 ms -- */
     static unsigned long lastPostMs = 0;
     if (millis() - lastPostMs >= 1000) {
         lastPostMs = millis();
         postToBackend();
     }
 
-    /* -- WiFi reconnect watchdog -- */
     if (WiFi.status() != WL_CONNECTED) {
         static unsigned long lastTry = 0;
-        if (millis() - lastTry > 10000) {
+        if (millis() - lastTry > 8000) {
             lastTry = millis();
-            Serial.println("WiFi lost - reconnecting...");
+            Serial.println("[WiFi] Connection lost. Reconnecting...");
             WiFi.disconnect();
             WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
         }
