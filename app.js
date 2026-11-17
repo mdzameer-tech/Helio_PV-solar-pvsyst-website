@@ -3750,7 +3750,7 @@ function updateAuthUI(user) {
     const drawerName = document.getElementById('drawer-user-name');
     const drawerEmail = document.getElementById('drawer-user-email');
 
-    const avatarUrl = user.profileImage || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.name)}`;
+    const avatarUrl = user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=0f2547&textColor=ffffff`;
     if (headerAvatar) headerAvatar.src = avatarUrl;
     if (headerName) headerName.textContent = user.name || 'User';
     if (drawerAvatar) drawerAvatar.src = avatarUrl;
@@ -3827,11 +3827,11 @@ function setupAuthEventListeners() {
   });
 
   // Avatar preset seeds
-  let selectedSignupAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=SolarUser';
+  let selectedSignupAvatar = 'https://api.dicebear.com/7.x/initials/svg?seed=SU&backgroundColor=0f2547&textColor=ffffff';
   document.querySelectorAll('.avatar-seed-opt').forEach(btn => {
     btn.addEventListener('click', () => {
       const seed = btn.getAttribute('data-seed');
-      selectedSignupAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=0f356b,0a254a`;
+      selectedSignupAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=0f2547&textColor=ffffff`;
       const img = document.getElementById('img-signup-avatar-preview');
       if (img) img.src = selectedSignupAvatar;
     });
@@ -4029,8 +4029,8 @@ function setupAuthEventListeners() {
   });
 
   btnRandomAvatar?.addEventListener('click', async () => {
-    const randomSeed = 'Solar_' + Math.random().toString(36).substring(2, 8);
-    const newAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${randomSeed}&backgroundColor=0f356b,0a254a`;
+    const randomSeed = ['OP', 'EN', 'PV', 'SC', 'EL', 'SOL'][Math.floor(Math.random() * 6)];
+    const newAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${randomSeed}&backgroundColor=0f2547&textColor=ffffff`;
     try {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/update-profile`, {
         method: 'POST',
