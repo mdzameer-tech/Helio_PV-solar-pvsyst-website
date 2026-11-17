@@ -55,6 +55,7 @@ const AppState = {
   },
   forecastSelectedDayOffset: 0,
   forecastUnit: 'kW',
+  mlPrediction: null,
   googleApiKey: localStorage.getItem('heliopv_google_api_key') || DEFAULT_GOOGLE_API_KEY
 };
 
@@ -544,7 +545,27 @@ function updateCoordinates(lat, lon, fetchWeather = false) {
 }
 
 /**
- * Fetch Satellite Solar Irradiance from Open-Meteo
+ * Fetch ML Model Predictions from FastAPI Microservice (LightGBM + Random Forest)
+ */
+async function fetchMLPrediction(lat, lon, capacityKwp) {
+  try {
+    const res = await fetch(`${getBackendBaseUrl()}/api/ml/predict?lat=${lat}&lon=${lon}&kw=${capacityKwp}&monthly=true`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.success && !data.isFallback) {
+      AppState.mlPrediction = data;
+      console.log('[HelioPV] ML Ensemble predictions loaded:', data);
+      return data;
+    }
+  } catch (e) {
+    console.warn('[HelioPV] ML prediction fetch error, using PVsyst engine:', e);
+  }
+  AppState.mlPrediction = null;
+  return null;
+}
+
+/**
+ * Fetch Satellite Solar Irradiance from Open-Meteo & ML Model
  */
 async function fetchWeatherAndUpdate() {
   const badges = document.querySelectorAll('#weather-badge, #weather-badge-modal');
@@ -553,20 +574,26 @@ async function fetchWeatherAndUpdate() {
     b.className = 'text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-mono calculating';
   });
 
-  const res = await WeatherService.fetchSolarData(AppState.project.lat, AppState.project.lon);
-  if (res && res.success && res.monthlyData) {
-    AppState.weatherData = res.monthlyData;
-    badges.forEach((b) => {
-      b.textContent = 'Satellite Active';
-      b.className = 'text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono';
-    });
-  } else {
-    AppState.weatherData = null; // Uses Universal Physics Climatology model
-    badges.forEach((b) => {
-      b.textContent = 'PVsyst Climatology Active';
-      b.className = 'text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono';
-    });
-  }
+  // Concurrently fetch Satellite ERA5 Data and Python ML Predictions
+  await Promise.allSettled([
+    (async () => {
+      const res = await WeatherService.fetchSolarData(AppState.project.lat, AppState.project.lon);
+      if (res && res.success && res.monthlyData) {
+        AppState.weatherData = res.monthlyData;
+        badges.forEach((b) => {
+          b.textContent = 'Satellite Active';
+          b.className = 'text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono';
+        });
+      } else {
+        AppState.weatherData = null; // Uses Universal Physics Climatology model
+        badges.forEach((b) => {
+          b.textContent = 'PVsyst Climatology Active';
+          b.className = 'text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono';
+        });
+      }
+    })(),
+    fetchMLPrediction(AppState.project.lat, AppState.project.lon, AppState.pv.capacityKwp)
+  ]);
 
   runSimulation();
 }
@@ -916,6 +943,29 @@ function renderForecastTab(res) {
     timeBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Current Time: ${timeStr}`;
   }
 
+  // Update ML Status & Next-Hour Prediction Badge
+  const mlBadge = document.getElementById('forecast-ml-badge');
+  const mlBadgeText = document.getElementById('forecast-ml-badge-text');
+  const mlNextHour = AppState.mlPrediction?.next_hour;
+
+  if (mlBadge && mlBadgeText) {
+    if (AppState.mlPrediction && mlNextHour) {
+      mlBadge.classList.remove('hidden');
+      mlBadge.classList.add('flex');
+      if (isToday) {
+        const p50Str = isWatt ? `${Math.round(mlNextHour.p50_w).toLocaleString()} W` : `${(mlNextHour.p50_w / 1000).toFixed(2)} kW`;
+        const p10Str = isWatt ? `${Math.round(mlNextHour.p10_w).toLocaleString()} W` : `${(mlNextHour.p10_w / 1000).toFixed(2)} kW`;
+        const p90Str = isWatt ? `${Math.round(mlNextHour.p90_w).toLocaleString()} W` : `${(mlNextHour.p90_w / 1000).toFixed(2)} kW`;
+        mlBadgeText.textContent = `AI Next Hour: ${p50Str} (Conf: ${p10Str}–${p90Str})`;
+      } else {
+        mlBadgeText.textContent = 'AI Ensemble Active';
+      }
+    } else {
+      mlBadge.classList.add('hidden');
+      mlBadge.classList.remove('flex');
+    }
+  }
+
   // 2. Build Hourly Data
   const dailyVariances = [1.03, 0.97, 1.05, 0.98, 1.02, 0.99, 1.01];
   const variance = isToday ? 1.0 : (dailyVariances[selectedDayOffset - 1] || 1.0);
@@ -954,8 +1004,25 @@ function renderForecastTab(res) {
       timeLabel = `${timeStr} – ${h === 23 ? '12:00 AM' : (h >= 12 ? (h === 12 ? 1 : h - 11) + ':00 PM' : (h + 1) + ':00 AM')}`;
     }
 
+    // Check if ML model prediction has an entry for this hour
+    let mlPowerKw = null;
+    if (AppState.mlPrediction && (isToday || isTomorrow)) {
+      const targetHourStr = `${(h === 24 ? 0 : h).toString().padStart(2, '0')}:00:00`;
+      const mlItem = AppState.mlPrediction.next_24h_physics?.find(x => x.hour_ending && x.hour_ending.includes(targetHourStr));
+      if (mlItem && mlItem.p50_w !== undefined) {
+        mlPowerKw = mlItem.p50_w / 1000;
+      }
+      // For the immediate next hour, use the LightGBM ML model directly
+      if (isToday && (h === currentHour || h === currentHour + 1) && mlNextHour?.p50_w !== undefined && mlNextHour.p50_w > 0) {
+        mlPowerKw = mlNextHour.p50_w / 1000;
+      }
+    }
+
     let ghi = 0;
-    if (h >= 6 && h <= 18) {
+    if (mlPowerKw !== null) {
+      // Powered directly by ML model output
+      ghi = mlPowerKw > 0 ? Math.round((mlPowerKw / Math.max(0.1, capacityKwp * pr)) * 1000) : 0;
+    } else if (h >= 6 && h <= 18) {
       const solarTime = (isToday && h === currentHour) ? (h + currentMinute / 60) : (h + 0.5);
       const angle = ((solarTime - 6) / 12) * Math.PI;
       if (angle > 0 && angle < Math.PI) {
@@ -966,7 +1033,7 @@ function renderForecastTab(res) {
     }
 
     const hourFraction = (isToday && h === currentHour) ? Math.max(0.05, (60 - currentMinute) / 60) : 1.0;
-    const powerKw = Math.max(0, capacityKwp * (ghi / 1000) * pr);
+    const powerKw = (mlPowerKw !== null) ? mlPowerKw : Math.max(0, capacityKwp * (ghi / 1000) * pr);
     const energyKwh = powerKw * hourFraction;
     const savings = energyKwh * tariff;
 
@@ -1144,11 +1211,27 @@ function renderForecastTab(res) {
     const shortLabel = `${dayNames[dDate.getDay()]} ${dDate.getDate()}`;
     const isSelected = selectedDayOffset === d;
 
-    const factor = dailyVariances[d - 1];
     const cond = weatherConditions[d - 1];
 
-    const dayYieldKwhPerKwp = Math.round(baseDailyGhi * factor * 100) / 100;
-    const dayKwh = Math.round(capacityKwp * dayYieldKwhPerKwp * pr * 10) / 10;
+    let dayYieldKwhPerKwp = 0;
+    let dayKwh = 0;
+    let mlSubtitle = cond.text;
+    let mlBandHtml = '';
+
+    const mlDay = AppState.mlPrediction?.daily?.find(x => x.lead_days === d);
+    if (mlDay) {
+      dayKwh = Math.round(mlDay.p50_kwh * 10) / 10;
+      dayYieldKwhPerKwp = Math.round((dayKwh / capacityKwp) * 100) / 100;
+      mlSubtitle = 'AI Ensemble: Lags + RF + Physics';
+      const loVal = isWatt ? Math.round(mlDay.p10_kwh * 1000).toLocaleString() : mlDay.p10_kwh.toFixed(1);
+      const hiVal = isWatt ? Math.round(mlDay.p90_kwh * 1000).toLocaleString() : mlDay.p90_kwh.toFixed(1);
+      mlBandHtml = `<div class="text-[9px] text-purple-700 font-medium mt-0.5">80% Conf: ${loVal}–${hiVal}</div>`;
+    } else {
+      const factor = dailyVariances[d - 1];
+      dayYieldKwhPerKwp = Math.round(baseDailyGhi * factor * 100) / 100;
+      dayKwh = Math.round(capacityKwp * dayYieldKwhPerKwp * pr * 10) / 10;
+    }
+
     const daySavings = Math.round(dayKwh * tariff);
 
     total7DayKwh += dayKwh;
@@ -1173,8 +1256,9 @@ function renderForecastTab(res) {
             <span class="text-xs font-bold ${isSelected ? 'text-blue-900 font-black' : 'text-slate-800'}">${shortLabel}</span>
             <i data-lucide="${cond.icon}" class="w-4 h-4 ${cond.color}"></i>
           </div>
-          <span class="text-[10px] text-slate-500 block mb-1.5">${cond.text}</span>
+          <span class="text-[10px] text-slate-500 block mb-1">${mlSubtitle}</span>
           <div class="text-lg font-black text-emerald-600 font-mono">${cardEnergyDisp} <span class="text-[10px] font-normal text-slate-500">${cardUnitDisp}</span></div>
+          ${mlBandHtml}
         </div>
         <div class="pt-2 border-t border-slate-200 mt-2 text-[11px] font-mono">
           <div class="text-slate-600 flex justify-between">
@@ -2475,8 +2559,17 @@ document.addEventListener('click', function initNotifyPermission() {
   document.removeEventListener('click', initNotifyPermission);
 }, { once: true });
 
+let lastGatewayOnlineTimestamp = 0;
+const GATEWAY_OFFLINE_GRACE_MS = 7000; // 7-second grace delay before showing offline
+
 function renderIoTMonitor(data) {
-  IoTMonitorState.gatewayOnline = data.gatewayOnline;
+  if (data.gatewayOnline) {
+    lastGatewayOnlineTimestamp = Date.now();
+  }
+  const isWithin7sGrace = (lastGatewayOnlineTimestamp > 0 && (Date.now() - lastGatewayOnlineTimestamp < GATEWAY_OFFLINE_GRACE_MS));
+  const effectiveGatewayOnline = data.gatewayOnline || isWithin7sGrace;
+
+  IoTMonitorState.gatewayOnline = effectiveGatewayOnline;
   IoTMonitorState.faultNodeId = data.faultNodeId;
   IoTMonitorState.faultDescription = data.faultDescription;
   IoTMonitorState.wires = data.wires || [];
@@ -2489,9 +2582,12 @@ function renderIoTMonitor(data) {
   const pingDot = document.getElementById('gateway-ping-dot');
   const statusDot = document.getElementById('gateway-status-dot');
 
-  if (data.gatewayOnline) {
+  if (effectiveGatewayOnline) {
     if (gwBadge) {
-      gwBadge.innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="text-emerald-400">ESP32 Gateway: ONLINE</span> ${data.isSimulated ? '<span class="text-[10px] text-blue-300 font-mono">(Simulated)</span>' : ''}`;
+      const extraTag = data.isSimulated
+        ? '<span class="text-[10px] text-blue-300 font-mono">(Simulated)</span>'
+        : (!data.gatewayOnline && isWithin7sGrace ? '<span class="text-[10px] text-emerald-300/80 font-mono">(Syncing)</span>' : '');
+      gwBadge.innerHTML = `<span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="text-emerald-400">ESP32 Gateway: ONLINE</span> ${extraTag}`;
       gwBadge.className = 'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-emerald-500/50 bg-emerald-950/40 text-emerald-300';
     }
     if (pingDot) pingDot.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
@@ -2506,7 +2602,7 @@ function renderIoTMonitor(data) {
   }
 
   // Update Operator Profile Statement Tag (below profile info & above System Controls & Tools)
-  updateDrawerGatewayStatus(data.gatewayOnline, data.faultDescription, data.faultNodeId, data.isSimulated, data.simulationScenario);
+  updateDrawerGatewayStatus(effectiveGatewayOnline, data.faultDescription, data.faultNodeId, data.isSimulated, data.simulationScenario);
 
   // 2. Alert Box (Root Cause Fault Isolation) & Notifications
   const alertBox = document.getElementById('iot-alert-box');
@@ -2620,7 +2716,7 @@ function renderIoTMonitor(data) {
     const p3 = data.cells.find(c => c.id === 3) || data.cells[2];
     const str = data.cells.find(c => c.id === 4) || data.cells[3];
 
-    const retState = getWireState(wires, 'W_P1_STR_RET');
+    const senseState = getWireState(wires, 'W_P1_STR_SENSE');
 
     function renderCellHtml(c) {
       if (!c) return '';
@@ -2631,6 +2727,8 @@ function renderIoTMonitor(data) {
 
       return `
         <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" title="${label}: hold or tap for details">
+          ${c.id === 1 ? `<div class="cell-terminal-tag origin" title="Sense Loop Origin Lead"><span class="terminal-dot"></span><span>Sense Lead</span></div>` : ''}
+          ${isString ? `<div class="cell-terminal-tag input" title="Sense Return Input Terminal"><span class="terminal-dot"></span><span>Sense In</span></div>` : ''}
           <!-- Desktop Full View Title -->
           <h3 class="cell-title-full">${label}</h3>
           <!-- Mobile Fit View Compact Title -->
@@ -2644,83 +2742,71 @@ function renderIoTMonitor(data) {
           </div>
 
           <div class="iot-vals">${renderCellBody(c)}</div>
-          <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${(c.id === 1 && c.state === 'ok') ? 'String Origin (+/-). Reference Lead.' : (IOT_NOTES[c.state] || '')}</div>
+          <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${(c.id === 1 && c.state === 'ok') ? 'String Origin (+/-). Sense Lead.' : (IOT_NOTES[c.state] || '')}</div>
         </div>
       `;
     }
 
     const html = `
-      <div class="schematic-cards-flex">
-        ${renderCellHtml(p1)}
+      <div class="schematic-circuit-flow">
+        <div class="schematic-cards-flex">
+          ${renderCellHtml(p1)}
 
-        <!-- Inter-Panel Wire Junction 1-2 -->
-        <div class="wire-junction-column" title="Panel 1 to Panel 2 Multi-Wire Junction">
-          <div class="wire-junction-item" title="W_P1_P2_PWR: Main Power (+) Line">
-            <span class="wire-role-label power">Power +</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_PWR'))}
+          <!-- Inter-Panel Wire Junction 1-2 -->
+          <div class="wire-junction-column" title="Panel 1 to Panel 2 Multi-Wire Junction">
+            <div class="wire-junction-item" title="W_P1_P2_PWR: Main Power (+) Line">
+              <span class="wire-role-label power">Power +</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_PWR'))}
+            </div>
+            <div class="wire-junction-item" title="W_P1_P2_SENSE: Optocoupler Sensing GND">
+              <span class="wire-role-label sense">Sense GND</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_SENSE'))}
+            </div>
           </div>
-          <div class="wire-junction-item" title="W_P1_P2_SENSE: Optocoupler Sensing GND">
-            <span class="wire-role-label sense">Sense GND</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_SENSE'))}
+
+          ${renderCellHtml(p2)}
+
+          <!-- Inter-Panel Wire Junction 2-3 -->
+          <div class="wire-junction-column" title="Panel 2 to Panel 3 Multi-Wire Junction">
+            <div class="wire-junction-item" title="W_P2_P3_PWR: Main Power (+) Line">
+              <span class="wire-role-label power">Power +</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_PWR'))}
+            </div>
+            <div class="wire-junction-item" title="W_P2_P3_SENSE: Daisy-Chained Sensing GND">
+              <span class="wire-role-label sense">Sense GND</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_SENSE'))}
+            </div>
           </div>
+
+          ${renderCellHtml(p3)}
+
+          <!-- Inter-Panel Wire Junction 3-String (Main Power (+) Line Only) -->
+          <div class="wire-junction-column" title="Panel 3 to String Module Junction">
+            <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
+              <span class="wire-role-label power">String +</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_PWR'))}
+            </div>
+          </div>
+
+          ${renderCellHtml(str)}
         </div>
 
-        ${renderCellHtml(p2)}
-
-        <!-- Inter-Panel Wire Junction 2-3 -->
-        <div class="wire-junction-column" title="Panel 2 to Panel 3 Multi-Wire Junction">
-          <div class="wire-junction-item" title="W_P2_P3_PWR: Main Power (+) Line">
-            <span class="wire-role-label power">Power +</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_PWR'))}
+        <!-- Continuous Sense Line: Left side of Panel 1 to String Monitor -->
+        <div class="schematic-sense-bus" title="Continuous Sense Line: Connecting Left of Panel 1 to String Monitor">
+          <div class="sense-bus-stem left ${senseState}" title="Sense lead origin on left side of Panel 1">
+            <span class="sense-stem-vertical"></span>
+            <span class="sense-stem-tag">P1 (Left Origin)</span>
           </div>
-          <div class="wire-junction-item" title="W_P2_P3_SENSE: Daisy-Chained Sensing GND">
-            <span class="wire-role-label sense">Sense GND</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_SENSE'))}
+          <div class="sense-bus-wire ${senseState}"></div>
+          <div class="sense-bus-switch-unit" title="W_P1_STR_SENSE: Master Continuity Sense Line">
+            <span class="wire-role-label sense">Sense Line (P1 ➔ String)</span>
+            ${renderSwitchSvg(senseState)}
+            <span class="wire-status-text ${senseState}">${senseState}</span>
           </div>
-        </div>
-
-        ${renderCellHtml(p3)}
-
-        <!-- Inter-Panel Wire Junction 3-String -->
-        <div class="wire-junction-column" title="Panel 3 to String Module Junction">
-          <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
-            <span class="wire-role-label power">String +</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_PWR'))}
-          </div>
-          <div class="wire-junction-item" title="W_P3_STR_SENSE: Continuity Signal Wire">
-            <span class="wire-role-label sense">Sense In</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_SENSE'))}
-          </div>
-        </div>
-
-        ${renderCellHtml(str)}
-      </div>
-
-      <!-- Direct Ground Return Bus (W_P1_STR_RET) -->
-      <div class="ground-return-bus-wrap" title="Direct Ground Return Bus: Panel 1(-) directly to String Node (-)">
-        <div class="ground-bus-header">
-          <div class="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-emerald-400">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Direct Return Ground Bus (Continuous Ground)
-          </div>
-          <div class="text-[11px] font-mono text-slate-400">
-            Topology: Optocoupler EL817 Multi-Wire Array
-          </div>
-        </div>
-        <div class="ground-bus-track">
-          <div class="ground-terminal">
-            <span class="terminal-node-dot"></span>
-            <span>P1 (-) Ground Lead</span>
-          </div>
-          <div class="ground-bus-wire-lead ${retState}"></div>
-          <div class="ground-switch-center">
-            <span class="wire-role-label ret">W_P1_STR_RET (Return GND)</span>
-            ${renderSwitchSvg(retState)}
-          </div>
-          <div class="ground-bus-wire-lead ${retState}"></div>
-          <div class="ground-terminal">
-            <span>String Node (-) Input</span>
-            <span class="terminal-node-dot"></span>
+          <div class="sense-bus-wire ${senseState}"></div>
+          <div class="sense-bus-stem right ${senseState}" title="Sense return input into String Monitor">
+            <span class="sense-stem-tag">String Sense In</span>
+            <span class="sense-stem-vertical"></span>
           </div>
         </div>
       </div>
@@ -2783,12 +2869,12 @@ function getWireState(wires, wireId) {
     const leg = wires.find(w => w.from === 2 && w.to === 3);
     return leg ? (leg.state || 'no_signal') : 'no_signal';
   }
-  if (wireId === 'W_P3_STR_PWR' || wireId === 'W_P3_STR_SENSE') {
+  if (wireId === 'W_P3_STR_PWR') {
     const leg = wires.find(w => w.from === 3 && w.to === 4);
     return leg ? (leg.state || 'no_signal') : 'no_signal';
   }
-  if (wireId === 'W_P1_STR_RET') {
-    const leg = wires.find(w => w.id === 'W_P1_STR_RET');
+  if (wireId === 'W_P1_STR_SENSE' || wireId === 'W_P1_STR_RET') {
+    const leg = wires.find(w => w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET' || (w.from === 1 && w.to === 4));
     return leg ? (leg.state || 'closed') : 'closed';
   }
   return 'no_signal';
@@ -3086,6 +3172,11 @@ function setupCellTouchEvents() {
 }
 
 function renderIoTMonitorOffline(errMsg) {
+  // If the gateway was seen online within the last 7 seconds, give it a 7-second grace period before switching to offline
+  if (lastGatewayOnlineTimestamp > 0 && (Date.now() - lastGatewayOnlineTimestamp < GATEWAY_OFFLINE_GRACE_MS)) {
+    return;
+  }
+
   const gwBadge = document.getElementById('iot-gateway-status');
   if (gwBadge) {
     gwBadge.innerHTML = '<span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-500"></span> <span class="text-slate-400">Server Offline (:3000)</span>';
@@ -3259,11 +3350,10 @@ function runClientSideSimulation(scenario) {
   const rawWires = [
     { id: 'W_P1_P2_PWR',    from: 1, to: 2, role: 'power' },
     { id: 'W_P1_P2_SENSE',  from: 1, to: 2, role: 'sensing_gnd' },
-    { id: 'W_P1_STR_RET',   from: 1, to: 4, role: 'return_gnd' },
+    { id: 'W_P1_STR_SENSE', from: 1, to: 4, role: 'sensing_wire' },
     { id: 'W_P2_P3_PWR',    from: 2, to: 3, role: 'power' },
     { id: 'W_P2_P3_SENSE',  from: 2, to: 3, role: 'sensing_gnd' },
-    { id: 'W_P3_STR_PWR',   from: 3, to: 4, role: 'power' },
-    { id: 'W_P3_STR_SENSE', from: 3, to: 4, role: 'sensing_wire' }
+    { id: 'W_P3_STR_PWR',   from: 3, to: 4, role: 'power' }
   ];
 
   const wires = rawWires.map(w => {
@@ -3271,13 +3361,13 @@ function runClientSideSimulation(scenario) {
 
     if (faultNodeId === 2) {
       if (w.id === 'W_P1_P2_PWR') return { ...w, state: 'open' };
-      if (w.id === 'W_P1_P2_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_P2_SENSE' || w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
       return { ...w, state: 'gray_zone' };
     }
 
     if (faultNodeId === 3) {
       if (w.from === 1 && w.to === 2) return { ...w, state: 'closed' };
-      if (w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
       if (w.id === 'W_P2_P3_PWR') return { ...w, state: 'open' };
       if (w.id === 'W_P2_P3_SENSE') return { ...w, state: 'closed' };
       return { ...w, state: 'gray_zone' };
@@ -3285,7 +3375,7 @@ function runClientSideSimulation(scenario) {
 
     if (faultNodeId === 4) {
       if (w.from < 3) return { ...w, state: 'closed' };
-      if (w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
       if (w.id === 'W_P3_STR_PWR') return { ...w, state: 'open' };
       return { ...w, state: 'gray_zone' };
     }
@@ -3442,6 +3532,7 @@ async function initAuth() {
     AuthState.token = null;
     AuthState.user = null;
     localStorage.removeItem('heliopv_jwt_token');
+    localStorage.removeItem('heliopv_user_profile');
     updateAuthUI(null);
     lockAuthWall('login', 'You have been signed out. Please sign in to continue.');
     return;
@@ -3449,42 +3540,56 @@ async function initAuth() {
 
   const requestedAuthMode = authParam === 'signup' ? 'signup' : 'login';
 
-  // If NO token is stored, immediately guard all views and present the Login/Signup screen
-  if (!AuthState.token) {
-    updateAuthUI(null);
-    lockAuthWall(requestedAuthMode, 'Authentication Required: Please sign in or create an account to access the dashboard.');
+  // 1. Permanent Session & Offline-First Restore
+  // If token is stored locally, the user NEVER gets logged out across browser/app restarts
+  const storedToken = localStorage.getItem('heliopv_jwt_token');
+  const storedUserJson = localStorage.getItem('heliopv_user_profile');
+  let cachedUser = null;
+  if (storedUserJson) {
+    try {
+      cachedUser = JSON.parse(storedUserJson);
+    } catch (e) {}
+  }
+
+  if (storedToken) {
+    AuthState.token = storedToken;
+    AuthState.user = cachedUser || { name: 'Solar User', email: '' };
+
+    // Instantly unlock the dashboard! No loading spinners, no lock screen!
+    updateAuthUI(AuthState.user);
+    if (AuthState.user && AuthState.user.savedLocation) {
+      applyUserSavedLocation(AuthState.user);
+    }
+    unlockAuthWall();
+    ensurePushSubscription().catch(() => {});
+
+    // In the background, gently sync and refresh profile from server without disturbing user
+    fetch(`${getBackendBaseUrl()}/api/auth/me`, {
+      headers: getAuthHeaders()
+    }).then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.user) {
+          AuthState.user = data.user;
+          localStorage.setItem('heliopv_user_profile', JSON.stringify(data.user));
+          updateAuthUI(data.user);
+          if (data.user.savedLocation) {
+            applyUserSavedLocation(data.user);
+          }
+        }
+      }
+      // If server returns error, 502, 503, or cold-starts: DO NOTHING!
+      // The session remains permanently active!
+    }).catch(() => {
+      // Offline / network disconnect: keep active session intact!
+    });
+
     return;
   }
 
-  // If token IS stored, verify it with the backend server
-  try {
-    const res = await fetch(`${getBackendBaseUrl()}/api/auth/me`, {
-      headers: getAuthHeaders()
-    });
-    if (res.ok) {
-      const data = await res.json();
-      AuthState.user = data.user;
-      updateAuthUI(AuthState.user);
-      applyUserSavedLocation(AuthState.user);
-      unlockAuthWall();
-      ensurePushSubscription().catch(() => {});
-      return;
-    }
-  } catch (e) {
-    console.warn('Session verification network issue; retaining active session:', e);
-    // Offline / network fallback: if a valid local token exists, allow access
-    if (AuthState.token) {
-      unlockAuthWall();
-      return;
-    }
-  }
-
-  // Token is expired, invalid, or account removed
-  AuthState.token = null;
-  AuthState.user = null;
-  localStorage.removeItem('heliopv_jwt_token');
+  // If NO token exists, guard all views and present the Login/Signup screen
   updateAuthUI(null);
-  lockAuthWall('login', 'Your session has expired. Please sign in again.');
+  lockAuthWall(requestedAuthMode, 'Authentication Required: Please sign in or create an account to access the dashboard.');
 }
 
 // Debounced auto-save of chosen location to user profile in MongoDB Atlas
@@ -3634,7 +3739,7 @@ function updateAuthUI(user) {
     const drawerName = document.getElementById('drawer-user-name');
     const drawerEmail = document.getElementById('drawer-user-email');
 
-    const avatarUrl = user.profileImage || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.name)}`;
+    const avatarUrl = user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=0f2547&textColor=ffffff`;
     if (headerAvatar) headerAvatar.src = avatarUrl;
     if (headerName) headerName.textContent = user.name || 'User';
     if (drawerAvatar) drawerAvatar.src = avatarUrl;
@@ -3711,11 +3816,11 @@ function setupAuthEventListeners() {
   });
 
   // Avatar preset seeds
-  let selectedSignupAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=SolarUser';
+  let selectedSignupAvatar = 'https://api.dicebear.com/7.x/initials/svg?seed=SU&backgroundColor=0f2547&textColor=ffffff';
   document.querySelectorAll('.avatar-seed-opt').forEach(btn => {
     btn.addEventListener('click', () => {
       const seed = btn.getAttribute('data-seed');
-      selectedSignupAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=0f356b,0a254a`;
+      selectedSignupAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=0f2547&textColor=ffffff`;
       const img = document.getElementById('img-signup-avatar-preview');
       if (img) img.src = selectedSignupAvatar;
     });
@@ -3725,31 +3830,52 @@ function setupAuthEventListeners() {
   formLogin?.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearAuthError();
-    const email = document.getElementById('login-email').value;
+    const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     const btnSubmit = document.getElementById('btn-submit-login');
 
     btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span>Signing In...</span>';
+    btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Connecting...</span>';
+
+    // Timer to notify user if Render is waking from sleep (> 3.5s)
+    const wakeTimer = setTimeout(() => {
+      if (btnSubmit && btnSubmit.disabled) {
+        btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5 text-amber-300" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Waking server up... (few sec)</span>';
+      }
+    }, 3500);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 28000); // 28s timeout
 
     try {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      if (!res.ok) throw new Error(data.error || 'Invalid email or password');
 
       AuthState.token = data.token;
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
+      localStorage.setItem('heliopv_user_profile', JSON.stringify(data.user));
       updateAuthUI(data.user);
       applyUserSavedLocation(data.user);
       unlockAuthWall();
       ensurePushSubscription().catch(() => {});
     } catch (err) {
-      showAuthError(err.message);
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+      if (err.name === 'AbortError') {
+        showAuthError('Connection timed out. The cloud server may be cold-starting; please tap "Sign In" once more.');
+      } else {
+        showAuthError(err.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i><span>Sign In to Dashboard</span>';
@@ -3761,13 +3887,22 @@ function setupAuthEventListeners() {
   formSignup?.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearAuthError();
-    const name = document.getElementById('signup-name').value;
-    const email = document.getElementById('signup-email').value;
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
     const password = document.getElementById('signup-password').value;
     const btnSubmit = document.getElementById('btn-submit-signup');
 
     btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span>Creating Account...</span>';
+    btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Creating Account...</span>';
+
+    const wakeTimer = setTimeout(() => {
+      if (btnSubmit && btnSubmit.disabled) {
+        btnSubmit.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5 text-amber-300" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Waking server up... (few sec)</span>';
+      }
+    }, 3500);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 28000);
 
     try {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/signup`, {
@@ -3783,20 +3918,31 @@ function setupAuthEventListeners() {
             lon: AppState.project.lon,
             displayLocation: AppState.project.displayLocation
           }
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Registration failed');
 
       AuthState.token = data.token;
       AuthState.user = data.user;
       localStorage.setItem('heliopv_jwt_token', data.token);
+      localStorage.setItem('heliopv_user_profile', JSON.stringify(data.user));
       updateAuthUI(data.user);
       applyUserSavedLocation(data.user);
       unlockAuthWall();
       ensurePushSubscription().catch(() => {});
     } catch (err) {
-      showAuthError(err.message);
+      clearTimeout(timeoutId);
+      clearTimeout(wakeTimer);
+      if (err.name === 'AbortError') {
+        showAuthError('Connection timed out. Please check your connection and tap "Create Account" again.');
+      } else {
+        showAuthError(err.message || 'Registration failed. Please try again.');
+      }
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i><span>Create Account &amp; Sign In</span>';
@@ -3872,8 +4018,8 @@ function setupAuthEventListeners() {
   });
 
   btnRandomAvatar?.addEventListener('click', async () => {
-    const randomSeed = 'Solar_' + Math.random().toString(36).substring(2, 8);
-    const newAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${randomSeed}&backgroundColor=0f356b,0a254a`;
+    const randomSeed = ['OP', 'EN', 'PV', 'SC', 'EL', 'SOL'][Math.floor(Math.random() * 6)];
+    const newAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${randomSeed}&backgroundColor=0f2547&textColor=ffffff`;
     try {
       const res = await fetch(`${getBackendBaseUrl()}/api/auth/update-profile`, {
         method: 'POST',
@@ -4069,6 +4215,7 @@ function setupAuthEventListeners() {
       AuthState.token = null;
       AuthState.user = null;
       localStorage.removeItem('heliopv_jwt_token');
+      localStorage.removeItem('heliopv_user_profile');
       updateAuthUI(null);
       closeDrawer();
       lockAuthWall('login', 'You have been signed out. Please sign in to continue.');

@@ -594,79 +594,146 @@ input, button, select, textarea {
 .wire-status-text.gray_zone { color: #9CA3AF; }
 .wire-status-text.no_signal { color: #4B5563; }
 
-/* Ground Return Bus */
-.ground-return-bus-wrap {
+/* Schematic Circuit Flow Container */
+.schematic-circuit-flow {
   width: 100%;
-  margin-top: 12px;
-  padding: 8px 12px;
-  background: #0E1117;
-  border: 1px solid #1F2430;
-  border-radius: 4px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: stretch;
+  gap: 2px;
 }
 
-.ground-bus-header {
-  display: flex;
+/* Cell Terminal Markers (Sense Origin & Sense Input) */
+.cell-terminal-tag {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: #9CA3AF;
+  gap: 4px;
+  font-size: 0.6rem;
   font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
 }
 
-.ground-bus-track {
+.cell-terminal-tag.origin {
+  background: rgba(37, 99, 235, 0.18);
+  color: #93C5FD;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+}
+
+.cell-terminal-tag.input {
+  background: rgba(37, 99, 235, 0.18);
+  color: #93C5FD;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+}
+
+.cell-terminal-tag .terminal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3B82F6;
+}
+
+/* Continuous Sense Line (Left of Panel 1 to String Monitor) */
+.schematic-sense-bus {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   width: 100%;
+  margin-top: 6px;
+  padding: 0 8px;
+  position: relative;
+  user-select: none;
 }
 
-.ground-terminal {
+.sense-bus-stem {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.725rem;
-  font-weight: 700;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sense-bus-stem.left {
+  justify-content: flex-start;
+}
+
+.sense-bus-stem.right {
+  justify-content: flex-end;
+}
+
+.sense-stem-vertical {
+  width: 12px;
+  height: 18px;
+  position: relative;
+}
+
+.sense-bus-stem.left .sense-stem-vertical {
+  border-left: 2px solid #059669;
+  border-bottom: 2px solid #059669;
+  border-bottom-left-radius: 3px;
+  margin-top: -12px;
+}
+
+.sense-bus-stem.right .sense-stem-vertical {
+  border-right: 2px solid #059669;
+  border-bottom: 2px solid #059669;
+  border-bottom-right-radius: 3px;
+  margin-top: -12px;
+}
+
+.sense-bus-stem.open .sense-stem-vertical {
+  border-color: #DC2626 !important;
+}
+
+.sense-bus-stem.gray_zone .sense-stem-vertical {
+  border-color: #6B7280 !important;
+  border-style: dashed;
+}
+
+.sense-bus-stem.no_signal .sense-stem-vertical {
+  border-color: #374151 !important;
+}
+
+.sense-stem-tag {
+  font-size: 0.625rem;
   font-family: var(--font-mono);
-  color: #E5E7EB;
+  font-weight: 700;
+  color: #93C5FD;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
-.terminal-node-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #059669;
-}
-
-.ground-bus-wire-lead {
+.sense-bus-wire {
   flex: 1;
   height: 2px;
   background: #059669;
   transition: all 0.2s ease;
+  min-width: 12px;
 }
 
-.ground-bus-wire-lead.open {
+.sense-bus-wire.open {
   background: #DC2626;
+  animation: wire-open-pulse 1.2s infinite ease-in-out;
 }
 
-.ground-bus-wire-lead.gray_zone {
+.sense-bus-wire.gray_zone {
   background: repeating-linear-gradient(90deg, #6B7280 0, #6B7280 4px, transparent 4px, transparent 8px);
 }
 
-.ground-bus-wire-lead.no_signal {
+.sense-bus-wire.no_signal {
   background: #374151;
 }
 
-.ground-switch-center {
+.sense-bus-switch-unit {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 110px;
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
 /* Steady clean alert pulses (no blurred neon glows) */
@@ -814,8 +881,31 @@ input, button, select, textarea {
   display: none !important;
 }
 
-.string-array-row.schematic-fit-mode .ground-return-bus-wrap,
-.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .ground-return-bus-wrap {
+.string-array-row.schematic-fit-mode .cell-terminal-tag,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .cell-terminal-tag {
+  display: none !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-stem-tag,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-stem-tag {
+  display: none !important;
+}
+
+.string-array-row.schematic-fit-mode .schematic-sense-bus,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .schematic-sense-bus {
+  margin-top: 4px !important;
+  padding: 0 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-switch-unit .wire-role-label,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-switch-unit .wire-role-label {
+  display: inline-block !important;
+  font-size: 0.55rem !important;
+  padding: 0 3px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-switch-unit .wire-status-text,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-switch-unit .wire-status-text {
   display: none !important;
 }
 
@@ -828,13 +918,20 @@ input, button, select, textarea {
   align-items: stretch !important;
   padding: 1rem 0.5rem !important;
   gap: 10px !important;
+  overflow-x: auto !important;
+}
+
+.string-array-row.schematic-zoom-mode .schematic-circuit-flow {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  min-width: max-content !important;
+  width: 100% !important;
 }
 
 .string-array-row.schematic-zoom-mode .schematic-cards-flex {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  overflow-x: auto !important;
   padding: 0.5rem 0.25rem !important;
   gap: 6px !important;
 }
@@ -842,6 +939,11 @@ input, button, select, textarea {
 @media (min-width: 1100px) {
   .string-array-row.schematic-zoom-mode .schematic-cards-flex {
     justify-content: center !important;
+  }
+  .string-array-row.schematic-zoom-mode .schematic-sense-bus {
+    max-width: 1100px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 }
 

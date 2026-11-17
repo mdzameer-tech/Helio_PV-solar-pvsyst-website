@@ -2716,7 +2716,7 @@ function renderIoTMonitor(data) {
     const p3 = data.cells.find(c => c.id === 3) || data.cells[2];
     const str = data.cells.find(c => c.id === 4) || data.cells[3];
 
-    const retState = getWireState(wires, 'W_P1_STR_RET');
+    const senseState = getWireState(wires, 'W_P1_STR_SENSE');
 
     function renderCellHtml(c) {
       if (!c) return '';
@@ -2727,6 +2727,8 @@ function renderIoTMonitor(data) {
 
       return `
         <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" title="${label}: hold or tap for details">
+          ${c.id === 1 ? `<div class="cell-terminal-tag origin" title="Sense Loop Origin Lead"><span class="terminal-dot"></span><span>Sense Lead</span></div>` : ''}
+          ${isString ? `<div class="cell-terminal-tag input" title="Sense Return Input Terminal"><span class="terminal-dot"></span><span>Sense In</span></div>` : ''}
           <!-- Desktop Full View Title -->
           <h3 class="cell-title-full">${label}</h3>
           <!-- Mobile Fit View Compact Title -->
@@ -2740,83 +2742,71 @@ function renderIoTMonitor(data) {
           </div>
 
           <div class="iot-vals">${renderCellBody(c)}</div>
-          <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${(c.id === 1 && c.state === 'ok') ? 'String Origin (+/-). Reference Lead.' : (IOT_NOTES[c.state] || '')}</div>
+          <div class="iot-note ${c.state === 'broken' ? 'warn' : ''}">${(c.id === 1 && c.state === 'ok') ? 'String Origin (+/-). Sense Lead.' : (IOT_NOTES[c.state] || '')}</div>
         </div>
       `;
     }
 
     const html = `
-      <div class="schematic-cards-flex">
-        ${renderCellHtml(p1)}
+      <div class="schematic-circuit-flow">
+        <div class="schematic-cards-flex">
+          ${renderCellHtml(p1)}
 
-        <!-- Inter-Panel Wire Junction 1-2 -->
-        <div class="wire-junction-column" title="Panel 1 to Panel 2 Multi-Wire Junction">
-          <div class="wire-junction-item" title="W_P1_P2_PWR: Main Power (+) Line">
-            <span class="wire-role-label power">Power +</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_PWR'))}
+          <!-- Inter-Panel Wire Junction 1-2 -->
+          <div class="wire-junction-column" title="Panel 1 to Panel 2 Multi-Wire Junction">
+            <div class="wire-junction-item" title="W_P1_P2_PWR: Main Power (+) Line">
+              <span class="wire-role-label power">Power +</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_PWR'))}
+            </div>
+            <div class="wire-junction-item" title="W_P1_P2_SENSE: Optocoupler Sensing GND">
+              <span class="wire-role-label sense">Sense GND</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_SENSE'))}
+            </div>
           </div>
-          <div class="wire-junction-item" title="W_P1_P2_SENSE: Optocoupler Sensing GND">
-            <span class="wire-role-label sense">Sense GND</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P1_P2_SENSE'))}
+
+          ${renderCellHtml(p2)}
+
+          <!-- Inter-Panel Wire Junction 2-3 -->
+          <div class="wire-junction-column" title="Panel 2 to Panel 3 Multi-Wire Junction">
+            <div class="wire-junction-item" title="W_P2_P3_PWR: Main Power (+) Line">
+              <span class="wire-role-label power">Power +</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_PWR'))}
+            </div>
+            <div class="wire-junction-item" title="W_P2_P3_SENSE: Daisy-Chained Sensing GND">
+              <span class="wire-role-label sense">Sense GND</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_SENSE'))}
+            </div>
           </div>
+
+          ${renderCellHtml(p3)}
+
+          <!-- Inter-Panel Wire Junction 3-String (Main Power (+) Line Only) -->
+          <div class="wire-junction-column" title="Panel 3 to String Module Junction">
+            <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
+              <span class="wire-role-label power">String +</span>
+              ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_PWR'))}
+            </div>
+          </div>
+
+          ${renderCellHtml(str)}
         </div>
 
-        ${renderCellHtml(p2)}
-
-        <!-- Inter-Panel Wire Junction 2-3 -->
-        <div class="wire-junction-column" title="Panel 2 to Panel 3 Multi-Wire Junction">
-          <div class="wire-junction-item" title="W_P2_P3_PWR: Main Power (+) Line">
-            <span class="wire-role-label power">Power +</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_PWR'))}
+        <!-- Continuous Sense Line: Left side of Panel 1 to String Monitor -->
+        <div class="schematic-sense-bus" title="Continuous Sense Line: Connecting Left of Panel 1 to String Monitor">
+          <div class="sense-bus-stem left ${senseState}" title="Sense lead origin on left side of Panel 1">
+            <span class="sense-stem-vertical"></span>
+            <span class="sense-stem-tag">P1 (Left Origin)</span>
           </div>
-          <div class="wire-junction-item" title="W_P2_P3_SENSE: Daisy-Chained Sensing GND">
-            <span class="wire-role-label sense">Sense GND</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P2_P3_SENSE'))}
+          <div class="sense-bus-wire ${senseState}"></div>
+          <div class="sense-bus-switch-unit" title="W_P1_STR_SENSE: Master Continuity Sense Line">
+            <span class="wire-role-label sense">Sense Line (P1 ➔ String)</span>
+            ${renderSwitchSvg(senseState)}
+            <span class="wire-status-text ${senseState}">${senseState}</span>
           </div>
-        </div>
-
-        ${renderCellHtml(p3)}
-
-        <!-- Inter-Panel Wire Junction 3-String -->
-        <div class="wire-junction-column" title="Panel 3 to String Module Junction">
-          <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
-            <span class="wire-role-label power">String +</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_PWR'))}
-          </div>
-          <div class="wire-junction-item" title="W_P3_STR_SENSE: Continuity Signal Wire">
-            <span class="wire-role-label sense">Sense In</span>
-            ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_SENSE'))}
-          </div>
-        </div>
-
-        ${renderCellHtml(str)}
-      </div>
-
-      <!-- Direct Ground Return Bus (W_P1_STR_RET) -->
-      <div class="ground-return-bus-wrap" title="Direct Ground Return Bus: Panel 1(-) directly to String Node (-)">
-        <div class="ground-bus-header">
-          <div class="flex items-center gap-1.5 font-mono text-[11px] font-semibold text-emerald-400">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Direct Return Ground Bus (Continuous Ground)
-          </div>
-          <div class="text-[11px] font-mono text-slate-400">
-            Topology: Optocoupler EL817 Multi-Wire Array
-          </div>
-        </div>
-        <div class="ground-bus-track">
-          <div class="ground-terminal">
-            <span class="terminal-node-dot"></span>
-            <span>P1 (-) Ground Lead</span>
-          </div>
-          <div class="ground-bus-wire-lead ${retState}"></div>
-          <div class="ground-switch-center">
-            <span class="wire-role-label ret">W_P1_STR_RET (Return GND)</span>
-            ${renderSwitchSvg(retState)}
-          </div>
-          <div class="ground-bus-wire-lead ${retState}"></div>
-          <div class="ground-terminal">
-            <span>String Node (-) Input</span>
-            <span class="terminal-node-dot"></span>
+          <div class="sense-bus-wire ${senseState}"></div>
+          <div class="sense-bus-stem right ${senseState}" title="Sense return input into String Monitor">
+            <span class="sense-stem-tag">String Sense In</span>
+            <span class="sense-stem-vertical"></span>
           </div>
         </div>
       </div>
@@ -2879,12 +2869,12 @@ function getWireState(wires, wireId) {
     const leg = wires.find(w => w.from === 2 && w.to === 3);
     return leg ? (leg.state || 'no_signal') : 'no_signal';
   }
-  if (wireId === 'W_P3_STR_PWR' || wireId === 'W_P3_STR_SENSE') {
+  if (wireId === 'W_P3_STR_PWR') {
     const leg = wires.find(w => w.from === 3 && w.to === 4);
     return leg ? (leg.state || 'no_signal') : 'no_signal';
   }
-  if (wireId === 'W_P1_STR_RET') {
-    const leg = wires.find(w => w.id === 'W_P1_STR_RET');
+  if (wireId === 'W_P1_STR_SENSE' || wireId === 'W_P1_STR_RET') {
+    const leg = wires.find(w => w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET' || (w.from === 1 && w.to === 4));
     return leg ? (leg.state || 'closed') : 'closed';
   }
   return 'no_signal';
@@ -3360,11 +3350,10 @@ function runClientSideSimulation(scenario) {
   const rawWires = [
     { id: 'W_P1_P2_PWR',    from: 1, to: 2, role: 'power' },
     { id: 'W_P1_P2_SENSE',  from: 1, to: 2, role: 'sensing_gnd' },
-    { id: 'W_P1_STR_RET',   from: 1, to: 4, role: 'return_gnd' },
+    { id: 'W_P1_STR_SENSE', from: 1, to: 4, role: 'sensing_wire' },
     { id: 'W_P2_P3_PWR',    from: 2, to: 3, role: 'power' },
     { id: 'W_P2_P3_SENSE',  from: 2, to: 3, role: 'sensing_gnd' },
-    { id: 'W_P3_STR_PWR',   from: 3, to: 4, role: 'power' },
-    { id: 'W_P3_STR_SENSE', from: 3, to: 4, role: 'sensing_wire' }
+    { id: 'W_P3_STR_PWR',   from: 3, to: 4, role: 'power' }
   ];
 
   const wires = rawWires.map(w => {
@@ -3372,13 +3361,13 @@ function runClientSideSimulation(scenario) {
 
     if (faultNodeId === 2) {
       if (w.id === 'W_P1_P2_PWR') return { ...w, state: 'open' };
-      if (w.id === 'W_P1_P2_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_P2_SENSE' || w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
       return { ...w, state: 'gray_zone' };
     }
 
     if (faultNodeId === 3) {
       if (w.from === 1 && w.to === 2) return { ...w, state: 'closed' };
-      if (w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
       if (w.id === 'W_P2_P3_PWR') return { ...w, state: 'open' };
       if (w.id === 'W_P2_P3_SENSE') return { ...w, state: 'closed' };
       return { ...w, state: 'gray_zone' };
@@ -3386,7 +3375,7 @@ function runClientSideSimulation(scenario) {
 
     if (faultNodeId === 4) {
       if (w.from < 3) return { ...w, state: 'closed' };
-      if (w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
+      if (w.id === 'W_P1_STR_SENSE' || w.id === 'W_P1_STR_RET') return { ...w, state: 'closed' };
       if (w.id === 'W_P3_STR_PWR') return { ...w, state: 'open' };
       return { ...w, state: 'gray_zone' };
     }

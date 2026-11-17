@@ -36,40 +36,41 @@
             mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
           },
           colors: {
-            epcBlue: '#0F356B',
-            epcDark: '#0A254A',
-            epcLight: '#F0F5FA',
-            epcAmber: '#F59E0B'
+            epcBlue: '#0F2547',
+            epcDark: '#0A1931',
+            epcLight: '#F3F4F6',
+            epcAmber: '#D97706'
           }
         }
       }
     }
   </script>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
+<body class="bg-[#F9FAFB] text-zinc-900 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
 
   <!-- MOBILE NATIVE PULL-TO-REFRESH FLOATING INDICATOR -->
-  <div id="pull-refresh-indicator" class="fixed top-2 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2 bg-slate-900/95 text-slate-200 border border-slate-700/80 px-3.5 py-1.5 rounded-full shadow-2xl pointer-events-none transition-transform duration-100 ease-out opacity-0" style="transform: translate(-50%, -65px);">
-    <div id="pull-refresh-icon-wrap" class="w-4 h-4 flex items-center justify-center text-amber-400">
+  <div id="pull-refresh-indicator" class="fixed top-2 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2 bg-[#0C0E12] text-zinc-200 border border-zinc-800 px-3 py-1 rounded shadow-none pointer-events-none transition-transform duration-100 ease-out opacity-0" style="transform: translate(-50%, -65px);">
+    <div id="pull-refresh-icon-wrap" class="w-4 h-4 flex items-center justify-center text-amber-500">
       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
         <polyline points="21 3 21 9 15 9"/>
       </svg>
     </div>
-    <span id="pull-refresh-text" class="text-xs font-semibold tracking-tight text-slate-200">Pull to refresh</span>
+    <span id="pull-refresh-text" class="text-xs font-semibold tracking-tight text-zinc-200 font-mono">Pull to refresh</span>
   </div>
 
   <!-- MINIMALIST STICKY NAVIGATION BAR -->
-  <header class="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white shadow-sm no-print w-full">
-    <div class="w-full px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+  <header class="sticky top-0 z-40 bg-[#0C0E12] border-b border-[#222733] text-white no-print w-full">
+    <div class="w-full px-4 sm:px-6 lg:px-8 h-13 sm:h-14 flex items-center justify-between gap-3">
       
       <!-- LOGO ON PROPER LEFT -->
       <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/20">
-          <i data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950 stroke-[2.5]"></i>
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded bg-amber-500 flex items-center justify-center text-zinc-950 font-bold">
+          <i data-lucide="sun" class="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]"></i>
         </div>
-        <div class="flex items-baseline">
-          <span class="font-bold text-base sm:text-lg tracking-tight text-white">HelioPV</span>
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-sm sm:text-base tracking-tight text-white">HelioPV</span>
+          <span class="hidden sm:inline-block text-[10px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">v8.0</span>
         </div>
       </div>
 
@@ -77,17 +78,17 @@
       <div class="flex items-center gap-2 sm:gap-4 shrink-0">
         <!-- Navigation Tabs (Live String Monitor & Solar Estimation) -->
         <nav class="flex items-center gap-1 sm:gap-1.5" aria-label="Main Navigation">
-          <button id="tab-btn-monitor" class="view-tab-btn active-tab p-1.5 sm:px-3 sm:py-1.5" title="Live ESP32 String Monitor" type="button">
-            <span class="relative flex h-2 w-2">
+          <button id="tab-btn-monitor" class="view-tab-btn active-tab p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium" title="Live ESP32 String Monitor" type="button">
+            <span class="relative flex h-2 w-2 mr-1">
               <span id="gateway-ping-dot" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span id="gateway-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <i data-lucide="radio" class="w-4 h-4 text-emerald-400 shrink-0"></i>
-            <span class="hidden md:inline">Live String Monitor</span>
+            <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+            <span class="hidden md:inline">String Monitor</span>
           </button>
 
-          <button id="tab-btn-estimate" class="view-tab-btn p-1.5 sm:px-3 sm:py-1.5" title="Solar PVsyst Estimation Studio" type="button">
-            <i data-lucide="sun-medium" class="w-4 h-4 text-amber-400 shrink-0"></i>
+          <button id="tab-btn-estimate" class="view-tab-btn p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium" title="Solar PVsyst Estimation Studio" type="button">
+            <i data-lucide="sun-medium" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
             <span class="hidden md:inline">Solar Estimation</span>
           </button>
         </nav>
@@ -102,27 +103,27 @@
         </div>
 
         <!-- Vertical Divider -->
-        <div class="hidden sm:block h-5 w-px bg-slate-800"></div>
+        <div class="hidden sm:block h-4 w-px bg-zinc-800"></div>
 
-        <!-- ACCOUNT ATTACHED WITH HAMBURGER ICON (RIGHT-MOST LIKE OFFICIAL WEBSITES) -->
+        <!-- ACCOUNT ATTACHED WITH HAMBURGER ICON -->
         <div class="flex items-center">
           <!-- Logged Out State: Sign In + Hamburger Menu Attached -->
           <div id="auth-header-logged-out" class="flex items-center gap-1.5">
-            <button id="btn-open-auth-modal" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-2.5 py-1.5 sm:px-3 rounded-lg font-semibold shadow-sm transition" title="Sign In" type="button">
-              <i data-lucide="log-in" class="w-3.5 h-3.5 shrink-0"></i>
+            <button id="btn-open-auth-modal" class="flex items-center gap-1.5 bg-[#0F2547] hover:bg-[#153460] text-white text-xs px-2.5 py-1.5 sm:px-3 rounded font-medium border border-blue-900/60 transition" title="Sign In" type="button">
+              <i data-lucide="log-in" class="w-3.5 h-3.5 shrink-0 text-blue-300"></i>
               <span class="hidden sm:inline">Sign In</span>
             </button>
-            <button id="btn-toggle-user-drawer-guest" class="btn-open-user-drawer flex items-center justify-center p-1.5 sm:px-2 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg transition shadow-sm shrink-0 cursor-pointer" title="Open Menu" type="button">
-              <i data-lucide="menu" class="w-4 h-4 text-slate-300"></i>
+            <button id="btn-toggle-user-drawer-guest" class="btn-open-user-drawer flex items-center justify-center p-1.5 sm:px-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded transition shrink-0 cursor-pointer" title="Open Menu" type="button">
+              <i data-lucide="menu" class="w-4 h-4 text-zinc-300"></i>
             </button>
           </div>
 
           <!-- Logged In State: Unified Account Button Attached with Hamburger Icon [Avatar + Name + ≡] -->
           <div id="auth-header-logged-in" class="hidden items-center">
-            <button id="btn-toggle-user-drawer" class="btn-open-user-drawer flex items-center gap-2 py-1 px-2 sm:px-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 rounded-xl transition shadow-sm group cursor-pointer" title="Operator Profile & System Menu" type="button">
-              <img id="header-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Operator" alt="Avatar" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border border-amber-400/80 bg-slate-800 shrink-0">
-              <span id="header-user-name" class="text-xs font-semibold max-w-[80px] sm:max-w-[120px] truncate text-slate-100 hidden sm:inline">Operator</span>
-              <i data-lucide="menu" class="w-4 h-4 text-slate-300 group-hover:text-white transition shrink-0"></i>
+            <button id="btn-toggle-user-drawer" class="btn-open-user-drawer flex items-center gap-2 py-1 px-2 sm:px-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded transition group cursor-pointer" title="Operator Profile & System Menu" type="button">
+              <img id="header-user-avatar" src="https://api.dicebear.com/7.x/initials/svg?seed=OP&backgroundColor=0f2547&textColor=ffffff" alt="Avatar" class="w-6 h-6 rounded object-cover border border-zinc-700 bg-zinc-900 shrink-0">
+              <span id="header-user-name" class="text-xs font-semibold max-w-[80px] sm:max-w-[120px] truncate text-zinc-200 hidden sm:inline">Operator</span>
+              <i data-lucide="menu" class="w-4 h-4 text-zinc-400 group-hover:text-white transition shrink-0"></i>
             </button>
           </div>
         </div>
@@ -135,23 +136,23 @@
   <section id="view-iot-monitor" class="view-panel max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 w-full flex-1 space-y-5">
     
     <!-- Main IoT Monitoring Shell -->
-    <div class="iot-monitor-shell p-5 sm:p-6 space-y-5">
+    <div class="iot-monitor-shell p-4 sm:p-5 space-y-4">
       
       <!-- Monitor Header with Live Indicator & IP Target -->
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-800">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-[#222733]">
         <div>
           <div class="flex items-center gap-2.5">
-            <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Solar String Fault Detection System</h2>
-            <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full font-mono border border-emerald-500/40 font-semibold">ESP32-C6 + CH32V003</span>
+            <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Solar String Fault Detection System</h2>
+            <span class="bg-zinc-900 text-zinc-300 text-[11px] px-2 py-0.5 rounded font-mono border border-zinc-800 font-medium">ESP32-C6 &bull; CH32V003</span>
           </div>
-          <p class="text-xs text-slate-400 mt-1">Multi-Point Series Continuity, Per-Cell Voltage/Temp &amp; String Power Monitoring</p>
+          <p class="text-xs text-zinc-400 mt-0.5">Multi-Point Series Continuity, Per-Cell Voltage/Temp &amp; String Power Monitoring</p>
         </div>
         <div class="flex items-center flex-wrap gap-2">
-          <div id="iot-gateway-status" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border border-slate-700 bg-slate-900 text-slate-300">
-            <span class="inline-block w-2 h-2 rounded-full bg-slate-500"></span>
+          <div id="iot-gateway-status" class="inline-flex items-center gap-2 px-3 py-1 rounded text-xs font-mono font-medium border border-zinc-800 bg-zinc-950 text-zinc-300">
+            <span class="inline-block w-2 h-2 rounded-full bg-zinc-500"></span>
             <span>Checking Gateway...</span>
           </div>
-          <button id="btn-poll-refresh" class="text-xs text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 p-2 rounded-lg border border-slate-700 transition" title="Force refresh status">
+          <button id="btn-poll-refresh" class="text-xs text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 p-1.5 rounded border border-zinc-800 transition" title="Force refresh status">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
           </button>
         </div>
@@ -159,38 +160,38 @@
 
       <!-- Dynamic Alert Banner (Danger / Warning / Success) -->
       <div id="iot-alert-box" class="monitor-alert-box success">
-        <div class="alert-title">&#10003; Solar PV String Normal &amp; Continuous</div>
-        <div>All series connections intact. Listening for gateway telemetry on <code>/api/status</code>.</div>
+        <div class="alert-title font-mono text-xs uppercase tracking-wider">&#10003; Solar PV String Normal &amp; Continuous</div>
+        <div class="text-xs">All series connections intact. Listening for gateway telemetry on <code>/api/status</code>.</div>
       </div>
 
       <!-- Visual Schematic Array with SVG Circuit Switches -->
-      <div class="bg-black/30 rounded-xl p-3 border border-slate-800/80" id="schematic-wrapper">
+      <div class="bg-black/40 rounded p-3 border border-[#222733]" id="schematic-wrapper">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <i data-lucide="circuit-board" class="w-3.5 h-3.5 text-slate-400"></i>
+          <div class="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="circuit-board" class="w-3.5 h-3.5 text-zinc-400"></i>
             <span>Schematic String View (Series Circuit with Inter-Node Switch Isolation)</span>
           </div>
 
-          <!-- Floating View Mode Toggle Tab (Hover/Float on laptop, Click on mobile & laptop) -->
+          <!-- Floating View Mode Toggle Tab -->
           <div class="relative group self-end sm:self-auto" id="schematic-view-dropdown-wrap">
             <!-- Main Trigger Button -->
-            <button id="btn-toggle-schematic-view-menu" type="button" class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 transition shadow-sm cursor-pointer" title="Switch between Fit Screen and Zoomed PC View">
-              <span class="text-slate-400 font-medium">View:</span>
+            <button id="btn-toggle-schematic-view-menu" type="button" class="flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-mono font-medium rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 transition cursor-pointer" title="Switch between Fit Screen and Zoomed PC View">
+              <span class="text-zinc-400">Layout:</span>
               <span id="current-schematic-mode-label" class="text-amber-400 flex items-center gap-1">
                 <i data-lucide="smartphone" id="current-schematic-mode-icon" class="w-3 h-3 text-amber-400"></i>
                 <span id="current-schematic-mode-text">Fit Screen</span>
               </span>
-              <i data-lucide="chevron-down" id="schematic-view-chevron" class="w-3 h-3 text-slate-400 transition-transform duration-200"></i>
+              <i data-lucide="chevron-down" id="schematic-view-chevron" class="w-3 h-3 text-zinc-400 transition-transform duration-200"></i>
             </button>
 
-            <!-- Floating Popover / Toggle Tab Options (Reveals on float/hover on PC, click on mobile/laptop) -->
-            <div id="schematic-view-popover" class="schematic-popover-tab absolute right-0 top-full mt-1.5 z-30 min-w-[175px] bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-2xl">
-              <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 border-b border-slate-800 mb-1">
-                Schematic Layout
+            <!-- Floating Popover / Toggle Tab Options -->
+            <div id="schematic-view-popover" class="schematic-popover-tab absolute right-0 top-full mt-1 z-30 min-w-[160px] bg-[#0E1117] border border-zinc-700 rounded p-1 shadow-xl">
+              <div class="text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-400 px-2 py-1 border-b border-zinc-800 mb-0.5">
+                Schematic Mode
               </div>
               
               <!-- Option 1: Fit Screen -->
-              <button id="btn-schematic-fit" type="button" class="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-white bg-blue-600/20 border border-blue-500/40">
+              <button id="btn-schematic-fit" type="button" class="w-full text-left px-2 py-1 text-xs font-mono font-medium rounded flex items-center justify-between transition text-white bg-blue-900/30 border border-blue-500/30">
                 <div class="flex items-center gap-2">
                   <i data-lucide="smartphone" class="w-3.5 h-3.5 text-blue-400"></i>
                   <span>Fit Screen</span>
@@ -199,7 +200,7 @@
               </button>
 
               <!-- Option 2: Zoom (PC View) -->
-              <button id="btn-schematic-zoom" type="button" class="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg flex items-center justify-between transition text-slate-300 hover:text-white hover:bg-slate-800 mt-1">
+              <button id="btn-schematic-zoom" type="button" class="w-full text-left px-2 py-1 text-xs font-mono font-medium rounded flex items-center justify-between transition text-zinc-300 hover:text-white hover:bg-zinc-800 mt-0.5">
                 <div class="flex items-center gap-2">
                   <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-amber-400"></i>
                   <span>Zoom (PC View)</span>
@@ -212,58 +213,70 @@
         
         <div class="string-array-row mobile-fit-screen" id="iot-string-row">
           <!-- Dynamically populated by app.js -->
-          <div class="text-slate-400 text-xs py-8">Loading solar string nodes and circuit switches...</div>
+          <div class="text-zinc-400 text-xs py-6 font-mono">Loading solar string nodes and circuit switches...</div>
         </div>
 
         <!-- Mobile Quick Hint -->
-        <div class="sm:hidden text-center text-[10px] text-slate-400 pt-1 pb-0.5" id="mobile-schematic-hint">
-          <span class="inline-flex items-center gap-1 bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-800">
+        <div class="sm:hidden text-center text-[10px] text-zinc-400 pt-1 pb-0.5" id="mobile-schematic-hint">
+          <span class="inline-flex items-center gap-1 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 font-mono">
             <i data-lucide="touchpad" class="w-3 h-3 text-amber-400"></i>
-            <span>Hold or tap panel for info &bull; Double-tap or Zoom for PC view</span>
+            <span>Tap node for telemetry &bull; Zoom for expanded view</span>
           </span>
         </div>
 
         <!-- Legend -->
-        <div class="flex flex-wrap items-center justify-center gap-2 pt-3 border-t border-slate-800 text-[11px]">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0d2818] border border-[#2ea043] text-[#3fb950] font-semibold">
-            <span class="w-2 h-2 rounded-full bg-[#3fb950]"></span> Green: Intact &amp; Closed
+        <div class="flex flex-wrap items-center justify-center gap-2 pt-2.5 border-t border-[#222733] text-[10px] font-mono">
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#0A1C14] border border-[#059669] text-emerald-400 font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Closed &amp; Intact
           </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#3d1416] border border-[#f85149] text-[#ff6b6b] font-semibold">
-            <span class="w-2 h-2 rounded-full bg-[#f85149]"></span> Red: Open Circuit Break (Root Cause)
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#200D0F] border border-[#DC2626] text-rose-400 font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Open Break (Root Cause)
           </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1e242d] border border-[#8b949e] text-[#8b949e] font-semibold">
-            <span class="w-2 h-2 rounded-full bg-[#8b949e]"></span> Gray Zone: Downstream of Break (Indeterminate)
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#171B22] border border-[#4B5563] text-zinc-400 font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span> Gray Zone (Downstream)
           </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#2b2006] border border-[#d29922] text-[#f39c12] font-semibold">
-            <span class="w-2 h-2 rounded-full bg-[#f39c12]"></span> Amber: Low Voltage / Shading
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#20170A] border border-[#D97706] text-amber-400 font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Low Voltage / Shading
           </span>
         </div>
       </div>
 
-      <!-- Real-Time Metrics & Macro PV Feasibility Bridge (Stacked for Mobile) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span class="text-xs text-slate-400 block mb-1">Live String Voltage</span>
-          <span id="metric-string-voltage" class="text-2xl font-bold text-blue-400 font-mono tracking-tight">-- V</span>
-          <span class="text-[11px] text-slate-500 block mt-1">Series sum of active cells</span>
+      <!-- Real-Time Metrics (High-Density Industrial Cards) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+        <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-blue-500 rounded p-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Live String Voltage</span>
+            <span class="text-[9px] font-mono text-zinc-500">DC VOLTS</span>
+          </div>
+          <div id="metric-string-voltage" class="text-2xl font-bold text-white font-mono tracking-tight">-- V</div>
+          <span class="text-[10px] text-zinc-500 block mt-1">Series sum of active cells</span>
         </div>
 
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span class="text-xs text-slate-400 block mb-1">Live String Current</span>
-          <span id="metric-string-current" class="text-2xl font-bold text-emerald-400 font-mono tracking-tight">-- A</span>
-          <span class="text-[11px] text-slate-500 block mt-1">Measured at String Node 4</span>
+        <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-emerald-500 rounded p-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Live String Current</span>
+            <span class="text-[9px] font-mono text-zinc-500">AMPERES</span>
+          </div>
+          <div id="metric-string-current" class="text-2xl font-bold text-white font-mono tracking-tight">-- A</div>
+          <span class="text-[10px] text-zinc-500 block mt-1">Measured at String Node 4</span>
         </div>
 
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span class="text-xs text-slate-400 block mb-1">Instantaneous String Power</span>
-          <span id="metric-string-power" class="text-2xl font-bold text-amber-400 font-mono tracking-tight">-- W</span>
-          <span class="text-[11px] text-slate-500 block mt-1">P = V &times; I</span>
+        <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-amber-500 rounded p-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Instantaneous Power</span>
+            <span class="text-[9px] font-mono text-zinc-500">WATTS</span>
+          </div>
+          <div id="metric-string-power" class="text-2xl font-bold text-white font-mono tracking-tight">-- W</div>
+          <span class="text-[10px] text-zinc-500 block mt-1">P = V &times; I calculation</span>
         </div>
 
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <span class="text-xs text-slate-400 block mb-1">Average Temperature</span>
-          <span id="metric-string-temp" class="text-2xl font-bold text-rose-400 font-mono tracking-tight">-- &deg;C</span>
-          <span class="text-[11px] text-slate-500 block mt-1">Panel string average</span>
+        <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-rose-500 rounded p-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Array Temperature</span>
+            <span class="text-[9px] font-mono text-zinc-500">CELSIUS</span>
+          </div>
+          <div id="metric-string-temp" class="text-2xl font-bold text-white font-mono tracking-tight">-- &deg;C</div>
+          <span class="text-[10px] text-zinc-500 block mt-1">Panel string average</span>
         </div>
       </div>
 
@@ -275,31 +288,28 @@
     
     <!-- Link to Live String Monitor Bar -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 no-print">
-      <div class="bg-blue-900/20 border border-blue-400/30 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="bg-zinc-100 border border-zinc-200 rounded p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div class="flex items-center gap-2">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span class="font-bold text-slate-800">Connected IoT Array Status:</span>
-          <span id="estimation-iot-status-badge" class="font-mono text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">All 4 Nodes Connected</span>
+          <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+          <span class="font-medium text-zinc-700">Connected Array Status:</span>
+          <span id="estimation-iot-status-badge" class="font-mono text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">All 4 Nodes Connected</span>
         </div>
-        <button id="btn-goto-monitor" class="flex items-center gap-1.5 font-bold text-[#0F356B] hover:text-blue-700 transition">
-          <i data-lucide="radio" class="w-3.5 h-3.5 text-blue-600"></i>
+        <button id="btn-goto-monitor" class="flex items-center gap-1.5 font-semibold text-[#0F2547] hover:text-blue-700 transition">
+          <i data-lucide="radio" class="w-3.5 h-3.5 text-blue-700"></i>
           <span>Switch to Live String Monitor &amp; Fault View &rarr;</span>
         </button>
       </div>
     </div>
 
   <!-- PRINT ONLY COMPANY HEADER (Visible only on print/PDF) -->
-  <div class="hidden print-only p-6 border-b border-slate-300 bg-white">
+  <div class="hidden print-only p-6 border-b border-zinc-300 bg-white">
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-[#0F356B] tracking-tight">SOLAR EPC INSTALLATIONS & ENGINEERING</h1>
-        <p class="text-sm text-slate-600">Grid-Tied Photovoltaic System Yield & Financial Assessment Report</p>
+        <h1 class="text-2xl font-bold text-[#0F2547] tracking-tight">SOLAR EPC INSTALLATIONS & ENGINEERING</h1>
+        <p class="text-sm text-zinc-600">Grid-Tied Photovoltaic System Yield & Financial Assessment Report</p>
       </div>
-      <div class="text-right text-xs text-slate-500">
-        <p class="font-bold text-slate-700">Calibrated to PVsyst 8.0 & Satellite Weather</p>
+      <div class="text-right text-xs text-zinc-500">
+        <p class="font-bold text-zinc-700">Calibrated to PVsyst 8.0 & Satellite Weather</p>
         <p id="print-date">Generated on: </p>
       </div>
     </div>
@@ -312,56 +322,56 @@
       <!-- LEFT COLUMN: CONTROLS & INPUT PARAMETERS (Col 1-4) -->
       <section class="lg:col-span-4 space-y-4 no-print">
         
-        <!-- CARD 1: DESIRED KW INSTALLATION (FRONT & CENTER) -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="bg-[#0F356B] text-white px-4 py-2.5 flex items-center justify-between">
+        <!-- CARD 1: TARGET KW INSTALLATION -->
+        <div class="bg-white rounded border border-zinc-200 overflow-hidden">
+          <div class="bg-[#0F2547] text-white px-3.5 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-              <h2 class="font-bold text-sm uppercase tracking-wide">1. Desired kW Installation</h2>
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <h2 class="font-bold text-xs uppercase tracking-wider font-mono">01 / Target Solar Capacity</h2>
             </div>
-            <span class="text-xs bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-bold font-mono tracking-tight" id="badge-kwp-top">36.60 kWp</span>
+            <span class="text-xs bg-amber-500 text-zinc-950 px-2 py-0.5 rounded font-bold font-mono tracking-tight" id="badge-kwp-top">36.60 kWp</span>
           </div>
 
-          <div class="p-4 space-y-3.5">
+          <div class="p-3.5 space-y-3">
             <!-- Capacity Input & Slider -->
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="text-xs font-bold text-slate-800">Target Solar Capacity (<span id="capacity-unit-label">kWp</span>)</label>
+                <label class="text-xs font-semibold text-zinc-700">Target Solar Capacity (<span id="capacity-unit-label">kWp</span>)</label>
                 <div class="flex items-center gap-1.5">
-                  <input type="number" id="input-capacity" step="0.1" min="0.1" max="50000" value="36.60" class="w-24 text-sm px-2.5 py-1 text-right font-bold border-2 border-blue-600 rounded-lg text-blue-900 font-mono focus:ring-2 focus:ring-blue-600 outline-none">
-                  <div class="inline-flex rounded-lg border border-slate-300 p-0.5 bg-slate-100 text-[11px] font-bold">
-                    <button type="button" id="btn-unit-kw" class="px-2 py-0.5 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts">kW</button>
-                    <button type="button" id="btn-unit-w" class="px-2 py-0.5 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts">W</button>
+                  <input type="number" id="input-capacity" step="0.1" min="0.1" max="50000" value="36.60" class="w-24 text-xs px-2 py-1 text-right font-bold border border-zinc-300 rounded text-zinc-900 font-mono focus:border-[#0F2547] focus:ring-1 focus:ring-[#0F2547] outline-none">
+                  <div class="inline-flex rounded border border-zinc-300 p-0.5 bg-zinc-100 text-[11px] font-mono font-medium">
+                    <button type="button" id="btn-unit-kw" class="px-2 py-0.5 rounded bg-[#0F2547] text-white transition" title="Kilowatts">kW</button>
+                    <button type="button" id="btn-unit-w" class="px-2 py-0.5 rounded text-zinc-600 hover:text-zinc-900 transition" title="Watts">W</button>
                   </div>
                 </div>
               </div>
-              <input type="range" id="slider-capacity" min="1" max="250" step="0.5" value="36.60" class="w-full accent-[#0F356B]">
+              <input type="range" id="slider-capacity" min="1" max="250" step="0.5" value="36.60" class="w-full accent-[#0F2547]">
             </div>
 
             <!-- Quick Capacity Presets -->
             <div>
-              <span class="block text-[11px] font-semibold text-slate-500 mb-1">Quick Sizing Presets:</span>
+              <span class="block text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Quick Sizing Presets:</span>
               <div class="flex flex-wrap gap-1">
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="3">3 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="5">5 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="10">10 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="25">25 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="50">50 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="100">100 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="250">250 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="500">500 kW</button>
-                <button class="cap-chip text-[10px] bg-slate-100 hover:bg-blue-600 hover:text-white px-2 py-0.5 rounded font-medium border border-slate-200 transition" data-kw="1000">1 MW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="3">3 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="5">5 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="10">10 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="25">25 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="50">50 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="100">100 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="250">250 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="500">500 kW</button>
+                <button class="cap-chip text-[10px] bg-zinc-50 hover:bg-[#0F2547] hover:text-white text-zinc-700 px-2 py-0.5 rounded font-mono font-medium border border-zinc-300 transition" data-kw="1000">1 MW</button>
               </div>
             </div>
 
-            <!-- Quick Configuration Links (Opens drawer directly) -->
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-              <button id="btn-quick-open-site-loc" type="button" class="btn-open-user-drawer flex items-center gap-1.5 text-blue-700 hover:text-blue-800 font-semibold bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition text-[11px] truncate cursor-pointer" title="Configure Site Location & Satellite Map">
-                <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 text-blue-600"></i>
+            <!-- Quick Configuration Links -->
+            <div class="pt-2 border-t border-zinc-200 flex items-center justify-between gap-2 text-xs">
+              <button id="btn-quick-open-site-loc" type="button" class="btn-open-user-drawer flex items-center gap-1.5 text-zinc-800 hover:text-zinc-950 font-medium bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 rounded border border-zinc-300 transition text-[11px] truncate cursor-pointer" title="Configure Site Location & Satellite Map">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 text-zinc-600"></i>
                 <span class="truncate max-w-[130px]">Site Location</span>
               </button>
-              <button id="btn-quick-open-hw-capex" type="button" class="btn-open-user-drawer flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-semibold bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-200 transition text-[11px] cursor-pointer" title="Configure Hardware Info">
-                <i data-lucide="sliders" class="w-3.5 h-3.5 shrink-0 text-amber-500"></i>
+              <button id="btn-quick-open-hw-capex" type="button" class="btn-open-user-drawer flex items-center gap-1.5 text-zinc-800 hover:text-zinc-950 font-medium bg-zinc-100 hover:bg-zinc-200 px-2.5 py-1.5 rounded border border-zinc-300 transition text-[11px] cursor-pointer" title="Configure Hardware Info">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 shrink-0 text-amber-600"></i>
                 <span>Hardware Info</span>
               </button>
             </div>
@@ -371,128 +381,132 @@
       </section>
 
       <!-- RIGHT COLUMN: REPORT & VISUAL DASHBOARD (Col 5-12) -->
-      <section class="lg:col-span-8 space-y-5" id="report-content">
+      <section class="lg:col-span-8 space-y-4" id="report-content">
 
-        <!-- EXECUTIVE KPI SUMMARY CARDS -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 no-print">
+        <!-- EXECUTIVE KPI SUMMARY: SEAMLESS MULTI-CELL ENGINEERING STRIP -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 bg-white border border-zinc-200 rounded divide-y sm:divide-y-0 sm:divide-x divide-zinc-200 no-print">
           
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Plant Size</span>
-            <div class="text-xl font-bold font-mono text-[#0F356B] mt-0.5 tracking-tight" id="kpi-capacity">36.60 kWp</div>
-            <span class="text-[10px] text-slate-400">Rooftop grid-tied</span>
+          <div class="p-3">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">01 / Plant Size</span>
+            <div class="text-lg font-bold font-mono text-[#0F2547] mt-0.5 tracking-tight" id="kpi-capacity">36.60 kWp</div>
+            <span class="text-[10px] text-zinc-400">Rooftop grid-tied</span>
           </div>
 
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Annual Energy</span>
-            <div class="text-xl font-bold font-mono text-emerald-600 mt-0.5 tracking-tight" id="kpi-generation">58,634 kWh</div>
-            <span class="text-[10px] text-slate-400" id="kpi-avg-monthly">4,886 kWh / month</span>
+          <div class="p-3">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">02 / Annual Energy</span>
+            <div class="text-lg font-bold font-mono text-emerald-700 mt-0.5 tracking-tight" id="kpi-generation">58,634 kWh</div>
+            <span class="text-[10px] text-zinc-400" id="kpi-avg-monthly">4,886 kWh / mo</span>
           </div>
 
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Specific Yield</span>
-            <div class="text-xl font-bold font-mono text-amber-600 mt-0.5 tracking-tight" id="kpi-yield">1,602</div>
-            <span class="text-[10px] text-slate-400">kWh / kWp / year</span>
+          <div class="p-3">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">03 / Specific Yield</span>
+            <div class="text-lg font-bold font-mono text-amber-700 mt-0.5 tracking-tight" id="kpi-yield">1,602</div>
+            <span class="text-[10px] text-zinc-400">kWh / kWp / yr</span>
           </div>
 
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Annual Offset</span>
-            <div class="text-xl font-bold font-mono text-blue-700 mt-0.5 tracking-tight" id="kpi-bill-offset">₹4,39,755</div>
-            <span class="text-[10px] text-slate-400" id="kpi-avg-offset">₹36,646 / month</span>
+          <div class="p-3">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">04 / Annual Offset</span>
+            <div class="text-lg font-bold font-mono text-[#0F2547] mt-0.5 tracking-tight" id="kpi-bill-offset">₹4,39,755</div>
+            <span class="text-[10px] text-zinc-400" id="kpi-avg-offset">₹36,646 / mo</span>
           </div>
 
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Simple Payback</span>
-            <div class="text-xl font-bold font-mono text-indigo-600 mt-0.5 tracking-tight" id="kpi-payback">5.4 Yrs</div>
-            <span class="text-[10px] text-slate-400" id="kpi-capex-sub">₹23.79 Lakh CAPEX</span>
+          <div class="p-3">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">05 / Payback</span>
+            <div class="text-lg font-bold font-mono text-zinc-800 mt-0.5 tracking-tight" id="kpi-payback">5.4 Yrs</div>
+            <span class="text-[10px] text-zinc-400" id="kpi-capex-sub">₹23.79 L CAPEX</span>
           </div>
 
-          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">25-Yr Net Benefit</span>
-            <div class="text-xl font-bold font-mono text-teal-700 mt-0.5 tracking-tight" id="kpi-net-benefit">₹86.15 L</div>
-            <span class="text-[10px] text-slate-400">After plant cost</span>
+          <div class="p-3">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">06 / 25-Yr Benefit</span>
+            <div class="text-lg font-bold font-mono text-emerald-800 mt-0.5 tracking-tight" id="kpi-net-benefit">₹86.15 L</div>
+            <span class="text-[10px] text-zinc-400">After plant cost</span>
           </div>
 
         </div>
 
         <!-- PRESENTATION TABS (no-print) -->
-        <div class="border-b border-slate-200 flex space-x-6 text-sm font-semibold no-print overflow-x-auto">
-          <button id="tab-btn-forecast" class="tab-btn pb-2 text-[#0F356B] border-b-2 border-[#0F356B] flex items-center gap-2 whitespace-nowrap">
-            <i data-lucide="clock" class="w-4 h-4"></i>
+        <div class="border-b border-zinc-200 flex space-x-6 text-xs font-semibold no-print overflow-x-auto">
+          <button id="tab-btn-forecast" class="tab-btn pb-2 text-[#0F2547] border-b-2 border-[#0F2547] flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
             <span>Hourly &amp; 7-Day Forecast</span>
           </button>
-          <button id="tab-btn-report" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
-            <i data-lucide="file-text" class="w-4 h-4"></i>
+          <button id="tab-btn-report" class="tab-btn pb-2 text-zinc-500 hover:text-zinc-800 flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
             <span>PVsyst Generation &amp; ROI Report</span>
           </button>
-          <button id="tab-btn-charts" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
-            <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+          <button id="tab-btn-charts" class="tab-btn pb-2 text-zinc-500 hover:text-zinc-800 flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
             <span>Visual Charts &amp; Yield Profiles</span>
           </button>
-          <button id="tab-btn-pvsyst" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
-            <i data-lucide="git-commit" class="w-4 h-4"></i>
+          <button id="tab-btn-pvsyst" class="tab-btn pb-2 text-zinc-500 hover:text-zinc-800 flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="git-commit" class="w-3.5 h-3.5"></i>
             <span>PVsyst Loss Tree &amp; Engineering</span>
           </button>
-          <button id="tab-btn-cashflow" class="tab-btn pb-2 text-slate-500 hover:text-slate-700 flex items-center gap-2 whitespace-nowrap">
-            <i data-lucide="trending-up" class="w-4 h-4"></i>
+          <button id="tab-btn-cashflow" class="tab-btn pb-2 text-zinc-500 hover:text-zinc-800 flex items-center gap-1.5 whitespace-nowrap">
+            <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
             <span>25-Year Cash Flow</span>
           </button>
         </div>
 
         <!-- TAB CONTENT 0: HOURLY & NEXT 7 DAYS FORECAST -->
-        <div id="tab-pane-forecast" class="space-y-6 bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+        <div id="tab-pane-forecast" class="space-y-6 bg-white p-5 sm:p-6 rounded border border-zinc-200">
           
           <!-- Section 1: Hourly Estimation (Current Hour to 12 Midnight) -->
           <div class="space-y-3">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-slate-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-2 border-b border-zinc-200">
               <div>
                 <h2 class="report-section-header flex items-center gap-2">
-                  <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
-                  <span id="forecast-hourly-title-text">TODAY'S HOURLY SOLAR ESTIMATION (UNTIL 12:00 AM MIDNIGHT)</span>
+                  <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+                  <span id="forecast-hourly-title-text" class="text-sm sm:text-base font-bold font-mono tracking-tight">HOURLY SOLAR ESTIMATION (UNTIL 12:00 AM MIDNIGHT)</span>
                 </h2>
-                <p class="report-section-subtitle text-xs text-slate-500" id="forecast-location-subtitle">
+                <p class="report-section-subtitle text-xs text-zinc-500" id="forecast-location-subtitle">
                   Location: Bilwaradahalli, Bengaluru &bull; Plant: 36.60 kWp
                 </p>
               </div>
               <div class="flex items-center flex-wrap gap-2">
                 <!-- Unit Toggle Option (kW vs W) -->
-                <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs font-bold shadow-xs">
-                  <button type="button" id="btn-forecast-unit-kw" class="px-2.5 py-1 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts (kW / kWh)">kW</button>
-                  <button type="button" id="btn-forecast-unit-w" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts (W / Wh)">W</button>
+                <div class="inline-flex rounded border border-zinc-300 bg-zinc-100 p-0.5 text-xs font-mono font-medium">
+                  <button type="button" id="btn-forecast-unit-kw" class="px-2.5 py-1 rounded bg-[#0F2547] text-white transition" title="Kilowatts (kW / kWh)">kW</button>
+                  <button type="button" id="btn-forecast-unit-w" class="px-2.5 py-1 rounded text-zinc-600 hover:text-zinc-900 transition" title="Watts (W / Wh)">W</button>
                 </div>
 
                 <!-- Day Switcher with Right Button -->
-                <div class="inline-flex items-center rounded-lg border border-slate-300 bg-white shadow-xs p-0.5">
-                  <button id="btn-hourly-prev" class="px-2 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1" title="Previous Day">
+                <div class="inline-flex items-center rounded border border-zinc-300 bg-white p-0.5">
+                  <button id="btn-hourly-prev" class="px-2 py-1 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 font-mono" title="Previous Day">
                     <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
                     <span>Prev</span>
                   </button>
-                  <span id="hourly-selected-day-label" class="px-2.5 py-1 text-xs font-bold text-[#0F356B] border-x border-slate-200 font-mono tracking-tight">
+                  <span id="hourly-selected-day-label" class="px-2.5 py-1 text-xs font-bold text-[#0F2547] border-x border-zinc-200 font-mono tracking-tight">
                     Today
                   </span>
-                  <button id="btn-hourly-next" class="px-3 py-1 text-xs font-bold bg-[#0F356B] hover:bg-blue-800 text-white rounded-md transition shadow-xs flex items-center gap-1.5" title="Next Day Hourly Estimation">
-                    <span>Next Day</span>
+                  <button id="btn-hourly-next" class="px-2.5 py-1 text-xs font-medium bg-[#0F2547] hover:bg-[#153460] text-white rounded transition flex items-center gap-1 font-mono" title="Next Day Hourly Estimation">
+                    <span>Next</span>
                     <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
 
-                <span id="forecast-current-time-badge" class="font-mono text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-xs">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="forecast-ml-badge" class="hidden font-mono text-xs font-medium bg-zinc-100 text-zinc-800 border border-zinc-300 px-2.5 py-1 rounded flex items-center gap-1.5" title="Calibrated Regression Model (PVsyst + ERA5)">
+                  <i data-lucide="cpu" class="w-3.5 h-3.5 text-zinc-600"></i>
+                  <span id="forecast-ml-badge-text">Irradiance Model</span>
+                </span>
+                <span id="forecast-current-time-badge" class="font-mono text-xs font-medium bg-zinc-100 text-zinc-800 border border-zinc-300 px-2.5 py-1 rounded flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                   Current Time: --:--
                 </span>
-                <span id="forecast-remaining-today-badge" class="font-mono text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1 rounded-lg shadow-xs">
+                <span id="forecast-remaining-today-badge" class="font-mono text-xs font-medium bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded">
                   Remaining Today: 0.00 kWh
                 </span>
               </div>
             </div>
 
             <!-- Hourly Chart -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+            <div class="bg-[#FAFAFA] p-3.5 rounded border border-zinc-200">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-600"></i>
+                <span class="text-xs font-bold text-zinc-700 flex items-center gap-1.5 font-mono">
+                  <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-700"></i>
                   <span id="lbl-hourly-chart-units">Hourly Solar Power Generation Curve (kW / kWh)</span>
                 </span>
-                <span class="text-[11px] text-slate-400">Projection from Current Hour to Midnight</span>
+                <span class="text-[11px] text-zinc-500 font-mono">Current Hour to Midnight</span>
               </div>
               <div class="relative w-full" style="height: 230px;">
                 <canvas id="chart-hourly-forecast"></canvas>
@@ -500,7 +514,7 @@
             </div>
 
             <!-- Hourly Table Breakdown -->
-            <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-xs">
+            <div class="overflow-x-auto rounded border border-zinc-200">
               <table class="epc-report-table text-xs">
                 <thead>
                   <tr>
@@ -528,38 +542,38 @@
           </div>
 
           <!-- Section 2: Next 7-Day Solar Estimation -->
-          <div class="space-y-3 pt-5 border-t-2 border-slate-100">
+          <div class="space-y-3 pt-5 border-t border-zinc-200">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-1">
               <div>
                 <h2 class="report-section-header flex items-center gap-2">
-                  <i data-lucide="calendar" class="w-5 h-5 text-emerald-600"></i>
-                  NEXT 7 DAYS SOLAR GENERATION FORECAST
+                  <i data-lucide="calendar" class="w-4 h-4 text-emerald-700"></i>
+                  <span class="text-sm sm:text-base font-bold font-mono tracking-tight">NEXT 7 DAYS SOLAR GENERATION FORECAST</span>
                 </h2>
-                <p class="report-section-subtitle text-xs text-slate-500">
+                <p class="report-section-subtitle text-xs text-zinc-500">
                   Daily projected kWh output and specific yield (kWh/kWp)
                 </p>
               </div>
               <div class="flex items-center flex-wrap gap-2">
                 <!-- Unit Toggle Option (kW vs W) for 7-Day Forecast -->
-                <div class="inline-flex rounded-lg border border-slate-300 bg-slate-100 p-0.5 text-xs font-bold shadow-xs">
-                  <button type="button" id="btn-daily-unit-kw" class="px-2.5 py-1 rounded-md bg-[#0F356B] text-white shadow-xs transition" title="Kilowatts (kW / kWh)">kW</button>
-                  <button type="button" id="btn-daily-unit-w" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 transition" title="Watts (W / Wh)">W</button>
+                <div class="inline-flex rounded border border-zinc-300 bg-zinc-100 p-0.5 text-xs font-mono font-medium">
+                  <button type="button" id="btn-daily-unit-kw" class="px-2.5 py-1 rounded bg-[#0F2547] text-white transition" title="Kilowatts (kW / kWh)">kW</button>
+                  <button type="button" id="btn-daily-unit-w" class="px-2.5 py-1 rounded text-zinc-600 hover:text-zinc-900 transition" title="Watts (W / Wh)">W</button>
                 </div>
 
-                <div id="forecast-7day-total-badge" class="font-mono text-xs font-bold bg-emerald-50 text-emerald-900 border border-emerald-200 px-3 py-1 rounded-lg shadow-xs">
+                <div id="forecast-7day-total-badge" class="font-mono text-xs font-semibold bg-emerald-50 text-emerald-900 border border-emerald-300 px-3 py-1 rounded">
                   7-Day Total: 0 kWh
                 </div>
               </div>
             </div>
 
             <!-- 7-Day Chart -->
-            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+            <div class="bg-[#FAFAFA] p-3.5 rounded border border-zinc-200">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span class="text-xs font-bold text-zinc-700 flex items-center gap-1.5 font-mono">
+                  <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-emerald-700"></i>
                   <span id="lbl-daily-chart-units">Daily Projected Generation (kWh/day)</span>
                 </span>
-                <span class="text-[11px] text-slate-400">Next 7 Days Ahead</span>
+                <span class="text-[11px] text-zinc-500 font-mono">7-Day Horizon</span>
               </div>
               <div class="relative w-full" style="height: 200px;">
                 <canvas id="chart-daily-forecast"></canvas>
@@ -567,7 +581,7 @@
             </div>
 
             <!-- 7-Day Cards Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5" id="grid-daily-forecast">
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2" id="grid-daily-forecast">
               <!-- Dynamically populated 7 day cards -->
             </div>
           </div>
@@ -575,7 +589,7 @@
         </div>
 
         <!-- TAB CONTENT 1: EXACT MATCH REPORT FROM SCREENSHOT -->
-        <div id="tab-pane-report" class="space-y-7 bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 hidden">
+        <div id="tab-pane-report" class="space-y-6 bg-white p-5 sm:p-6 rounded border border-zinc-200 hidden">
           
           <!-- SECTION 2: MONTH-WISE GENERATION REPORT (FAITHFUL TO SCREENSHOT) -->
           <div class="space-y-3">
@@ -675,29 +689,29 @@
             </p>
           </div>
 
-          <!-- ENVIRONMENTAL IMPACT ACCORDION / BADGES -->
-          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
+          <!-- ENVIRONMENTAL IMPACT SUMMARY -->
+          <div class="bg-zinc-50 border border-zinc-200 rounded p-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-              <div class="bg-emerald-600 text-white p-2.5 rounded-lg">
-                <i data-lucide="leaf" class="w-5 h-5"></i>
+              <div class="bg-[#0F2547] text-white p-2 rounded">
+                <i data-lucide="leaf" class="w-4 h-4 text-emerald-400"></i>
               </div>
               <div>
-                <h4 class="font-bold text-sm text-emerald-950">Clean Green Energy Impact</h4>
-                <p class="text-xs text-emerald-700">Mitigates greenhouse gas emissions compared to coal-fired grid electricity</p>
+                <h4 class="font-bold text-xs uppercase tracking-wider font-mono text-zinc-900">Clean Energy Offset Metrics</h4>
+                <p class="text-xs text-zinc-500">Mitigates carbon footprint compared to coal-fired regional grid base</p>
               </div>
             </div>
-            <div class="flex items-center gap-6 text-xs font-semibold text-emerald-900">
+            <div class="flex items-center gap-6 text-xs font-mono text-zinc-800">
               <div>
-                <span class="block text-slate-500 font-normal">Annual CO₂ Offset</span>
-                <span class="text-base font-bold text-emerald-700" id="env-annual-co2">48.1 Tons</span>
+                <span class="block text-zinc-400 text-[10px] uppercase">Annual CO₂</span>
+                <span class="text-sm font-bold text-emerald-700" id="env-annual-co2">48.1 Tons</span>
               </div>
               <div>
-                <span class="block text-slate-500 font-normal">25-Yr CO₂ Reduction</span>
-                <span class="text-base font-bold text-emerald-700" id="env-lifetime-co2">938 Tons</span>
+                <span class="block text-zinc-400 text-[10px] uppercase">25-Yr Reduction</span>
+                <span class="text-sm font-bold text-emerald-700" id="env-lifetime-co2">938 Tons</span>
               </div>
               <div>
-                <span class="block text-slate-500 font-normal">Equivalent Trees Planted</span>
-                <span class="text-base font-bold text-emerald-700" id="env-trees">2,164 Trees</span>
+                <span class="block text-zinc-400 text-[10px] uppercase">Tree Offset</span>
+                <span class="text-sm font-bold text-emerald-700" id="env-trees">2,164 Trees</span>
               </div>
             </div>
           </div>
@@ -705,27 +719,27 @@
         </div>
 
         <!-- TAB CONTENT 2: INTERACTIVE CHARTS -->
-        <div id="tab-pane-charts" class="space-y-6 hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div id="tab-pane-charts" class="space-y-6 hidden bg-white p-5 sm:p-6 rounded border border-zinc-200">
           <div>
             <div class="flex justify-between items-center mb-2">
-              <h3 class="font-bold text-base text-[#0F356B] flex items-center gap-2">
-                <i data-lucide="bar-chart-2" class="w-4 h-4 text-amber-500"></i>
+              <h3 class="font-bold text-xs uppercase tracking-wider font-mono text-[#0F2547] flex items-center gap-1.5">
+                <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-amber-600"></i>
                 Month-Wise Generation (kWh) & Indicative Yield (kWh/kWp)
               </h3>
-              <span class="text-xs text-slate-500">Monsoon dips visible in Jun-Aug & Nov</span>
+              <span class="text-[11px] font-mono text-zinc-500">Monsoon Dips in Jun-Aug & Nov</span>
             </div>
             <div class="h-72 w-full">
               <canvas id="chart-monthly-generation"></canvas>
             </div>
           </div>
 
-          <div class="border-t border-slate-200 pt-6">
+          <div class="border-t border-zinc-200 pt-5">
             <div class="flex justify-between items-center mb-2">
-              <h3 class="font-bold text-base text-[#0F356B] flex items-center gap-2">
-                <i data-lucide="line-chart" class="w-4 h-4 text-emerald-500"></i>
+              <h3 class="font-bold text-xs uppercase tracking-wider font-mono text-[#0F2547] flex items-center gap-1.5">
+                <i data-lucide="line-chart" class="w-3.5 h-3.5 text-emerald-700"></i>
                 25-Year Cumulative Cash Flow & Simple Payback Timeline
               </h3>
-              <span class="text-xs text-slate-500">Break-even Point</span>
+              <span class="text-[11px] font-mono text-zinc-500">Break-even Point</span>
             </div>
             <div class="h-72 w-full">
               <canvas id="chart-cashflow"></canvas>
@@ -734,59 +748,59 @@
         </div>
 
         <!-- TAB CONTENT 3: PVSYST LOSS TREE & TECHNICAL DETAILS -->
-        <div id="tab-pane-pvsyst" class="space-y-6 hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div id="tab-pane-pvsyst" class="space-y-6 hidden bg-white p-5 sm:p-6 rounded border border-zinc-200">
           <div>
-            <h3 class="font-bold text-base text-[#0F356B] flex items-center gap-2 mb-1">
-              <i data-lucide="git-pull-request" class="w-4 h-4 text-blue-600"></i>
+            <h3 class="font-bold text-xs uppercase tracking-wider font-mono text-[#0F2547] flex items-center gap-1.5 mb-1">
+              <i data-lucide="git-pull-request" class="w-3.5 h-3.5 text-blue-700"></i>
               PVsyst Loss Diagram & Energy Cascade
             </h3>
-            <p class="text-xs text-slate-500">Step-by-step irradiance loss breakdown from Nominal Irradiance to Inverter AC Output</p>
+            <p class="text-xs text-zinc-500">Step-by-step irradiance loss breakdown from Nominal Irradiance to Inverter AC Output</p>
           </div>
 
           <div class="space-y-3" id="loss-tree-container">
             <!-- Dynamically populated waterfall bars -->
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-200 text-xs">
-            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <h4 class="font-bold text-slate-800 mb-2">Key PVsyst Simulation Factors</h4>
-              <ul class="space-y-1.5 text-slate-600">
-                <li class="flex justify-between"><span>Nominal STC Irradiance:</span> <span class="font-mono font-bold">1,000 W/m²</span></li>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-zinc-200 text-xs">
+            <div class="bg-zinc-50 p-4 rounded border border-zinc-200">
+              <h4 class="font-bold font-mono text-[11px] uppercase tracking-wider text-zinc-800 mb-2">Key Simulation Parameters</h4>
+              <ul class="space-y-1.5 text-zinc-600 font-mono text-[11px]">
+                <li class="flex justify-between"><span>Nominal STC Irradiance:</span> <span class="font-bold">1,000 W/m²</span></li>
                 <li class="flex justify-between"><span>Module Technology:</span> <span class="font-medium" id="tech-module-name">Mono PERC Half-cut</span></li>
-                <li class="flex justify-between"><span>Temperature Derate (γ):</span> <span class="font-mono font-bold">-0.35 %/°C</span></li>
-                <li class="flex justify-between"><span>NOCT Cell Temp:</span> <span class="font-mono font-bold">45.0 °C</span></li>
-                <li class="flex justify-between"><span>Inverter Euro Efficiency:</span> <span class="font-mono font-bold">98.4 %</span></li>
-                <li class="flex justify-between text-blue-800 font-bold border-t pt-1"><span>Overall Performance Ratio (PR):</span> <span class="font-mono text-sm" id="tech-pr">79.2%</span></li>
+                <li class="flex justify-between"><span>Temperature Derate (γ):</span> <span class="font-bold">-0.35 %/°C</span></li>
+                <li class="flex justify-between"><span>NOCT Cell Temp:</span> <span class="font-bold">45.0 °C</span></li>
+                <li class="flex justify-between"><span>Inverter Euro Efficiency:</span> <span class="font-bold">98.4 %</span></li>
+                <li class="flex justify-between text-[#0F2547] font-bold border-t border-zinc-200 pt-1"><span>Overall Performance Ratio (PR):</span> <span class="text-xs" id="tech-pr">79.2%</span></li>
               </ul>
             </div>
 
-            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-              <h4 class="font-bold text-slate-800 mb-2">Plant Bill of Materials (BOM) Estimate</h4>
-              <ul class="space-y-1.5 text-slate-600">
-                <li class="flex justify-between"><span>DC Sizing (Array):</span> <span class="font-mono font-bold" id="bom-dc-size">36.60 kWp</span></li>
-                <li class="flex justify-between"><span>AC Inverter Capacity:</span> <span class="font-mono font-bold" id="bom-ac-size">30.0 kW</span></li>
-                <li class="flex justify-between"><span>DC/AC Overloading Ratio:</span> <span class="font-mono font-bold">1.22</span></li>
-                <li class="flex justify-between"><span>Total Modules Required:</span> <span class="font-mono font-bold" id="bom-module-count">67 Modules</span></li>
-                <li class="flex justify-between"><span>Total Required Roof Shadow-Free:</span> <span class="font-mono font-bold" id="bom-roof-sqft">~3,660 sq ft</span></li>
-                <li class="flex justify-between text-emerald-800 font-bold border-t pt-1"><span>Daily Avg Generation:</span> <span class="font-mono text-sm" id="bom-daily-units">160.6 Units/day</span></li>
+            <div class="bg-zinc-50 p-4 rounded border border-zinc-200">
+              <h4 class="font-bold font-mono text-[11px] uppercase tracking-wider text-zinc-800 mb-2">Plant Bill of Materials (BOM)</h4>
+              <ul class="space-y-1.5 text-zinc-600 font-mono text-[11px]">
+                <li class="flex justify-between"><span>DC Array Sizing:</span> <span class="font-bold" id="bom-dc-size">36.60 kWp</span></li>
+                <li class="flex justify-between"><span>AC Inverter Capacity:</span> <span class="font-bold" id="bom-ac-size">30.0 kW</span></li>
+                <li class="flex justify-between"><span>DC/AC Overloading Ratio:</span> <span class="font-bold">1.22</span></li>
+                <li class="flex justify-between"><span>Estimated Module Count:</span> <span class="font-bold" id="bom-module-count">67 Modules</span></li>
+                <li class="flex justify-between"><span>Shadow-Free Roof Area:</span> <span class="font-bold" id="bom-roof-sqft">~3,660 sq ft</span></li>
+                <li class="flex justify-between text-emerald-800 font-bold border-t border-zinc-200 pt-1"><span>Daily Avg Generation:</span> <span class="text-xs" id="bom-daily-units">160.6 Units/day</span></li>
               </ul>
             </div>
           </div>
         </div>
 
         <!-- TAB CONTENT 4: 25-YEAR CASH FLOW TABLE -->
-        <div id="tab-pane-cashflow" class="space-y-4 hidden bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div id="tab-pane-cashflow" class="space-y-4 hidden bg-white p-5 sm:p-6 rounded border border-zinc-200">
           <div class="flex justify-between items-center">
             <div>
-              <h3 class="font-bold text-base text-[#0F356B]">25-Year Lifecycle Cash Flow Projection</h3>
-              <p class="text-xs text-slate-500">Factoring 0.5% annual degradation and 2.5% annual utility tariff escalation</p>
+              <h3 class="font-bold text-xs uppercase tracking-wider font-mono text-[#0F2547]">25-Year Lifecycle Cash Flow Projection</h3>
+              <p class="text-xs text-zinc-500">Factoring 0.5% annual degradation and 2.5% annual utility tariff escalation</p>
             </div>
-            <span class="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">Positive Cash Flow</span>
+            <span class="text-xs font-mono bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded font-semibold">Positive Cash Flow</span>
           </div>
 
-          <div class="overflow-x-auto max-h-96 border border-slate-200 rounded-lg">
+          <div class="overflow-x-auto max-h-96 border border-zinc-200 rounded">
             <table class="w-full text-xs text-left">
-              <thead class="bg-slate-800 text-white sticky top-0">
+              <thead class="bg-[#0F2547] text-white sticky top-0 font-mono text-[11px]">
                 <tr>
                   <th class="py-2 px-3">Year</th>
                   <th class="py-2 px-3">Annual Gen (Units)</th>
@@ -795,7 +809,7 @@
                   <th class="py-2 px-3">Cumulative Net Position (₹)</th>
                 </tr>
               </thead>
-              <tbody id="tbody-cashflow-25" class="divide-y divide-slate-200">
+              <tbody id="tbody-cashflow-25" class="divide-y divide-zinc-200 font-mono text-[11px]">
                 <!-- 25 years rows -->
               </tbody>
             </table>
@@ -809,100 +823,100 @@
   </section>
 
   <!-- FOOTER -->
-  <footer class="bg-slate-900 text-slate-400 py-6 mt-12 border-t border-slate-800 no-print text-xs">
+  <footer class="bg-[#0C0E12] text-zinc-400 py-6 mt-12 border-t border-[#222733] no-print text-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
       <div>
-        <p class="text-white font-semibold">HelioPV Solar Estimator</p>
-        <p class="text-slate-500">Designed for Solar EPC installers, developers, and rooftop solar consultants across India & Global territories.</p>
+        <p class="text-white font-semibold font-mono text-xs">HelioPV &bull; Solar EPC Studio</p>
+        <p class="text-zinc-500 mt-0.5">Designed for Solar EPC installers, developers, and rooftop solar consultants across India & Global territories.</p>
       </div>
-      <div class="text-right text-slate-400">
-        <p>Satellite Weather: Open-Meteo ERA5 & PVGIS Models</p>
-        <p>Maps: Leaflet Satellite Hybrid & Google Maps JavaScript API</p>
+      <div class="text-right text-zinc-500 font-mono text-[11px]">
+        <p>Satellite Weather: Open-Meteo ERA5 &amp; PVGIS Models</p>
+        <p>Geospatial: Leaflet Satellite Hybrid &amp; Google Maps API</p>
       </div>
     </div>
   </footer>
 
   <!-- MODAL: GOOGLE MAPS & API SETTINGS -->
-  <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
-      <div class="bg-[#0F356B] text-white px-5 py-4 flex justify-between items-center">
+  <div id="modal-settings" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded max-w-lg w-full overflow-hidden border border-zinc-300 shadow-xl">
+      <div class="bg-[#0F2547] text-white px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <i data-lucide="key" class="w-5 h-5 text-amber-400"></i>
-          <h3 class="font-bold text-base">Google Maps API Key Configuration</h3>
+          <i data-lucide="key" class="w-4 h-4 text-amber-400"></i>
+          <h3 class="font-bold text-sm font-mono">Google Maps API Configuration</h3>
         </div>
-        <button id="btn-close-settings" class="text-slate-300 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btn-close-settings" class="text-zinc-300 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <div class="p-5 space-y-4 text-xs">
+      <div class="p-4 space-y-4 text-xs">
         <div>
-          <label class="block font-semibold text-slate-800 mb-1">Google Maps JavaScript API Key</label>
-          <input type="text" id="input-google-api-key" value="AIzaSyCOu9sS27zZW88e4r9FpztHAggOJeqzuLs" placeholder="AIzaSy..." class="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-blue-600">
-          <p class="text-[11px] text-slate-500 mt-1">
+          <label class="block font-semibold text-zinc-800 mb-1">Google Maps JavaScript API Key</label>
+          <input type="text" id="input-google-api-key" value="AIzaSyCOu9sS27zZW88e4r9FpztHAggOJeqzuLs" placeholder="AIzaSy..." class="w-full px-3 py-1.5 border border-zinc-300 rounded font-mono outline-none focus:border-[#0F2547]">
+          <p class="text-[11px] text-zinc-500 mt-1">
             Your key is pre-configured. If Google billing is enabled on your Google Cloud Console, Google Maps Satellite Hybrid and Places Autocomplete load automatically.
           </p>
         </div>
 
-        <div id="settings-status-box" class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-900 space-y-1">
-          <h4 class="font-bold flex items-center gap-1.5">
-            <i data-lucide="check-circle" class="w-4 h-4 text-blue-600"></i>
-            Reliability & Fallback Guarantee:
+        <div id="settings-status-box" class="bg-zinc-50 border border-zinc-200 p-3 rounded text-zinc-800 space-y-1 font-mono text-[11px]">
+          <h4 class="font-bold flex items-center gap-1.5 text-zinc-900">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+            Reliability &amp; Fallback Guarantee:
           </h4>
-          <p>&bull; <strong>High-Resolution Rooftop Satellite:</strong> Active via Esri World Imagery (zooms directly into rooftop solar panels).</p>
-          <p>&bull; <strong>Satellite Solar Irradiance:</strong> Active via Open-Meteo ERA5 & PVsyst physics engine (free, unlimited, zero downtime).</p>
-          <p>&bull; <strong>Location & Plus Codes:</strong> Resolves addresses, Google Plus Codes, and GPS coordinates.</p>
+          <p>&bull; <strong>High-Resolution Rooftop Satellite:</strong> Active via Esri World Imagery.</p>
+          <p>&bull; <strong>Satellite Solar Irradiance:</strong> Active via Open-Meteo ERA5 &amp; PVsyst physics engine.</p>
+          <p>&bull; <strong>Location &amp; Plus Codes:</strong> Resolves addresses, Google Plus Codes, and GPS coordinates.</p>
         </div>
 
         <div class="flex justify-end gap-2 pt-2">
-          <button id="btn-cancel-settings" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-100 font-semibold">Cancel</button>
-          <button id="btn-save-settings" class="px-4 py-2 bg-[#0F356B] hover:bg-blue-800 text-white rounded-lg font-bold">Save & Apply</button>
+          <button id="btn-cancel-settings" class="px-3 py-1.5 border border-zinc-300 rounded text-zinc-700 hover:bg-zinc-100 font-medium">Cancel</button>
+          <button id="btn-save-settings" class="px-3.5 py-1.5 bg-[#0F2547] hover:bg-[#153460] text-white rounded font-medium">Save &amp; Apply</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: SITE LOCATION & ROOFTOP SATELLITE (CLAUDE-STYLE CENTERED SETTINGS WINDOW) -->
-  <div id="modal-site-location" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-[60] flex items-center justify-center p-3 sm:p-5 hidden transition-opacity duration-200">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+  <!-- MODAL: SITE LOCATION & ROOFTOP SATELLITE (HIGH-PRECISION SETTINGS WINDOW) -->
+  <div id="modal-site-location" class="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-3 sm:p-5 hidden transition-opacity duration-150">
+    <div class="bg-[#0C0E12] border border-[#222733] rounded max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden text-zinc-100 shadow-2xl">
       
       <!-- Modal Header -->
-      <div class="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/90 shrink-0">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-            <i data-lucide="map-pin" class="w-4 h-4"></i>
+      <div class="px-4 py-3 border-b border-[#222733] flex justify-between items-center bg-[#0E1117] shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="font-bold text-sm sm:text-base text-white tracking-tight">Site Location &amp; Rooftop Satellite</h3>
-              <span id="weather-badge-modal" class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono">
-                Satellite Active
+              <h3 class="font-bold text-sm text-white font-mono tracking-tight">Site Coordinates &amp; Rooftop Geospatial</h3>
+              <span id="weather-badge-modal" class="text-[9px] bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded font-mono">
+                Active
               </span>
             </div>
-            <p class="text-[11px] text-slate-400">Configure site coordinates, rooftop aerial imagery, and solar irradiance sync</p>
+            <p class="text-[11px] text-zinc-400 font-mono">Configure site coordinates, rooftop aerial imagery, and solar irradiance sync</p>
           </div>
         </div>
-        <button id="btn-close-site-loc-modal" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer" type="button" title="Close (Esc)">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btn-close-site-loc-modal" class="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition cursor-pointer" type="button" title="Close (Esc)">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Modal Body (Scrollable Settings Content) -->
-      <div class="overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
+      <div class="overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
         
         <!-- 1. Search Bar with GPS button -->
-        <div class="space-y-1.5">
-          <label class="block font-semibold text-slate-200">Search Address, Rooftop, City, or Plus Code</label>
+        <div class="space-y-1">
+          <label class="block font-semibold text-zinc-200">Search Address, Rooftop, City, or Plus Code</label>
           <div class="flex gap-2">
             <div class="relative flex-1">
-              <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
-              <input type="text" id="input-search-location" value="RHM7+RH8, Bilwaradahalli, Karnataka" placeholder="Enter city, street address, or Google Plus Code" class="w-full text-xs pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition font-medium">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-2.5"></i>
+              <input type="text" id="input-search-location" value="RHM7+RH8, Bilwaradahalli, Karnataka" placeholder="Enter city, street address, or Google Plus Code" class="w-full text-xs pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-zinc-200 focus:border-blue-500 outline-none font-medium">
             </div>
-            <button id="btn-search-loc" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shrink-0 cursor-pointer shadow-sm" title="Search Location" type="button">
+            <button id="btn-search-loc" class="bg-[#0F2547] hover:bg-[#153460] text-white px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition shrink-0 cursor-pointer" title="Search Location" type="button">
               <i data-lucide="search" class="w-3.5 h-3.5"></i>
               <span>Search</span>
             </button>
-            <button id="btn-gps-loc" class="bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 hover:border-slate-600 transition shrink-0 cursor-pointer" title="Use My Current GPS Location" type="button">
+            <button id="btn-gps-loc" class="bg-zinc-900 hover:bg-zinc-800 text-amber-400 px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 border border-zinc-700 transition shrink-0 cursor-pointer" title="Use My Current GPS Location" type="button">
               <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
               <span class="hidden sm:inline">My GPS</span>
             </button>
@@ -910,55 +924,55 @@
         </div>
 
         <!-- 2. Project Site Label & Coordinate Inputs -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div class="sm:col-span-1">
-            <label class="block font-semibold text-slate-300 mb-1">Project Site Label</label>
-            <input type="text" id="input-display-location" value="RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)" class="w-full text-xs px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 font-medium outline-none focus:border-blue-500 transition">
+            <label class="block font-semibold text-zinc-300 mb-1">Project Site Label</label>
+            <input type="text" id="input-display-location" value="RHM7+RH8, Bilwaradahalli, Karnataka (Bengaluru region)" class="w-full text-xs px-2.5 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-zinc-200 font-medium outline-none focus:border-blue-500">
           </div>
           <div>
-            <label class="block font-semibold text-slate-300 mb-1">Latitude (°N)</label>
-            <input type="number" id="input-lat" step="0.0001" value="12.8342" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 font-mono focus:border-blue-500 outline-none">
+            <label class="block font-semibold text-zinc-300 mb-1">Latitude (°N)</label>
+            <input type="number" id="input-lat" step="0.0001" value="12.8342" class="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-zinc-200 font-mono focus:border-blue-500 outline-none">
           </div>
           <div>
-            <label class="block font-semibold text-slate-300 mb-1">Longitude (°E)</label>
-            <input type="number" id="input-lon" step="0.0001" value="77.5891" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 font-mono focus:border-blue-500 outline-none">
+            <label class="block font-semibold text-zinc-300 mb-1">Longitude (°E)</label>
+            <input type="number" id="input-lon" step="0.0001" value="77.5891" class="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-zinc-200 font-mono focus:border-blue-500 outline-none">
           </div>
         </div>
 
         <!-- 3. Interactive Rooftop Satellite Map -->
         <div class="space-y-1.5 pt-1">
           <div class="flex justify-between items-center">
-            <span class="font-bold text-slate-200 flex items-center gap-1.5 text-xs">
-              <i data-lucide="satellite" class="w-4 h-4 text-blue-400"></i> Rooftop Satellite Array
+            <span class="font-bold text-zinc-200 flex items-center gap-1.5 text-xs font-mono">
+              <i data-lucide="satellite" class="w-3.5 h-3.5 text-blue-400"></i> Rooftop Satellite Array
             </span>
             <div class="flex items-center gap-1.5">
-              <button id="btn-map-sat" class="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-600 text-white shadow-sm cursor-pointer" type="button">Satellite</button>
-              <button id="btn-map-street" class="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 cursor-pointer" type="button">Street</button>
-              <span id="map-mode-indicator" class="text-[10px] text-slate-400 font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Esri High-Res</span>
+              <button id="btn-map-sat" class="px-2 py-0.5 text-[11px] font-mono font-medium rounded bg-[#0F2547] text-white cursor-pointer" type="button">Satellite</button>
+              <button id="btn-map-street" class="px-2 py-0.5 text-[11px] font-mono font-medium rounded bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border border-zinc-700 cursor-pointer" type="button">Street</button>
+              <span id="map-mode-indicator" class="text-[10px] text-zinc-400 font-mono bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">Esri High-Res</span>
             </div>
           </div>
           
           <!-- Map Container -->
-          <div id="map-container" class="shadow-inner rounded-xl border border-slate-700 h-[280px] sm:h-[320px] w-full overflow-hidden bg-slate-950"></div>
+          <div id="map-container" class="rounded border border-zinc-700 h-[260px] sm:h-[300px] w-full overflow-hidden bg-zinc-950"></div>
           
-          <div class="flex justify-between items-center text-[11px] text-slate-400 pt-0.5">
-            <span class="flex items-center gap-1 text-slate-300"><i data-lucide="mouse-pointer" class="w-3.5 h-3.5 text-amber-400"></i> Click anywhere or drag the red pin to focus on rooftop</span>
-            <span class="text-slate-500 hidden sm:inline">Coordinates auto-save to account</span>
+          <div class="flex justify-between items-center text-[10px] font-mono text-zinc-400 pt-0.5">
+            <span class="flex items-center gap-1 text-zinc-300"><i data-lucide="mouse-pointer" class="w-3 h-3 text-amber-400"></i> Drag pin to pinpoint array footprint</span>
+            <span class="text-zinc-500 hidden sm:inline">Coordinates auto-persist</span>
           </div>
         </div>
 
         <!-- 4. Satellite Weather & Simulation Sync Card -->
-        <div class="p-3.5 bg-slate-950/70 border border-slate-800 rounded-xl flex items-center justify-between gap-3">
+        <div class="p-3 bg-zinc-950 border border-zinc-800 rounded flex items-center justify-between gap-3">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-              <i data-lucide="cloud-sun" class="w-4 h-4"></i>
+            <div class="w-7 h-7 rounded bg-blue-950/60 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+              <i data-lucide="cloud-sun" class="w-3.5 h-3.5"></i>
             </div>
             <div class="min-w-0">
-              <span class="font-bold text-white text-xs block truncate">Open-Meteo Satellite Solar Sync</span>
-              <span class="text-[11px] text-slate-400 block truncate">Hourly GHI, DNI, DHI, &amp; ambient temperature for this site</span>
+              <span class="font-bold text-white text-xs block truncate font-mono">Open-Meteo Satellite Solar Sync</span>
+              <span class="text-[11px] text-zinc-400 block truncate font-mono">Hourly GHI, DNI, DHI, &amp; ambient temp</span>
             </div>
           </div>
-          <button id="btn-fetch-weather" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition shrink-0 cursor-pointer shadow" type="button">
+          <button id="btn-fetch-weather" class="bg-[#0F2547] hover:bg-[#153460] text-white px-3 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition shrink-0 cursor-pointer font-mono" type="button">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
             <span>Sync Weather</span>
           </button>
@@ -967,12 +981,12 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
-        <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+      <div class="px-4 py-2.5 border-t border-[#222733] bg-[#0E1117] flex justify-between items-center shrink-0">
+        <div class="text-[10px] font-mono text-zinc-400 flex items-center gap-1.5">
           <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Rooftop preferences auto-persist across revisits</span>
+          <span>Configuration auto-saved</span>
         </div>
-        <button id="btn-done-site-loc-modal" type="button" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer">
+        <button id="btn-done-site-loc-modal" type="button" class="bg-zinc-800 hover:bg-zinc-700 text-white px-3.5 py-1.5 rounded text-xs font-semibold border border-zinc-700 transition cursor-pointer">
           Done
         </button>
       </div>
@@ -980,81 +994,81 @@
     </div>
   </div>
 
-  <!-- MODAL: HARDWARE INFO & CAPEX (CLAUDE-STYLE CENTERED SETTINGS WINDOW) -->
-  <div id="modal-hardware-info" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-[60] flex items-center justify-center p-3 sm:p-5 hidden transition-opacity duration-200">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+  <!-- MODAL: HARDWARE INFO & CAPEX (HIGH-PRECISION SETTINGS WINDOW) -->
+  <div id="modal-hardware-info" class="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-3 sm:p-5 hidden transition-opacity duration-150">
+    <div class="bg-[#0C0E12] border border-[#222733] rounded max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden text-zinc-100 shadow-2xl">
       
       <!-- Modal Header -->
-      <div class="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/90 shrink-0">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold shrink-0">
-            <i data-lucide="sliders" class="w-4 h-4"></i>
+      <div class="px-4 py-3 border-b border-[#222733] flex justify-between items-center bg-[#0E1117] shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center text-amber-500 font-bold shrink-0">
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h3 class="font-bold text-sm sm:text-base text-white tracking-tight">Hardware Info &amp; Commercials</h3>
-              <span class="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono">
+              <h3 class="font-bold text-sm text-white font-mono tracking-tight">Hardware Specifications &amp; Commercials</h3>
+              <span class="text-[9px] bg-zinc-900 text-zinc-300 border border-zinc-700 px-1.5 py-0.2 rounded font-mono">
                 PVsyst 8.0 Physics
               </span>
             </div>
-            <p class="text-[11px] text-slate-400">Configure PV module technology, array geometry, EPC cost, tariff, and derate losses</p>
+            <p class="text-[11px] text-zinc-400 font-mono">Module technology, array orientation, EPC cost, tariff, and derate factors</p>
           </div>
         </div>
-        <button id="btn-close-hw-info-modal" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer" type="button" title="Close (Esc)">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btn-close-hw-info-modal" class="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition cursor-pointer" type="button" title="Close (Esc)">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Modal Body (Scrollable Settings Content) -->
-      <div class="overflow-y-auto p-5 sm:p-6 space-y-4 text-xs">
+      <div class="overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
         
         <!-- 1. Commercials & Financials Section -->
-        <div class="bg-slate-950/70 border border-slate-800 p-3.5 rounded-xl space-y-2.5">
-          <div class="flex items-center gap-2 pb-1 border-b border-slate-800">
-            <i data-lucide="banknote" class="w-4 h-4 text-emerald-400"></i>
-            <span class="font-bold text-slate-200">Commercials &amp; Power Tariff</span>
+        <div class="bg-zinc-950 border border-zinc-800 p-3 rounded space-y-2">
+          <div class="flex items-center gap-2 pb-1 border-b border-zinc-800">
+            <i data-lucide="banknote" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="font-bold font-mono text-zinc-200 uppercase text-[11px]">Commercials &amp; Power Tariff</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Installed EPC Cost (₹/kWp)</label>
+              <label class="block font-semibold text-zinc-300 mb-1">Installed EPC Cost (₹/kWp)</label>
               <div class="relative">
-                <input type="number" id="input-cost-per-kwp" step="1000" value="65000" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 font-mono font-bold focus:border-blue-500 outline-none">
+                <input type="number" id="input-cost-per-kwp" step="1000" value="65000" class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 font-mono font-bold focus:border-blue-500 outline-none">
               </div>
-              <span class="text-[10px] text-slate-500 mt-1 block">Includes BOS, Tier-1 modules, string inverter, MMS &amp; EPC labor</span>
+              <span class="text-[10px] text-zinc-500 mt-0.5 block font-mono">BOS, modules, inverter, MMS &amp; EPC labor</span>
             </div>
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Grid Electricity Tariff (₹/kWh)</label>
+              <label class="block font-semibold text-zinc-300 mb-1">Grid Electricity Tariff (₹/kWh)</label>
               <div class="relative">
-                <input type="number" id="input-tariff" step="0.10" value="7.50" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 font-mono font-bold focus:border-blue-500 outline-none">
+                <input type="number" id="input-tariff" step="0.10" value="7.50" class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 font-mono font-bold focus:border-blue-500 outline-none">
               </div>
-              <span class="text-[10px] text-slate-500 mt-1 block">Used for calculating LCOE, annual bill savings, and payback ROI</span>
+              <span class="text-[10px] text-zinc-500 mt-0.5 block font-mono">Used for LCOE, annual bill savings, and ROI</span>
             </div>
           </div>
         </div>
 
         <!-- 2. Array Tilt & Orientation (Azimuth) -->
-        <div class="bg-slate-950/70 border border-slate-800 p-3.5 rounded-xl space-y-2.5">
-          <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+        <div class="bg-zinc-950 border border-zinc-800 p-3 rounded space-y-2">
+          <div class="flex items-center justify-between pb-1 border-b border-zinc-800">
             <div class="flex items-center gap-2">
-              <i data-lucide="compass" class="w-4 h-4 text-blue-400"></i>
-              <span class="font-bold text-slate-200">Array Tilt &amp; Azimuth Orientation</span>
+              <i data-lucide="compass" class="w-3.5 h-3.5 text-blue-400"></i>
+              <span class="font-bold font-mono text-zinc-200 uppercase text-[11px]">Array Tilt &amp; Azimuth Orientation</span>
             </div>
-            <button id="btn-auto-tilt" class="text-[11px] text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1 transition cursor-pointer" type="button">
-              <i data-lucide="sparkles" class="w-3 h-3"></i> Auto Optimize Tilt
+            <button id="btn-auto-tilt" class="text-[10px] font-mono text-zinc-300 hover:text-white bg-zinc-900 border border-zinc-700 px-2 py-0.5 rounded font-medium flex items-center gap-1 transition cursor-pointer" type="button">
+              <i data-lucide="crosshair" class="w-3 h-3 text-amber-400"></i> Optimize Tilt
             </button>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Tilt Angle (Degrees)</label>
+              <label class="block font-semibold text-zinc-300 mb-1">Tilt Angle (Degrees)</label>
               <div class="flex items-center gap-2">
-                <input type="number" id="input-tilt" min="0" max="90" value="13" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 font-mono font-bold focus:border-blue-500 outline-none">
-                <span class="text-slate-400 font-mono font-semibold shrink-0">° deg</span>
+                <input type="number" id="input-tilt" min="0" max="90" value="13" class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 font-mono font-bold focus:border-blue-500 outline-none">
+                <span class="text-zinc-400 font-mono text-xs shrink-0">° deg</span>
               </div>
-              <span class="text-[10px] text-slate-500 mt-1 block">Optimal tilt for maximum annual irradiance at this latitude</span>
+              <span class="text-[10px] text-zinc-500 mt-0.5 block font-mono">Optimal tilt for maximum annual irradiance</span>
             </div>
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Orientation (Azimuth)</label>
-              <select id="select-azimuth" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 font-medium focus:border-blue-500 outline-none cursor-pointer">
+              <label class="block font-semibold text-zinc-300 mb-1">Orientation (Azimuth)</label>
+              <select id="select-azimuth" class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 font-medium focus:border-blue-500 outline-none cursor-pointer">
                 <option value="180">South (180° - Recommended for Northern Hemisphere)</option>
                 <option value="165">South-Southeast (165°)</option>
                 <option value="195">South-Southwest (195°)</option>
@@ -1062,21 +1076,21 @@
                 <option value="270">West (270° - Evening Peak)</option>
                 <option value="0">North (0° - Southern Hemisphere)</option>
               </select>
-              <span class="text-[10px] text-slate-500 mt-1 block">Azimuth angle relative to true geographic North</span>
+              <span class="text-[10px] text-zinc-500 mt-0.5 block font-mono">Azimuth angle relative to true North</span>
             </div>
           </div>
         </div>
 
         <!-- 3. Module Technology & Annual Degradation -->
-        <div class="bg-slate-950/70 border border-slate-800 p-3.5 rounded-xl space-y-2.5">
-          <div class="flex items-center gap-2 pb-1 border-b border-slate-800">
-            <i data-lucide="cpu" class="w-4 h-4 text-amber-400"></i>
-            <span class="font-bold text-slate-200">PV Module Technology &amp; Longevity</span>
+        <div class="bg-zinc-950 border border-zinc-800 p-3 rounded space-y-2">
+          <div class="flex items-center gap-2 pb-1 border-b border-zinc-800">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span class="font-bold font-mono text-zinc-200 uppercase text-[11px]">PV Module Technology &amp; Longevity</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Module Technology</label>
-              <select id="select-module-type" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 font-medium focus:border-blue-500 outline-none cursor-pointer">
+              <label class="block font-semibold text-zinc-300 mb-1">Module Technology</label>
+              <select id="select-module-type" class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 font-medium focus:border-blue-500 outline-none cursor-pointer">
                 <option value="mono_550">Mono PERC 550Wp (Tier-1, 21.3% Efficiency)</option>
                 <option value="topcon_580">TOPCon N-Type 580Wp (22.5% Efficiency)</option>
                 <option value="bifacial_600">Bifacial Dual-Glass 600Wp (+15% Albedo Boost)</option>
@@ -1084,66 +1098,84 @@
               </select>
             </div>
             <div>
-              <label class="block font-semibold text-slate-300 mb-1">Annual Module Degradation</label>
+              <label class="block font-semibold text-zinc-300 mb-1">Annual Degradation Rate</label>
               <div class="flex items-center gap-2">
-                <input type="number" id="input-degradation" step="0.1" value="0.5" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-slate-200 font-mono font-bold focus:border-blue-500 outline-none">
-                <span class="text-slate-400 font-mono font-semibold shrink-0">%/yr</span>
+                <input type="number" id="input-degradation" step="0.1" value="0.5" class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 rounded text-zinc-200 font-mono font-bold focus:border-blue-500 outline-none">
+                <span class="text-zinc-400 font-mono text-xs shrink-0">%/yr</span>
               </div>
-              <span class="text-[10px] text-slate-500 mt-1 block">Standard Tier-1 warranty: 0.5% annual degradation (25 yrs)</span>
+              <span class="text-[10px] text-zinc-500 mt-0.5 block font-mono">Standard Tier-1: 0.5% degradation/year</span>
             </div>
           </div>
         </div>
 
         <!-- 4. PVsyst Physics Derate Loss Breakdown -->
-        <div class="bg-slate-950/70 border border-slate-800 p-3.5 rounded-xl space-y-2.5">
-          <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+        <div class="bg-zinc-950 border border-zinc-800 p-3 rounded space-y-2">
+          <div class="flex items-center justify-between pb-1 border-b border-zinc-800">
             <div class="flex items-center gap-2">
-              <i data-lucide="activity" class="w-4 h-4 text-purple-400"></i>
-              <span class="font-bold text-slate-200">PVsyst Derate Loss Factors (System PR ~ 79%)</span>
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-zinc-400"></i>
+              <span class="font-bold font-mono text-zinc-200 uppercase text-[11px]">PVsyst Derate Loss Factors (System PR ~ 79%)</span>
             </div>
-            <span class="text-[10px] text-purple-300 bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 rounded font-mono">IEC 61724 Standard</span>
+            <span class="text-[10px] text-zinc-400 bg-zinc-900 border border-zinc-700 px-2 py-0.5 rounded font-mono">IEC 61724</span>
           </div>
           
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div class="flex justify-between items-center p-2 bg-slate-900/90 rounded-lg border border-slate-800">
-              <span class="text-slate-300 font-medium">Soiling Loss:</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono">
+            <div class="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800">
+              <span class="text-zinc-300">Soiling Loss:</span>
               <div class="flex items-center gap-1.5">
-                <input type="number" id="input-loss-soiling" step="0.5" value="2.5" class="w-16 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-right font-mono text-slate-200 font-bold">
-                <span class="text-slate-400 font-mono">%</span>
+                <input type="number" id="input-loss-soiling" step="0.5" value="2.5" class="w-16 px-2 py-0.5 bg-zinc-950 border border-zinc-700 rounded text-right font-mono text-zinc-200 font-bold">
+                <span class="text-zinc-400">%</span>
               </div>
             </div>
 
-            <div class="flex justify-between items-center p-2 bg-slate-900/90 rounded-lg border border-slate-800">
-              <span class="text-slate-300 font-medium">DC Cable Ohmic Loss:</span>
+            <div class="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800">
+              <span class="text-zinc-300">DC Cable Ohmic Loss:</span>
               <div class="flex items-center gap-1.5">
-                <input type="number" id="input-loss-wiring" step="0.1" value="1.5" class="w-16 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-right font-mono text-slate-200 font-bold">
-                <span class="text-slate-400 font-mono">%</span>
+                <input type="number" id="input-loss-wiring" step="0.1" value="1.5" class="w-16 px-2 py-0.5 bg-zinc-950 border border-zinc-700 rounded text-right font-mono text-zinc-200 font-bold">
+                <span class="text-zinc-400">%</span>
               </div>
             </div>
 
-            <div class="flex justify-between items-center p-2 bg-slate-900/90 rounded-lg border border-slate-800">
-              <span class="text-slate-300 font-medium">Inverter Efficiency Loss:</span>
+            <div class="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800">
+              <span class="text-zinc-300">Inverter Loss:</span>
               <div class="flex items-center gap-1.5">
-                <input type="number" id="input-loss-inverter" step="0.1" value="2.0" class="w-16 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-right font-mono text-slate-200 font-bold">
-                <span class="text-slate-400 font-mono">%</span>
+                <input type="number" id="input-loss-inverter" step="0.1" value="2.0" class="w-16 px-2 py-0.5 bg-zinc-950 border border-zinc-700 rounded text-right font-mono text-zinc-200 font-bold">
+                <span class="text-zinc-400">%</span>
               </div>
             </div>
 
-            <div class="flex justify-between items-center p-2 bg-slate-900/90 rounded-lg border border-slate-800">
-              <span class="text-slate-300 font-medium">Mismatch &amp; Shading:</span>
+            <div class="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800">
+              <span class="text-zinc-300">Mismatch &amp; Shading:</span>
               <div class="flex items-center gap-1.5">
-                <input type="number" id="input-loss-mismatch" step="0.5" value="2.0" class="w-16 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-right font-mono text-slate-200 font-bold">
-                <span class="text-slate-400 font-mono">%</span>
+                <input type="number" id="input-loss-mismatch" step="0.5" value="2.0" class="w-16 px-2 py-0.5 bg-zinc-950 border border-zinc-700 rounded text-right font-mono text-zinc-200 font-bold">
+                <span class="text-zinc-400">%</span>
               </div>
             </div>
 
-            <div class="flex justify-between items-center p-2 bg-slate-900/90 rounded-lg border border-slate-800 sm:col-span-2">
-              <span class="text-slate-300 font-medium">Tariff Annual Escalation Rate:</span>
+            <div class="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800 sm:col-span-2">
+              <span class="text-zinc-300">Tariff Escalation Rate:</span>
               <div class="flex items-center gap-1.5">
-                <input type="number" id="input-escalation" step="0.5" value="2.5" class="w-16 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-right font-mono text-slate-200 font-bold">
-                <span class="text-slate-400 font-mono">%/yr</span>
+                <input type="number" id="input-escalation" step="0.5" value="2.5" class="w-16 px-2 py-0.5 bg-zinc-950 border border-zinc-700 rounded text-right font-mono text-zinc-200 font-bold">
+                <span class="text-zinc-400">%/yr</span>
               </div>
             </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-4 py-2.5 border-t border-[#222733] bg-[#0E1117] flex justify-between items-center shrink-0">
+        <div class="text-[10px] font-mono text-zinc-400 flex items-center gap-1.5">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>Auto-calculates yield &amp; PR</span>
+        </div>
+        <button id="btn-done-hw-info-modal" type="button" class="bg-[#0F2547] hover:bg-[#153460] text-white px-3.5 py-1.5 rounded text-xs font-semibold border border-blue-900/60 transition cursor-pointer">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
           </div>
         </div>
 
@@ -1164,46 +1196,46 @@
   </div>
 
   <!-- MODAL: ESP32 HARDWARE SETUP -->
-  <div id="modal-hw-info" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
-      <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center border-b border-slate-800">
+  <div id="modal-hw-info" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded max-w-lg w-full overflow-hidden border border-zinc-300 shadow-xl">
+      <div class="bg-[#0F2547] text-white px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-2">
-          <i data-lucide="cpu" class="w-5 h-5 text-emerald-400"></i>
-          <h3 class="font-bold text-base">ESP32 Gateway Configuration</h3>
+          <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
+          <h3 class="font-bold text-sm font-mono">ESP32 Gateway Configuration</h3>
         </div>
-        <button id="btn-close-hw-info" class="text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btn-close-hw-info" class="text-zinc-300 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <div class="p-5 space-y-4 text-xs">
-        <!-- 1. Live Cloud Render URL (Recommended) -->
+      <div class="p-4 space-y-3.5 text-xs">
+        <!-- 1. Live Cloud Render URL -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="font-bold text-slate-900 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>1. Live Cloud Backend URL (Recommended)</span>
+            <label class="font-bold text-zinc-900 flex items-center gap-1.5 font-mono">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>1. Live Cloud Backend Endpoint</span>
             </label>
-            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Worldwide Access</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300">Worldwide Access</span>
           </div>
           <div class="flex items-center gap-2">
-            <input type="text" id="input-cloud-ip" readonly value="https://heliopv-solar.onrender.com/api/data" class="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono bg-slate-50 text-slate-900 outline-none select-all font-bold">
-            <button id="btn-copy-cloud-ip" type="button" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1 shrink-0 transition">
+            <input type="text" id="input-cloud-ip" readonly value="https://heliopv-solar.onrender.com/api/data" class="w-full px-2.5 py-1.5 border border-zinc-300 rounded font-mono bg-zinc-50 text-zinc-900 outline-none select-all font-semibold">
+            <button id="btn-copy-cloud-ip" type="button" class="px-3 py-1.5 bg-[#0F2547] hover:bg-[#153460] text-white rounded font-mono text-xs font-medium flex items-center gap-1 shrink-0 transition">
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
               <span>Copy</span>
             </button>
           </div>
-          <p class="text-[11px] text-slate-500 mt-1">
-            Allows your ESP32 to transmit solar telemetry from <strong>any Wi-Fi network or mobile hotspot</strong> directly to your cloud dashboard.
+          <p class="text-[11px] text-zinc-500 mt-1 font-mono">
+            Direct telemetry ingest from ESP32 gateway over Wi-Fi / Hotspot.
           </p>
         </div>
 
-        <!-- 2. Local Wi-Fi IP (For offline lab testing) -->
-        <div class="pt-2 border-t border-slate-200">
-          <label class="block font-semibold text-slate-700 mb-1">2. Local Computer IP (Offline Lab Testing Only)</label>
+        <!-- 2. Local Wi-Fi IP -->
+        <div class="pt-2 border-t border-zinc-200">
+          <label class="block font-semibold text-zinc-700 mb-1 font-mono">2. Local Endpoint (Lab Testing Only)</label>
           <div class="flex items-center gap-2">
-            <input type="text" id="input-server-ip" readonly value="http://localhost:3000/api/data" class="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono bg-slate-50 text-slate-600 text-xs outline-none select-all">
-            <button id="btn-copy-server-ip" type="button" class="px-2.5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium flex items-center gap-1 shrink-0 text-xs transition">
+            <input type="text" id="input-server-ip" readonly value="http://localhost:3000/api/data" class="w-full px-2.5 py-1.5 border border-zinc-300 rounded font-mono bg-zinc-50 text-zinc-600 text-xs outline-none select-all">
+            <button id="btn-copy-server-ip" type="button" class="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded font-mono text-xs flex items-center gap-1 shrink-0 transition">
               <i data-lucide="copy" class="w-3 h-3"></i>
               <span>Copy</span>
             </button>
@@ -1211,93 +1243,92 @@
         </div>
 
         <!-- Arduino Code Snippet -->
-        <div class="bg-slate-900 text-slate-200 p-3.5 rounded-lg space-y-2 font-mono text-[11px] border border-slate-800">
-          <div class="text-emerald-400 font-bold font-sans text-xs flex items-center gap-1.5">
-            <i data-lucide="code" class="w-4 h-4"></i>
-            Paste into esp32_gateway.ino (line 34):
+        <div class="bg-zinc-950 text-zinc-200 p-3 rounded space-y-1.5 font-mono text-[11px] border border-zinc-800">
+          <div class="text-zinc-400 font-semibold text-[10px] flex items-center gap-1.5 uppercase">
+            <i data-lucide="code" class="w-3.5 h-3.5 text-zinc-400"></i>
+            esp32_gateway.ino (line 34):
           </div>
-          <pre id="code-snippet-esp32" class="text-amber-300 overflow-x-auto p-2 bg-black/40 rounded border border-slate-800 font-bold">const char *BACKEND_URL = "https://heliopv-solar.onrender.com/api/data";</pre>
+          <pre id="code-snippet-esp32" class="text-amber-400 overflow-x-auto p-1.5 bg-black/50 rounded border border-zinc-800">const char *BACKEND_URL = "https://heliopv-solar.onrender.com/api/data";</pre>
         </div>
 
-        <div class="space-y-1.5 text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <p class="font-bold text-slate-900">Quick Hardware Checklist:</p>
-          <p>&bull; <strong>Master Node:</strong> DFRobot Beetle ESP32-C6 receiving over nRF24L01+ Multiceiver (4 pipes).</p>
-          <p>&bull; <strong>Micro-Nodes:</strong> CH32V003 transmitting every ~2s (P1, P2, P3, and String Node).</p>
-          <p>&bull; <strong>Auto-ACK &amp; Post:</strong> ESP32 auto-ACKs received packets and sends HTTP POST to <code>/api/data</code>.</p>
+        <div class="space-y-1 text-zinc-600 bg-zinc-50 p-2.5 rounded border border-zinc-200 font-mono text-[11px]">
+          <p class="font-bold text-zinc-800">Hardware Pipeline:</p>
+          <p>&bull; <strong>Master Gateway:</strong> ESP32-C6 receiving via nRF24L01+ (4 pipes).</p>
+          <p>&bull; <strong>Micro-Nodes:</strong> CH32V003 per-panel telemetry (~2s rate).</p>
         </div>
 
-        <div class="pt-2">
-          <button id="btn-test-push-alert" type="button" class="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg flex items-center justify-center gap-2 transition shadow-sm text-xs">
-            <i data-lucide="bell-ring" class="w-4 h-4 text-slate-950"></i>
-            <span>Send Test Background Push Alert (Works When App Closed)</span>
+        <div class="pt-1">
+          <button id="btn-test-push-alert" type="button" class="w-full py-2 px-3 bg-zinc-900 hover:bg-zinc-800 text-amber-400 font-mono text-xs font-semibold rounded border border-zinc-700 flex items-center justify-center gap-2 transition">
+            <i data-lucide="bell" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Send Test Background Alert</span>
           </button>
         </div>
 
         <div class="flex justify-end pt-1">
-          <button id="btn-close-hw-info-2" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold">Close</button>
+          <button id="btn-close-hw-info-2" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-xs font-medium">Close</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: MOBILE PANEL TELEMETRY DETAIL (TRIGGERED ON LONG PRESS OR TAP) -->
-  <div id="modal-panel-detail" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-200">
-    <div class="bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden text-slate-100 animate-in slide-in-from-bottom duration-200">
+  <!-- MODAL: PANEL TELEMETRY DETAIL (INSPECTION DRAWER) -->
+  <div id="modal-panel-detail" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-150">
+    <div class="bg-[#0C0E12] border border-[#222733] rounded-t sm:rounded max-w-sm w-full overflow-hidden text-zinc-100 shadow-2xl">
       
       <!-- Popover Header -->
-      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
+      <div class="p-3.5 border-b border-[#222733] flex items-center justify-between bg-[#0E1117]">
         <div class="flex items-center gap-2.5">
-          <div id="panel-modal-icon-wrap" class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs">
+          <div id="panel-modal-icon-wrap" class="w-7 h-7 rounded bg-zinc-900 border border-zinc-700 flex items-center justify-center text-emerald-400 font-bold font-mono text-xs">
             P1
           </div>
           <div>
-            <h3 id="panel-modal-title" class="font-bold text-sm text-white">Panel 1 Telemetry</h3>
-            <span id="panel-modal-type" class="text-[10px] text-slate-400">Micro-Node (CH32V003 &bull; Pipe 1)</span>
+            <h3 id="panel-modal-title" class="font-bold text-xs text-white font-mono">Panel 1 Telemetry</h3>
+            <span id="panel-modal-type" class="text-[10px] text-zinc-400 font-mono">CH32V003 &bull; Pipe 1</span>
           </div>
         </div>
-        <button id="btn-close-panel-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" type="button">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btn-close-panel-modal" class="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition" type="button">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Popover Body: Live Metrics -->
       <div class="p-4 space-y-3">
         <!-- Status Badge Banner -->
-        <div id="panel-modal-badge" class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+        <div id="panel-modal-badge" class="px-2.5 py-1 rounded text-xs font-mono font-medium flex items-center justify-between bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
           <span id="panel-modal-status-text">Normal &amp; Continuous</span>
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
         </div>
 
         <!-- Metrics Grid -->
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block mb-0.5">Cell Voltage</span>
-            <span id="panel-modal-volt" class="text-base font-bold text-blue-400 font-mono tracking-tight">-- V</span>
+        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+          <div class="bg-zinc-950 p-2 rounded border border-zinc-800">
+            <span class="text-[10px] text-zinc-400 block mb-0.5 uppercase">Voltage</span>
+            <span id="panel-modal-volt" class="text-base font-bold text-white tracking-tight">-- V</span>
           </div>
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block mb-0.5">Temperature</span>
-            <span id="panel-modal-temp" class="text-base font-bold text-rose-400 font-mono tracking-tight">-- &deg;C</span>
+          <div class="bg-zinc-950 p-2 rounded border border-zinc-800">
+            <span class="text-[10px] text-zinc-400 block mb-0.5 uppercase">Temperature</span>
+            <span id="panel-modal-temp" class="text-base font-bold text-white tracking-tight">-- &deg;C</span>
           </div>
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block mb-0.5">String Current</span>
-            <span id="panel-modal-curr" class="text-base font-bold text-emerald-400 font-mono tracking-tight">-- A</span>
+          <div class="bg-zinc-950 p-2 rounded border border-zinc-800">
+            <span class="text-[10px] text-zinc-400 block mb-0.5 uppercase">Current</span>
+            <span id="panel-modal-curr" class="text-base font-bold text-white tracking-tight">-- A</span>
           </div>
-          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-            <span class="text-[10px] text-slate-400 block mb-0.5">String Power</span>
-            <span id="panel-modal-pwr" class="text-base font-bold text-amber-400 font-mono tracking-tight">-- W</span>
+          <div class="bg-zinc-950 p-2 rounded border border-zinc-800">
+            <span class="text-[10px] text-zinc-400 block mb-0.5 uppercase">Power</span>
+            <span id="panel-modal-pwr" class="text-base font-bold text-white tracking-tight">-- W</span>
           </div>
         </div>
 
         <!-- Diagnostic Note -->
-        <div id="panel-modal-note-box" class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-300">
-          <span class="text-slate-400 block text-[10px] font-semibold uppercase tracking-wider mb-0.5">Circuit Diagnostic</span>
+        <div id="panel-modal-note-box" class="p-2.5 rounded bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 font-mono">
+          <span class="text-zinc-500 block text-[9px] uppercase tracking-wider mb-0.5">Circuit Diagnostic</span>
           <span id="panel-modal-note-text">All series circuit continuity switches closed and communicating.</span>
         </div>
 
-        <!-- Zoom to Laptop View Action -->
-        <button id="btn-modal-zoom-view" type="button" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition">
+        <!-- Zoom Action -->
+        <button id="btn-modal-zoom-view" type="button" class="w-full py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-mono font-medium rounded border border-zinc-700 flex items-center justify-center gap-1.5 transition">
           <i data-lucide="zoom-in" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Zoom In (Full Laptop View)</span>
+          <span>Expanded Technical View</span>
         </button>
       </div>
 
@@ -1305,126 +1336,126 @@
   </div>
 
   <!-- MODAL: LOGIN / SIGNUP WINDOW -->
-  <div id="modal-auth" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+  <div id="modal-auth" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-[#0C0E12] border border-[#222733] rounded max-w-md w-full overflow-hidden text-zinc-100 shadow-2xl">
       
       <!-- Modal Header with Tabs -->
-      <div class="px-6 pt-6 pb-4 border-b border-slate-800 flex justify-between items-start">
+      <div class="px-5 pt-5 pb-3 border-b border-[#222733] flex justify-between items-start">
         <div>
-          <div class="flex items-center gap-2 mb-1">
-            <div class="w-7 h-7 rounded-lg bg-amber-400 flex items-center justify-center text-slate-950 font-bold">
-              <i data-lucide="sun" class="w-4 h-4 stroke-[2.5]"></i>
+          <div class="flex items-center gap-2 mb-0.5">
+            <div class="w-6 h-6 rounded bg-amber-500 flex items-center justify-center text-zinc-950 font-bold font-mono">
+              <i data-lucide="sun" class="w-3.5 h-3.5 stroke-[2.5]"></i>
             </div>
-            <span class="font-bold text-base tracking-tight text-white">HelioPV Account</span>
+            <span class="font-bold text-sm tracking-tight text-white font-mono">HelioPV Account</span>
           </div>
-          <p class="text-xs text-slate-400">Access your solar monitoring and EPC project cloud</p>
+          <p class="text-xs text-zinc-400 font-mono">Access your solar monitoring and EPC project cloud</p>
         </div>
-        <button id="btn-close-auth-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" type="button">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="btn-close-auth-modal" class="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition" type="button">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Tab Switcher (Sign In vs Sign Up) -->
-      <div class="p-6 pt-4 space-y-4">
-        <!-- Auth Guard Notice (shown when user is unauthenticated) -->
-        <div id="auth-guard-notice" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2.5">
+      <div class="p-5 pt-3 space-y-3.5">
+        <!-- Auth Guard Notice -->
+        <div id="auth-guard-notice" class="hidden p-2.5 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 font-mono">
           <i data-lucide="shield-alert" class="w-4 h-4 shrink-0 text-amber-400"></i>
-          <span id="auth-guard-notice-text">Authentication Required: Please sign in or create an account to access the dashboard.</span>
+          <span id="auth-guard-notice-text">Authentication Required: Please sign in to access the system.</span>
         </div>
 
-        <div class="grid grid-cols-2 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs font-semibold">
-          <button id="tab-auth-login" class="py-2 rounded-lg transition text-white bg-slate-800 shadow" type="button">Sign In</button>
-          <button id="tab-auth-signup" class="py-2 rounded-lg transition text-slate-400 hover:text-slate-200" type="button">Create Account</button>
+        <div class="grid grid-cols-2 p-0.5 bg-zinc-950 rounded border border-zinc-800 text-xs font-mono font-medium">
+          <button id="tab-auth-login" class="py-1.5 rounded transition text-white bg-zinc-800 shadow" type="button">Sign In</button>
+          <button id="tab-auth-signup" class="py-1.5 rounded transition text-zinc-400 hover:text-zinc-200" type="button">Create Account</button>
         </div>
 
         <!-- Alert Error Message Banner -->
-        <div id="auth-error-banner" class="hidden p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-center gap-2">
+        <div id="auth-error-banner" class="hidden p-2.5 rounded bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-center gap-2 font-mono">
           <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-red-400"></i>
           <span id="auth-error-text">Authentication failed.</span>
         </div>
 
         <!-- 1. SIGN IN FORM -->
-        <form id="form-login" class="space-y-3.5">
+        <form id="form-login" class="space-y-3">
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+            <label class="block text-xs font-mono text-zinc-300 mb-1">Email Address</label>
             <div class="relative">
-              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-              <input type="email" id="login-email" required placeholder="you@domain.com" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+              <i data-lucide="mail" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5"></i>
+              <input type="email" id="login-email" required placeholder="operator@domain.com" class="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+            <label class="block text-xs font-mono text-zinc-300 mb-1">Password</label>
             <div class="relative">
-              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-              <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-9 pr-10 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
-              <button type="button" class="btn-toggle-pwd-vis absolute right-3 top-2.5 text-slate-400 hover:text-slate-200">
-                <i data-lucide="eye" class="w-4 h-4"></i>
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5"></i>
+              <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-8 pr-9 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono">
+              <button type="button" class="btn-toggle-pwd-vis absolute right-2.5 top-2 text-zinc-400 hover:text-zinc-200">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               </button>
             </div>
           </div>
 
-          <button type="submit" id="btn-submit-login" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
+          <button type="submit" id="btn-submit-login" class="w-full py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold font-mono text-xs rounded transition flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
             <span>Sign In to Dashboard</span>
           </button>
         </form>
 
         <!-- 2. CREATE ACCOUNT FORM (HIDDEN BY DEFAULT) -->
-        <form id="form-signup" class="space-y-3.5 hidden">
+        <form id="form-signup" class="space-y-3 hidden">
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+            <label class="block text-xs font-mono text-zinc-300 mb-1">Full Name</label>
             <div class="relative">
-              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-              <input type="text" id="signup-name" required placeholder="e.g. Sameer Khan" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+              <i data-lucide="user" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="signup-name" required placeholder="e.g. Sameer Khan" class="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+            <label class="block text-xs font-mono text-zinc-300 mb-1">Email Address</label>
             <div class="relative">
-              <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-              <input type="email" id="signup-email" required placeholder="name@company.com" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
+              <i data-lucide="mail" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5"></i>
+              <input type="email" id="signup-email" required placeholder="name@company.com" class="w-full pl-8 pr-3 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Password (min 6 characters)</label>
+            <label class="block text-xs font-mono text-zinc-300 mb-1">Password (min 6 characters)</label>
             <div class="relative">
-              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-              <input type="password" id="signup-password" minlength="6" required placeholder="••••••••" class="w-full pl-9 pr-10 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400">
-              <button type="button" class="btn-toggle-pwd-vis absolute right-3 top-2.5 text-slate-400 hover:text-slate-200">
-                <i data-lucide="eye" class="w-4 h-4"></i>
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5"></i>
+              <input type="password" id="signup-password" minlength="6" required placeholder="••••••••" class="w-full pl-8 pr-9 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono">
+              <button type="button" class="btn-toggle-pwd-vis absolute right-2.5 top-2 text-zinc-400 hover:text-zinc-200">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
               </button>
             </div>
           </div>
 
-          <!-- Quick Avatar Selection -->
+          <!-- Quick Monogram Selection -->
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1.5">Choose Avatar Style</label>
+            <label class="block text-xs font-mono text-zinc-300 mb-1">Operator Badge Tag</label>
             <div class="flex items-center gap-2">
-              <div id="signup-avatar-preview" class="w-10 h-10 rounded-full border border-amber-400 overflow-hidden bg-slate-950 shrink-0">
-                <img id="img-signup-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=SolarUser" alt="Preview" class="w-full h-full object-cover">
+              <div id="signup-avatar-preview" class="w-8 h-8 rounded border border-amber-500 overflow-hidden bg-zinc-950 shrink-0">
+                <img id="img-signup-avatar-preview" src="https://api.dicebear.com/7.x/initials/svg?seed=SU&backgroundColor=0f2547&textColor=ffffff" alt="Preview" class="w-full h-full object-cover">
               </div>
               <div class="flex items-center gap-1.5 overflow-x-auto py-1">
-                <button type="button" class="avatar-seed-opt w-7 h-7 rounded-full border border-slate-700 hover:border-amber-400 overflow-hidden" data-seed="HelioOperator">
-                  <img src="https://api.dicebear.com/7.x/bottts/svg?seed=HelioOperator" class="w-full h-full">
+                <button type="button" class="avatar-seed-opt w-7 h-7 rounded border border-zinc-700 hover:border-amber-400 overflow-hidden" data-seed="OP">
+                  <img src="https://api.dicebear.com/7.x/initials/svg?seed=OP&backgroundColor=0f2547&textColor=ffffff" class="w-full h-full">
                 </button>
-                <button type="button" class="avatar-seed-opt w-7 h-7 rounded-full border border-slate-700 hover:border-amber-400 overflow-hidden" data-seed="SolarTech">
-                  <img src="https://api.dicebear.com/7.x/bottts/svg?seed=SolarTech" class="w-full h-full">
+                <button type="button" class="avatar-seed-opt w-7 h-7 rounded border border-zinc-700 hover:border-amber-400 overflow-hidden" data-seed="EN">
+                  <img src="https://api.dicebear.com/7.x/initials/svg?seed=EN&backgroundColor=0f2547&textColor=ffffff" class="w-full h-full">
                 </button>
-                <button type="button" class="avatar-seed-opt w-7 h-7 rounded-full border border-slate-700 hover:border-amber-400 overflow-hidden" data-seed="PVEngineer">
-                  <img src="https://api.dicebear.com/7.x/bottts/svg?seed=PVEngineer" class="w-full h-full">
+                <button type="button" class="avatar-seed-opt w-7 h-7 rounded border border-zinc-700 hover:border-amber-400 overflow-hidden" data-seed="PV">
+                  <img src="https://api.dicebear.com/7.x/initials/svg?seed=PV&backgroundColor=0f2547&textColor=ffffff" class="w-full h-full">
                 </button>
-                <button type="button" class="avatar-seed-opt w-7 h-7 rounded-full border border-slate-700 hover:border-amber-400 overflow-hidden" data-seed="StringMonitor">
-                  <img src="https://api.dicebear.com/7.x/bottts/svg?seed=StringMonitor" class="w-full h-full">
+                <button type="button" class="avatar-seed-opt w-7 h-7 rounded border border-zinc-700 hover:border-amber-400 overflow-hidden" data-seed="SC">
+                  <img src="https://api.dicebear.com/7.x/initials/svg?seed=SC&backgroundColor=0f2547&textColor=ffffff" class="w-full h-full">
                 </button>
               </div>
             </div>
           </div>
 
-          <button type="submit" id="btn-submit-signup" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
-            <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <button type="submit" id="btn-submit-signup" class="w-full py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold font-mono text-xs rounded transition flex items-center justify-center gap-2">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
             <span>Create Account &amp; Sign In</span>
           </button>
         </form>
@@ -1433,181 +1464,173 @@
     </div>
   </div>
 
-  <!-- SLIDE-OVER TOGGLE BAR (USER PROFILE DRAWER ON RIGHT) -->
-  <div id="drawer-backdrop" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden transition-opacity duration-300"></div>
+  <!-- SLIDE-OVER TOGGLE BAR (OPERATOR PROFILE DRAWER) -->
+  <div id="drawer-backdrop" class="fixed inset-0 bg-black/60 z-50 hidden transition-opacity duration-200"></div>
 
-  <aside id="drawer-user-profile" class="fixed top-0 right-0 h-full w-[92vw] sm:w-[420px] max-w-full bg-slate-900 border-l border-slate-800 shadow-2xl z-50 flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out text-slate-100 no-print">
+  <aside id="drawer-user-profile" class="fixed top-0 right-0 h-full w-[92vw] sm:w-[400px] max-w-full bg-[#0C0E12] border-l border-[#222733] z-50 flex flex-col transform translate-x-full transition-transform duration-200 ease-in-out text-zinc-100 no-print">
     
     <!-- Drawer Header -->
-    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-      <div class="flex items-center gap-2">
-        <i data-lucide="user-check" class="w-5 h-5 text-amber-400"></i>
-        <h3 class="font-bold text-base text-white">Operator Profile</h3>
+    <div class="p-4 border-b border-[#222733] flex items-center justify-between bg-[#0E1117]">
+      <div class="flex items-center gap-2 font-mono">
+        <i data-lucide="user-check" class="w-4 h-4 text-amber-500"></i>
+        <h3 class="font-bold text-sm text-white">Operator Profile</h3>
       </div>
-      <button id="btn-close-user-drawer" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" type="button">
-        <i data-lucide="x" class="w-5 h-5"></i>
+      <button id="btn-close-user-drawer" class="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition" type="button">
+        <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
 
     <!-- Drawer Content Scrollable Area -->
-    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+    <div class="flex-1 overflow-y-auto p-4 space-y-4">
       
       <!-- User Profile Card -->
-      <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center relative group">
+      <div class="bg-zinc-950 border border-zinc-800 rounded p-4 flex flex-col items-center text-center relative group">
         <!-- Profile Image with Change Action -->
-        <div class="relative cursor-pointer mb-3" id="profile-avatar-clickable" title="Click to change profile picture">
-          <img id="drawer-user-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=user" alt="Profile Image" class="w-20 h-20 rounded-full object-cover border-2 border-amber-400 shadow-xl bg-slate-900">
-          <div class="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-white text-[10px] font-bold">
-            <i data-lucide="camera" class="w-4 h-4 mb-0.5 text-amber-400"></i>
+        <div class="relative cursor-pointer mb-2.5" id="profile-avatar-clickable" title="Click to change profile picture">
+          <img id="drawer-user-avatar" src="https://api.dicebear.com/7.x/initials/svg?seed=OP&backgroundColor=0f2547&textColor=ffffff" alt="Profile Image" class="w-16 h-16 rounded object-cover border border-zinc-700 bg-zinc-900">
+          <div class="absolute inset-0 rounded bg-black/60 flex flex-col items-center justify-center opacity-0 hover:opacity-100 transition-opacity text-white text-[10px] font-mono font-bold">
+            <i data-lucide="camera" class="w-3.5 h-3.5 mb-0.5 text-amber-400"></i>
             <span>Change</span>
           </div>
         </div>
 
         <input type="file" id="input-profile-file" accept="image/*" class="hidden">
 
-        <h4 id="drawer-user-name" class="font-extrabold text-base text-white">Operator Name</h4>
-        <p id="drawer-user-email" class="text-xs text-slate-400 font-mono mt-0.5">operator@heliopv.com</p>
-        <span class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <h4 id="drawer-user-name" class="font-bold text-sm text-white font-mono">Operator Name</h4>
+        <p id="drawer-user-email" class="text-xs text-zinc-400 font-mono mt-0.5">operator@heliopv.com</p>
+        <span class="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           <span>Verified Operator</span>
         </span>
 
         <!-- Quick Change Avatar Options -->
-        <div class="w-full pt-4 mt-3 border-t border-slate-800/80">
-          <span class="text-[11px] font-medium text-slate-400 block mb-2">Change Avatar Image</span>
+        <div class="w-full pt-3 mt-3 border-t border-zinc-800">
+          <span class="text-[10px] font-mono text-zinc-500 block mb-2">Avatar Options</span>
           <div class="flex items-center justify-center gap-2">
-            <button id="btn-trigger-upload-photo" type="button" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+            <button id="btn-trigger-upload-photo" type="button" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded text-xs font-mono border border-zinc-700 flex items-center gap-1.5 transition">
               <i data-lucide="upload" class="w-3.5 h-3.5 text-amber-400"></i>
-              <span>Upload Photo</span>
+              <span>Upload</span>
             </button>
-            <button id="btn-random-avatar" type="button" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition">
+            <button id="btn-random-avatar" type="button" class="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded text-xs font-mono border border-zinc-700 flex items-center gap-1.5 transition">
               <i data-lucide="shuffle" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Random</span>
+              <span>Cycle</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- ESP32 Gateway Hardware Status Statement Tag (Placed just below profile info & above System Controls & Tools) -->
-      <div id="drawer-gateway-status-tag" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-red-500/40 bg-red-950/30 text-red-300 font-mono text-xs shadow-sm transition-all duration-200">
+      <!-- ESP32 Gateway Hardware Status Tag -->
+      <div id="drawer-gateway-status-tag" class="w-full flex items-center justify-between px-3 py-2 rounded border border-red-500/30 bg-red-950/20 text-red-300 font-mono text-xs transition-all duration-200">
         <div class="flex items-center gap-2">
           <span class="relative flex h-2 w-2">
             <span id="drawer-gw-ping-dot" class="hidden animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span id="drawer-gw-status-dot" class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
           </span>
-          <span id="drawer-gw-state-text" class="font-extrabold text-red-400 tracking-wider">OFFLINE</span>
+          <span id="drawer-gw-state-text" class="font-bold text-red-400 tracking-wider">OFFLINE</span>
         </div>
-        <span id="drawer-gw-statement-text" class="text-[11px] text-amber-300/90 font-sans font-medium">Waiting for ESP32</span>
+        <span id="drawer-gw-statement-text" class="text-[11px] text-amber-400 font-mono">Waiting for ESP32</span>
       </div>
 
       <!-- System & IoT Controls Section -->
-      <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">System Controls &amp; Tools</span>
+      <div class="bg-zinc-950 border border-zinc-800 rounded p-3 space-y-2">
+        <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block px-1">System Controls</span>
 
-        <!-- 1. Site Location Button (Opens Claude-style Centered Settings Window) -->
-        <button id="drawer-btn-open-site-location" type="button" class="w-full p-2.5 flex items-center justify-between text-left bg-slate-900 hover:bg-slate-800/90 border border-slate-800 hover:border-slate-700 rounded-xl transition group cursor-pointer shadow-sm">
+        <!-- 1. Site Location Button -->
+        <button id="drawer-btn-open-site-location" type="button" class="w-full p-2 flex items-center justify-between text-left bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 rounded transition group cursor-pointer">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0 group-hover:bg-emerald-500/20 transition">
-              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            <div class="w-7 h-7 rounded bg-zinc-950 border border-zinc-800 flex items-center justify-center text-emerald-400 shrink-0">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <span class="font-bold text-xs text-white block">Site Location</span>
-                <span id="weather-badge" class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded font-mono">
-                  Satellite Active
+                <span class="font-semibold text-xs text-white block font-mono">Site Location</span>
+                <span id="weather-badge" class="text-[9px] bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 px-1 py-0.2 rounded font-mono">
+                  Active
                 </span>
               </div>
-              <span id="drawer-lbl-location" class="text-[10px] text-slate-400 truncate max-w-[170px] sm:max-w-[200px] block">RHM7+RH8, Bilwaradahalli, Karnataka</span>
+              <span id="drawer-lbl-location" class="text-[10px] text-zinc-400 truncate max-w-[170px] sm:max-w-[200px] block font-mono">RHM7+RH8, Bilwaradahalli</span>
             </div>
           </div>
-          <div class="flex items-center gap-1 text-slate-400 group-hover:text-white transition shrink-0">
-            <span class="text-[10px] font-medium hidden sm:inline text-slate-400 group-hover:text-slate-200">Configure</span>
-            <i data-lucide="sliders" class="w-3.5 h-3.5 text-slate-500 group-hover:text-white"></i>
-          </div>
+          <i data-lucide="sliders" class="w-3.5 h-3.5 text-zinc-500 group-hover:text-white"></i>
         </button>
 
-        <!-- 2. Hardware Info Button (Opens Claude-style Centered Settings Window) -->
-        <button id="drawer-btn-open-hardware-info" type="button" class="w-full p-2.5 flex items-center justify-between text-left bg-slate-900 hover:bg-slate-800/90 border border-slate-800 hover:border-slate-700 rounded-xl transition group cursor-pointer shadow-sm">
+        <!-- 2. Hardware Info Button -->
+        <button id="drawer-btn-open-hardware-info" type="button" class="w-full p-2 flex items-center justify-between text-left bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 rounded transition group cursor-pointer">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400 shrink-0 group-hover:bg-blue-500/20 transition">
-              <i data-lucide="sliders" class="w-4 h-4"></i>
+            <div class="w-7 h-7 rounded bg-zinc-950 border border-zinc-800 flex items-center justify-center text-amber-500 shrink-0">
+              <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5">
-                <span class="font-bold text-xs text-white block">Hardware Info</span>
-                <span class="text-[9px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-1.5 py-0.2 rounded font-mono">
-                  PV Parameters
+                <span class="font-semibold text-xs text-white block font-mono">Hardware Info</span>
+                <span class="text-[9px] bg-zinc-950 text-zinc-400 border border-zinc-700 px-1 py-0.2 rounded font-mono">
+                  PV Specs
                 </span>
               </div>
-              <span id="drawer-lbl-hw-preview" class="text-[10px] text-slate-400 font-mono truncate max-w-[170px] sm:max-w-[200px] block">₹65k/kWp &bull; ₹7.5/u &bull; Tilt 13°</span>
+              <span id="drawer-lbl-hw-preview" class="text-[10px] text-zinc-400 font-mono truncate max-w-[170px] sm:max-w-[200px] block">₹65k/kWp &bull; ₹7.5/u &bull; Tilt 13°</span>
             </div>
           </div>
-          <div class="flex items-center gap-1 text-slate-400 group-hover:text-white transition shrink-0">
-            <span class="text-[10px] font-medium hidden sm:inline text-slate-400 group-hover:text-slate-200">Configure</span>
-            <i data-lucide="sliders" class="w-3.5 h-3.5 text-slate-500 group-hover:text-white"></i>
-          </div>
+          <i data-lucide="sliders" class="w-3.5 h-3.5 text-zinc-500 group-hover:text-white"></i>
         </button>
 
-        <!-- 3. Background Push Alerts Notification Button -->
-        <button id="drawer-btn-push-alerts" type="button" class="w-full flex items-center justify-between p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition text-xs">
+        <!-- 3. Push Alerts -->
+        <button id="drawer-btn-push-alerts" type="button" class="w-full flex items-center justify-between p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded transition text-xs">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shrink-0">
-              <i data-lucide="bell" id="drawer-icon-push-bell" class="w-4 h-4"></i>
+            <div class="w-7 h-7 rounded bg-zinc-950 border border-zinc-800 flex items-center justify-center text-amber-500 shrink-0">
+              <i data-lucide="bell" id="drawer-icon-push-bell" class="w-3.5 h-3.5"></i>
             </div>
-            <div class="text-left">
-              <span class="font-bold text-white block text-xs">Push Notifications</span>
-              <span id="drawer-lbl-push-status" class="text-[10px] text-slate-400">Fault alerts when app closed</span>
+            <div class="text-left font-mono">
+              <span class="font-semibold text-white block text-xs">Push Notifications</span>
+              <span id="drawer-lbl-push-status" class="text-[10px] text-zinc-500">Alerts when app closed</span>
             </div>
           </div>
-          <span id="drawer-badge-push" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">Push Alerts</span>
+          <span id="drawer-badge-push" class="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">Push Alerts</span>
         </button>
 
-        <!-- 2. ESP32 Gateway Configuration -->
-        <button id="drawer-btn-esp32-setup" type="button" class="w-full flex items-center justify-between p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl transition text-xs">
+        <!-- 4. ESP32 Setup -->
+        <button id="drawer-btn-esp32-setup" type="button" class="w-full flex items-center justify-between p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded transition text-xs">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400 shrink-0">
-              <i data-lucide="cpu" class="w-4 h-4"></i>
+            <div class="w-7 h-7 rounded bg-zinc-950 border border-zinc-800 flex items-center justify-center text-emerald-400 shrink-0">
+              <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
             </div>
-            <div class="text-left">
-              <span class="font-bold text-white block text-xs">ESP32 Configuration</span>
-              <span class="text-[10px] text-slate-400">Target IP &amp; gateway status</span>
+            <div class="text-left font-mono">
+              <span class="font-semibold text-white block text-xs">ESP32 Configuration</span>
+              <span class="text-[10px] text-zinc-500">Target IP &amp; endpoints</span>
             </div>
           </div>
-          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-500"></i>
         </button>
 
-        <!-- 3. Export Reports (Excel or PDF Report) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-          <button id="drawer-btn-toggle-exports" type="button" class="w-full p-2.5 flex items-center justify-between text-left hover:bg-slate-800 transition">
+        <!-- 5. Export Reports -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded overflow-hidden">
+          <button id="drawer-btn-toggle-exports" type="button" class="w-full p-2 flex items-center justify-between text-left hover:bg-zinc-800 transition">
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-blue-400/10 border border-blue-400/20 flex items-center justify-center text-blue-400 shrink-0">
-                <i data-lucide="download" class="w-4 h-4"></i>
+              <div class="w-7 h-7 rounded bg-zinc-950 border border-zinc-800 flex items-center justify-center text-blue-400 shrink-0">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
               </div>
-              <div>
-                <span class="font-bold text-xs text-white block">Export Reports</span>
-                <span class="text-[10px] text-slate-400">Excel spreadsheet or PDF proposal</span>
+              <div class="font-mono">
+                <span class="font-semibold text-xs text-white block">Export Engineering Reports</span>
+                <span class="text-[10px] text-zinc-500">Excel or PDF format</span>
               </div>
             </div>
-            <i data-lucide="chevron-down" id="drawer-icon-export-chevron" class="w-4 h-4 text-slate-400 transition-transform"></i>
+            <i data-lucide="chevron-down" id="drawer-icon-export-chevron" class="w-3.5 h-3.5 text-zinc-400 transition-transform"></i>
           </button>
 
-          <div id="drawer-export-options" class="p-2.5 pt-1 border-t border-slate-800/80 space-y-2 hidden">
-            <!-- Export Excel (.CSV) -->
-            <button id="drawer-btn-export-excel" type="button" class="w-full py-2 px-3 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-lg text-xs font-medium flex items-center justify-between transition">
+          <div id="drawer-export-options" class="p-2 pt-1 border-t border-zinc-800 space-y-1.5 hidden font-mono">
+            <button id="drawer-btn-export-excel" type="button" class="w-full py-1.5 px-2.5 bg-zinc-950 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 rounded text-xs flex items-center justify-between transition">
               <div class="flex items-center gap-2">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i>
-                <span>Export as Excel (.CSV)</span>
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Export as CSV</span>
               </div>
-              <span class="text-[10px] text-slate-500 font-mono">.csv</span>
+              <span class="text-[10px] text-zinc-500">.csv</span>
             </button>
 
-            <!-- Export PDF Proposal -->
-            <button id="drawer-btn-export-pdf" type="button" class="w-full py-2 px-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg text-xs font-bold flex items-center justify-between transition shadow-sm">
+            <button id="drawer-btn-export-pdf" type="button" class="w-full py-1.5 px-2.5 bg-[#0F2547] hover:bg-[#153460] text-white rounded text-xs font-medium flex items-center justify-between transition border border-blue-900/60">
               <div class="flex items-center gap-2">
-                <i data-lucide="printer" class="w-4 h-4"></i>
-                <span>Export as PDF Proposal</span>
+                <i data-lucide="printer" class="w-3.5 h-3.5 text-blue-300"></i>
+                <span>Export as PDF Report</span>
               </div>
-              <span class="text-[10px] font-bold text-slate-900 font-mono">.pdf</span>
+              <span class="text-[10px] text-blue-300">.pdf</span>
             </button>
           </div>
         </div>
@@ -1615,35 +1638,34 @@
       </div>
 
       <!-- Change Password Collapsible Section -->
-      <div class="bg-slate-950/70 border border-slate-800 rounded-2xl overflow-hidden">
-        <button id="btn-toggle-pwd-section" type="button" class="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition">
-          <div class="flex items-center gap-2.5">
-            <i data-lucide="shield-check" class="w-4 h-4 text-amber-400"></i>
-            <span class="text-xs font-bold text-white">Change Password</span>
+      <div class="bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
+        <button id="btn-toggle-pwd-section" type="button" class="w-full p-3 flex items-center justify-between text-left hover:bg-zinc-900 transition font-mono">
+          <div class="flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-500"></i>
+            <span class="text-xs font-semibold text-white">Change Password</span>
           </div>
-          <i data-lucide="chevron-down" id="icon-pwd-chevron" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          <i data-lucide="chevron-down" id="icon-pwd-chevron" class="w-3.5 h-3.5 text-zinc-400 transition-transform"></i>
         </button>
 
-        <form id="form-change-password" class="p-4 pt-1 border-t border-slate-800/80 space-y-3 hidden">
-          <!-- Password change status banner -->
-          <div id="pwd-status-banner" class="hidden p-2.5 rounded-lg text-xs font-medium"></div>
+        <form id="form-change-password" class="p-3 pt-1 border-t border-zinc-800 space-y-2.5 hidden font-mono">
+          <div id="pwd-status-banner" class="hidden p-2 rounded text-xs font-medium"></div>
 
           <div>
-            <label class="block text-[11px] text-slate-400 mb-1">Current Password</label>
-            <input type="password" id="input-curr-pwd" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400">
+            <label class="block text-[10px] uppercase text-zinc-400 mb-0.5">Current Password</label>
+            <input type="password" id="input-curr-pwd" required placeholder="••••••••" class="w-full px-2.5 py-1 bg-zinc-900 border border-zinc-700 rounded text-xs text-white focus:outline-none focus:border-amber-400">
           </div>
 
           <div>
-            <label class="block text-[11px] text-slate-400 mb-1">New Password (min 6 chars)</label>
-            <input type="password" id="input-new-pwd" minlength="6" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400">
+            <label class="block text-[10px] uppercase text-zinc-400 mb-0.5">New Password</label>
+            <input type="password" id="input-new-pwd" minlength="6" required placeholder="••••••••" class="w-full px-2.5 py-1 bg-zinc-900 border border-zinc-700 rounded text-xs text-white focus:outline-none focus:border-amber-400">
           </div>
 
           <div>
-            <label class="block text-[11px] text-slate-400 mb-1">Confirm New Password</label>
-            <input type="password" id="input-confirm-pwd" minlength="6" required placeholder="••••••••" class="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-400">
+            <label class="block text-[10px] uppercase text-zinc-400 mb-0.5">Confirm Password</label>
+            <input type="password" id="input-confirm-pwd" minlength="6" required placeholder="••••••••" class="w-full px-2.5 py-1 bg-zinc-900 border border-zinc-700 rounded text-xs text-white focus:outline-none focus:border-amber-400">
           </div>
 
-          <button type="submit" id="btn-submit-change-pwd" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+          <button type="submit" id="btn-submit-change-pwd" class="w-full py-1.5 bg-[#0F2547] hover:bg-[#153460] text-white font-medium rounded text-xs transition flex items-center justify-center gap-1.5 border border-blue-900/60">
             <i data-lucide="key" class="w-3.5 h-3.5"></i>
             <span>Update Password</span>
           </button>
@@ -1653,39 +1675,38 @@
     </div>
 
     <!-- Drawer Footer: Logout Button -->
-    <div class="p-4 border-t border-slate-800 bg-slate-950/60">
-      <button id="btn-logout-user" type="button" class="w-full py-2.5 px-4 bg-red-950/40 hover:bg-red-600/30 text-red-400 hover:text-red-200 border border-red-500/30 rounded-xl font-bold flex items-center justify-center gap-2 transition text-xs">
-        <i data-lucide="log-out" class="w-4 h-4"></i>
+    <div class="p-3 border-t border-[#222733] bg-[#0E1117]">
+      <button id="btn-logout-user" type="button" class="w-full py-2 px-3 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-200 border border-red-500/30 rounded font-mono font-medium flex items-center justify-center gap-1.5 transition text-xs">
+        <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
         <span>Sign Out</span>
       </button>
     </div>
 
   </aside>
 
-  <!-- MOBILE STICKY BOTTOM NAVIGATION BAR (>44px touch targets, hidden on desktop md:hidden) -->
-  <nav id="mobile-bottom-nav" class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 z-50 md:hidden flex justify-around items-center h-16 px-2 shadow-2xl no-print">
-    <button id="mobile-nav-monitor" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-emerald-400 font-bold transition active:scale-95" type="button">
+  <!-- MOBILE STICKY BOTTOM NAVIGATION BAR -->
+  <nav id="mobile-bottom-nav" class="fixed bottom-0 inset-x-0 bg-[#0C0E12] border-t border-[#222733] z-50 md:hidden flex justify-around items-center h-14 px-2 no-print font-mono">
+    <button id="mobile-nav-monitor" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full py-1 text-emerald-400 font-medium transition" type="button">
       <div class="relative flex items-center justify-center">
-        <i data-lucide="radio" class="w-5 h-5"></i>
-        <span class="absolute -top-0.5 -right-1 flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        <i data-lucide="radio" class="w-4 h-4"></i>
+        <span class="absolute -top-0.5 -right-1 flex h-1.5 w-1.5">
+          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
         </span>
       </div>
-      <span class="text-[11px] mt-1 tracking-tight">String Monitor</span>
+      <span class="text-[10px] mt-0.5">Monitor</span>
     </button>
 
-    <button id="mobile-nav-estimate" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-slate-200 transition active:scale-95" type="button">
-      <i data-lucide="sun-medium" class="w-5 h-5"></i>
-      <span class="text-[11px] mt-1 tracking-tight">PV Estimation</span>
+    <button id="mobile-nav-estimate" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full py-1 text-zinc-400 hover:text-zinc-200 transition" type="button">
+      <i data-lucide="sun-medium" class="w-4 h-4"></i>
+      <span class="text-[10px] mt-0.5">Estimation</span>
     </button>
 
-    <button id="mobile-nav-faults" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full min-h-[48px] py-1 text-slate-400 hover:text-amber-400 transition active:scale-95" type="button">
+    <button id="mobile-nav-faults" class="mobile-nav-btn flex flex-col items-center justify-center flex-1 h-full py-1 text-zinc-400 hover:text-amber-400 transition" type="button">
       <div class="relative flex items-center justify-center">
-        <i data-lucide="bell" class="w-5 h-5"></i>
-        <span id="mobile-nav-fault-badge" class="hidden absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full border border-slate-900 animate-pulse">!</span>
+        <i data-lucide="bell" class="w-4 h-4"></i>
+        <span id="mobile-nav-fault-badge" class="hidden absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-bold px-1 rounded-full border border-zinc-900">!</span>
       </div>
-      <span class="text-[11px] mt-1 tracking-tight">Fault Logs</span>
+      <span class="text-[10px] mt-0.5">Fault Logs</span>
     </button>
   </nav>
 

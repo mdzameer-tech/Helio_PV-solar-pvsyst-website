@@ -1400,13 +1400,12 @@ app.get("/api/status", (req, res) => {
   }
 
   const rawWires = [
-    { id: "W_P1_P2_PWR",   from: 1, to: 2, role: "power" },
-    { id: "W_P1_P2_SENSE", from: 1, to: 2, role: "sensing_gnd" },
-    { id: "W_P1_STR_RET",  from: 1, to: 4, role: "return_gnd" },
-    { id: "W_P2_P3_PWR",   from: 2, to: 3, role: "power" },
-    { id: "W_P2_P3_SENSE", from: 2, to: 3, role: "sensing_gnd" },
-    { id: "W_P3_STR_PWR",  from: 3, to: 4, role: "power" },
-    { id: "W_P3_STR_SENSE",from: 3, to: 4, role: "sensing_wire" }
+    { id: "W_P1_P2_PWR",    from: 1, to: 2, role: "power" },
+    { id: "W_P1_P2_SENSE",  from: 1, to: 2, role: "sensing_gnd" },
+    { id: "W_P1_STR_SENSE", from: 1, to: 4, role: "sensing_wire" },
+    { id: "W_P2_P3_PWR",    from: 2, to: 3, role: "power" },
+    { id: "W_P2_P3_SENSE",  from: 2, to: 3, role: "sensing_gnd" },
+    { id: "W_P3_STR_PWR",   from: 3, to: 4, role: "power" }
   ];
 
   const wires = rawWires.map((w) => {
@@ -1418,13 +1417,13 @@ app.get("/api/status", (req, res) => {
 
     if (faultNodeId === 2) {
       if (w.id === "W_P1_P2_PWR") return { ...w, state: "open" };
-      if (w.id === "W_P1_P2_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
+      if (w.id === "W_P1_P2_SENSE" || w.id === "W_P1_STR_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
       return { ...w, state: "gray_zone" };
     }
 
     if (faultNodeId === 3) {
       if (w.from === 1 && w.to === 2) return { ...w, state: "closed" };
-      if (w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
+      if (w.id === "W_P1_STR_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
       if (w.id === "W_P2_P3_PWR") return { ...w, state: "open" };
       if (w.id === "W_P2_P3_SENSE") return { ...w, state: "closed" };
       return { ...w, state: "gray_zone" };
@@ -1432,7 +1431,7 @@ app.get("/api/status", (req, res) => {
 
     if (faultNodeId === 4) {
       if (w.from < 3) return { ...w, state: "closed" };
-      if (w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
+      if (w.id === "W_P1_STR_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
       if (w.id === "W_P3_STR_PWR") return { ...w, state: "open" };
       return { ...w, state: "gray_zone" };
     }

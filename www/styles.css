@@ -1,78 +1,96 @@
 /* 
- * Solar EPC / PVsyst Web Estimator Custom Stylesheet
- * Custom styling for high-precision PV engineering reports
+ * HelioPV — Solar EPC Studio & Industrial IoT String Monitor
+ * High-Precision Anti-AI Design System
+ * Aesthetic: Swiss Typographic Precision & Industrial Hardware Interface
  */
 
-/* Minimalist & Official Enterprise Typography */
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap');
 
 :root {
-  --epc-blue: #0F356B;
-  --epc-blue-dark: #0A254A;
-  --epc-blue-light: #E8F0FE;
-  --epc-accent: #F59E0B;
-  --epc-green: #10B981;
-  --epc-text: #0F172A;
-  --epc-gray: #64748B;
-  --epc-border: #E2E8F0;
+  /* Grounded Technical Palette (No neon AI glows, no purple SaaS hues) */
+  --epc-blue: #0F2547;
+  --epc-blue-dark: #0A1931;
+  --epc-blue-light: #F0F4F8;
+  --epc-accent: #D97706; /* Industrial Solar Cadmium / Amber */
+  --epc-green: #059669; /* Precision Silicon Emerald */
+  --epc-text: #111827; /* Deep Carbon */
+  --epc-text-muted: #6B7280;
+  --epc-border: #E5E7EB;
+  --epc-card-bg: #FFFFFF;
+  --epc-page-bg: #F9FAFB;
+
+  /* SCADA / Hardware Deck Theme */
+  --scada-bg: #0C0E12;
+  --scada-surface: #13171F;
+  --scada-border: #222733;
+  --scada-text: #F3F4F6;
+  --scada-text-muted: #9CA3AF;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+/* Base Document Setup */
 html {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'calt' 1, 'tnum' 1;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.012em;
 }
 
 body {
   font-family: var(--font-sans);
   color: var(--epc-text);
-  background-color: #F8FAFC;
+  background-color: var(--epc-page-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'calt' 1, 'tnum' 1;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.012em;
 }
 
-/* Minimalist & Official Heading Styles */
+/* Headings: Clean, Confident, Architectural Hierarchy */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-sans);
   letter-spacing: -0.025em;
   font-weight: 700;
+  color: var(--epc-text);
 }
 
-/* Precision Technical Data & Numeric Values */
+/* Technical Monospace & Numerical Precision */
 code, kbd, samp, pre, .font-mono, .epc-num, .iot-vals, .compact-volt {
   font-family: var(--font-mono) !important;
   font-feature-settings: 'zero' 1, 'tnum' 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 input, button, select, textarea {
   font-family: inherit;
 }
 
-/* Custom table styling to faithfully match the user's PVsyst report screenshot */
+/* ==========================================================================
+   OFFICIAL SWISS ENGINEERING LEDGER TABLES
+   ========================================================================== */
+
 .epc-report-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.925rem;
+  font-size: 0.875rem;
+  background-color: #FFFFFF;
+  border: 1px solid var(--epc-border);
 }
 
 .epc-report-table thead th {
-  background-color: #143767 !important;
+  background-color: var(--epc-blue) !important;
   color: #FFFFFF !important;
   font-weight: 600;
   text-align: left;
-  padding: 10px 14px;
-  font-size: 0.875rem;
-  letter-spacing: 0.01em;
-  border: 1px solid #143767;
+  padding: 9px 12px;
+  font-size: 0.775rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--epc-blue);
+  white-space: nowrap;
 }
 
 .epc-report-table thead th:last-child {
@@ -80,100 +98,101 @@ input, button, select, textarea {
 }
 
 .epc-report-table tbody td {
-  padding: 8px 14px;
-  border-top: 1px solid #E2E8F0;
-  border-bottom: 1px solid #E2E8F0;
-  border-left: 1px solid #F1F5F9;
-  border-right: 1px solid #F1F5F9;
-  color: #1E293B;
+  padding: 8px 12px;
+  border: 1px solid #E5E7EB;
+  color: #1F2937;
+  font-variant-numeric: tabular-nums;
 }
 
 .epc-report-table tbody tr:nth-child(even) {
-  background-color: #FAFBFD;
+  background-color: #F9FAFB;
 }
 
 .epc-report-table tbody tr:hover {
-  background-color: #F1F5F9;
+  background-color: #F3F4F6;
 }
 
 .epc-report-table tfoot tr,
 .epc-report-table tr.total-row {
-  background-color: #F8FAFC !important;
+  background-color: #F3F4F6 !important;
   font-weight: 700;
-  border-top: 2px solid #CBD5E1;
-  border-bottom: 2px solid #CBD5E1;
+  border-top: 2px solid var(--epc-blue) !important;
+  border-bottom: 2px solid var(--epc-blue) !important;
 }
 
 .epc-report-table tfoot td,
 .epc-report-table tr.total-row td {
-  padding: 10px 14px;
-  color: #0F172A;
+  padding: 9px 12px;
+  color: var(--epc-blue-dark);
 }
 
-/* ROI Table styling */
+/* ROI Financial Table */
 .roi-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.925rem;
+  font-size: 0.875rem;
+  background-color: #FFFFFF;
+  border: 1px solid var(--epc-border);
 }
 
 .roi-table thead th {
-  background-color: #143767 !important;
+  background-color: var(--epc-blue) !important;
   color: #FFFFFF !important;
   font-weight: 600;
-  padding: 10px 14px;
-  font-size: 0.875rem;
-  border: 1px solid #143767;
+  padding: 9px 12px;
+  font-size: 0.775rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--epc-blue);
 }
 
 .roi-table tbody td {
-  padding: 10px 14px;
-  border-top: 1px solid #E2E8F0;
-  border-bottom: 1px solid #E2E8F0;
-  border-left: 1px solid #F1F5F9;
-  border-right: 1px solid #F1F5F9;
+  padding: 9px 12px;
+  border: 1px solid #E5E7EB;
 }
 
 .roi-table tbody tr:nth-child(even) {
-  background-color: #FAFBFD;
+  background-color: #F9FAFB;
 }
 
 .roi-table td.param-name {
   font-weight: 500;
-  color: #1E293B;
-  width: 38%;
+  color: #374151;
+  width: 40%;
 }
 
 .roi-table td.param-val {
   font-weight: 600;
-  color: #0F172A;
+  color: #111827;
+  font-family: var(--font-mono);
+  font-size: 0.825rem;
 }
 
-/* Report Section Headers matching screenshot style */
+/* Section Headers */
 .report-section-header {
-  color: #143767;
-  font-size: 1.45rem;
+  color: var(--epc-blue-dark);
+  font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .report-section-subtitle {
-  color: #475569;
-  font-size: 0.95rem;
-  margin-top: 4px;
+  color: var(--epc-text-muted);
+  font-size: 0.825rem;
+  margin-top: 2px;
 }
 
 /* Map Containers */
 #map-container {
   height: 280px;
   width: 100%;
-  border-radius: 0.5rem;
+  border-radius: 4px;
   overflow: hidden;
   position: relative;
-  border: 1px solid #CBD5E1;
+  border: 1px solid #D1D5DB;
 }
 
 /* Print proposal styling */
@@ -181,7 +200,7 @@ input, button, select, textarea {
   body {
     font-family: var(--font-sans) !important;
     background-color: #FFFFFF !important;
-    font-size: 11pt;
+    font-size: 10.5pt;
     color: #000000;
   }
 
@@ -207,7 +226,7 @@ input, button, select, textarea {
 
   .epc-report-table thead th,
   .roi-table thead th {
-    background-color: #143767 !important;
+    background-color: #0F2547 !important;
     color: #FFFFFF !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -215,7 +234,7 @@ input, button, select, textarea {
 
   .epc-report-table tbody tr:nth-child(even),
   .roi-table tbody tr:nth-child(even) {
-    background-color: #F8FAFC !important;
+    background-color: #F9FAFB !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -223,28 +242,28 @@ input, button, select, textarea {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #F1F3F5;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
 
-/* Animation pulses for real-time calculations */
+/* Minimal calculating indicator */
 @keyframes calcPulse {
-  0% { opacity: 0.5; }
+  0% { opacity: 0.6; }
   50% { opacity: 1; }
-  100% { opacity: 0.5; }
+  100% { opacity: 0.6; }
 }
 
 .calculating {
@@ -252,24 +271,23 @@ input, button, select, textarea {
 }
 
 /* ==========================================================================
-   ESP32 Solar IoT String Monitor & Fault Detection Styles
+   NAVIGATION & SEGMENTED TABS
    ========================================================================== */
 
-/* Minimalist Header Navigation Links */
 .view-tab-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.35rem 0.65rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  border-radius: 0.5rem;
-  color: #94A3B8 !important;
+  border-radius: 4px;
+  color: #9CA3AF !important;
   background-color: transparent !important;
   border: 1px solid transparent !important;
   box-shadow: none !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -278,71 +296,78 @@ input, button, select, textarea {
 
 @media (max-width: 767px) {
   .view-tab-btn {
-    padding: 0.4rem 0.5rem;
-    gap: 0.3rem;
+    padding: 0.35rem 0.5rem;
+    gap: 0.25rem;
   }
 }
 
 .view-tab-btn:hover {
-  color: #F8FAFC !important;
+  color: #F3F4F6 !important;
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 .view-tab-btn.active-tab {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: #1F2430 !important;
   color: #FFFFFF !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
+  border-color: #2F3646 !important;
   font-weight: 600 !important;
 }
 
-/* IoT Monitor Section Theme */
+/* ==========================================================================
+   ESP32 SCADA STRING MONITOR DECK
+   ========================================================================== */
+
 .iot-monitor-shell {
-  background: #0D1117;
-  color: #E6EDF3;
-  border-radius: 1rem;
-  border: 1px solid #30363D;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  background: var(--scada-bg);
+  color: var(--scada-text);
+  border-radius: 6px;
+  border: 1px solid var(--scada-border);
+  box-shadow: none;
 }
 
-/* Dynamic Alert Banners */
+/* High-Precision Industrial Status Banners */
 .monitor-alert-box {
-  border-radius: 0.625rem;
-  padding: 1rem 1.25rem;
-  font-size: 0.925rem;
-  line-height: 1.5;
+  border-radius: 4px;
+  padding: 0.85rem 1.15rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
   text-align: left;
-  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .monitor-alert-box.danger {
-  background: rgba(231, 76, 60, 0.15);
-  border: 2px solid #E74C3C;
-  color: #FF6B6B;
+  background: #1C1113;
+  border-color: #DC2626;
+  border-left-width: 4px;
+  color: #F87171;
 }
 
 .monitor-alert-box.warning {
-  background: rgba(243, 156, 18, 0.15);
-  border: 2px solid #F39C12;
-  color: #F39C12;
+  background: #1C170E;
+  border-color: #D97706;
+  border-left-width: 4px;
+  color: #FBBF24;
 }
 
 .monitor-alert-box.success {
-  background: rgba(46, 204, 113, 0.12);
-  border: 2px solid #2ECC71;
-  color: #2ECC71;
+  background: #0E1A14;
+  border-color: #059669;
+  border-left-width: 4px;
+  color: #34D399;
 }
 
 .alert-title {
   font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
+  font-size: 0.925rem;
+  margin-bottom: 0.2rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
-/* Interactive String Array Row */
+/* Schematic Layout Container */
 .string-array-row {
   display: flex;
   flex-direction: column;
@@ -350,7 +375,7 @@ input, button, select, textarea {
   justify-content: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 1.25rem 0.5rem;
+  padding: 1rem 0.5rem;
   scrollbar-width: thin;
 }
 
@@ -362,78 +387,71 @@ input, button, select, textarea {
   width: 100%;
 }
 
-/* Panel & String Node Cards */
+/* Hardware Node / PV String Modular Cards */
 .iot-cell {
   width: 215px;
-  min-height: 230px;
-  padding: 1.1rem 0.95rem;
-  border-radius: 0.85rem;
-  border: 2px solid #30363D;
-  background: #161B22;
+  min-height: 220px;
+  padding: 1rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--scada-border);
+  background: var(--scada-surface);
   position: relative;
   text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
   flex-shrink: 0;
 }
 
 .iot-cell.panel {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-  background-size: 20px 20px;
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 18px 18px;
 }
 
 .iot-cell.string-node {
-  background: #161B22;
+  background: var(--scada-surface);
 }
 
-/* Cell Status States */
+/* Node States */
 .iot-cell.ok {
-  border-color: #2EA043;
-  background-color: #0D2818;
+  border-color: #059669;
+  background-color: #0A1C14;
 }
 
 .iot-cell.broken {
-  border-color: #F85149;
-  background-color: #3D1416;
-  animation: border-pulse 1.2s infinite;
+  border-color: #DC2626;
+  background-color: #200D0F;
 }
 
 .iot-cell.gray_zone {
-  border-color: #8B949E;
-  background-color: #1E242D;
+  border-color: #4B5563;
+  background-color: #171B22;
   background-image: repeating-linear-gradient(
     -45deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.03) 10px,
-    transparent 10px,
-    transparent 20px
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.02) 8px,
+    transparent 8px,
+    transparent 16px
   );
 }
 
 .iot-cell.no_signal {
-  border-color: #484F58;
-  background-color: #161B22;
+  border-color: #374151;
+  background-color: #11141A;
   opacity: 0.65;
 }
 
 .iot-cell.low_voltage {
-  border-color: #D29922;
-  background-color: #2B2006;
-}
-
-@keyframes border-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.7); }
-  50% { box-shadow: 0 0 0 8px rgba(248, 81, 73, 0); }
+  border-color: #D97706;
+  background-color: #20170A;
 }
 
 .iot-cell h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.05rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #F0F6FC;
+  letter-spacing: -0.01em;
+  color: #F9FAFB;
 }
 
 /* Dual Title & Compact Metric Handlers */
@@ -447,55 +465,57 @@ input, button, select, textarea {
   display: none;
 }
 
+/* Crisp Industrial Badges */
 .iot-badge {
   display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 0.25rem 0.65rem;
-  border-radius: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2px;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
-.iot-badge.ok          { background: #238636; color: #FFFFFF; }
-.iot-badge.broken      { background: #DA3633; color: #FFFFFF; }
-.iot-badge.gray_zone   { background: #6E7681; color: #FFFFFF; }
-.iot-badge.low_voltage { background: #9E6A03; color: #FFFFFF; }
-.iot-badge.no_signal   { background: #30363D; color: #8B949E; }
+.iot-badge.ok          { background: #065F46; color: #ECFDF5; border: 1px solid #059669; }
+.iot-badge.broken      { background: #991B1B; color: #FEF2F2; border: 1px solid #DC2626; }
+.iot-badge.gray_zone   { background: #374151; color: #F3F4F6; border: 1px solid #4B5563; }
+.iot-badge.low_voltage { background: #92400E; color: #FFFBEB; border: 1px solid #D97706; }
+.iot-badge.no_signal   { background: #1F2430; color: #9CA3AF; border: 1px solid #374151; }
 
 .iot-vals {
-  margin-top: 0.85rem;
-  font-size: 0.875rem;
-  line-height: 1.65;
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
   font-family: var(--font-mono);
-  color: #E6EDF3;
+  color: #E5E7EB;
   text-align: left;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 0.5rem 0.65rem;
-  border-radius: 0.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.5rem 0.6rem;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .iot-vals .val-highlight {
   font-weight: 600;
-  color: #58A6FF;
+  color: #60A5FA;
 }
 
 .iot-note {
-  font-size: 0.75rem;
-  margin-top: 0.65rem;
-  color: #8B949E;
+  font-size: 0.725rem;
+  margin-top: 0.55rem;
+  color: #9CA3AF;
   line-height: 1.35;
 }
 
 .iot-note.warn {
-  color: #F85149;
+  color: #F87171;
   font-weight: 600;
 }
 
 /* Inter-Panel Multi-Wire Circuit Switch Connectors */
 .wire-box {
-  width: 72px;
+  width: 68px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -510,7 +530,7 @@ input, button, select, textarea {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
   user-select: none;
 }
@@ -524,202 +544,217 @@ input, button, select, textarea {
 }
 
 .wire-role-label {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 1px 5px;
-  border-radius: 4px;
+  letter-spacing: 0.03em;
+  padding: 1px 4px;
+  border-radius: 2px;
   margin-bottom: 2px;
   white-space: nowrap;
   font-family: var(--font-mono);
 }
 
 .wire-role-label.power {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(217, 119, 6, 0.2);
   color: #FBBF24;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(217, 119, 6, 0.4);
 }
 
 .wire-role-label.sense {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60A5FA;
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(37, 99, 235, 0.2);
+  color: #93C5FD;
+  border: 1px solid rgba(37, 99, 235, 0.4);
 }
 
 .wire-role-label.ret {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34D399;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(5, 150, 105, 0.2);
+  color: #6EE7B7;
+  border: 1px solid rgba(5, 150, 105, 0.4);
 }
 
 .wire-svg {
-  width: 72px;
-  height: 24px;
+  width: 68px;
+  height: 22px;
   overflow: visible;
 }
 
 .wire-status-text {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   margin-top: 0.15rem;
   text-transform: uppercase;
   white-space: nowrap;
+  font-family: var(--font-mono);
 }
 
-.wire-status-text.closed { color: #3FB950; }
-.wire-status-text.open { color: #F85149; }
-.wire-status-text.gray_zone { color: #8B949E; }
-.wire-status-text.no_signal { color: #484F58; }
+.wire-status-text.closed { color: #34D399; }
+.wire-status-text.open { color: #F87171; }
+.wire-status-text.gray_zone { color: #9CA3AF; }
+.wire-status-text.no_signal { color: #4B5563; }
 
-/* Direct Return Ground Bus (W_P1_STR_RET) */
-.ground-return-bus-wrap {
+/* Schematic Circuit Flow Container */
+.schematic-circuit-flow {
   width: 100%;
-  margin-top: 14px;
-  padding: 10px 14px;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(51, 65, 85, 0.7);
-  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  gap: 2px;
 }
 
-.ground-bus-header {
-  display: flex;
+/* Cell Terminal Markers (Sense Origin & Sense Input) */
+.cell-terminal-tag {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  color: #94A3B8;
-}
-
-.ground-bus-track {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-}
-
-.ground-terminal {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  gap: 4px;
+  font-size: 0.6rem;
   font-family: var(--font-mono);
-  color: #E2E8F0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.cell-terminal-tag.origin {
+  background: rgba(37, 99, 235, 0.18);
+  color: #93C5FD;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+}
+
+.cell-terminal-tag.input {
+  background: rgba(37, 99, 235, 0.18);
+  color: #93C5FD;
+  border: 1px solid rgba(37, 99, 235, 0.4);
+}
+
+.cell-terminal-tag .terminal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3B82F6;
+}
+
+/* Continuous Sense Line (Left of Panel 1 to String Monitor) */
+.schematic-sense-bus {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: 6px;
+  padding: 0 8px;
+  position: relative;
+  user-select: none;
+}
+
+.sense-bus-stem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sense-bus-stem.left {
+  justify-content: flex-start;
+}
+
+.sense-bus-stem.right {
+  justify-content: flex-end;
+}
+
+.sense-stem-vertical {
+  width: 12px;
+  height: 18px;
+  position: relative;
+}
+
+.sense-bus-stem.left .sense-stem-vertical {
+  border-left: 2px solid #059669;
+  border-bottom: 2px solid #059669;
+  border-bottom-left-radius: 3px;
+  margin-top: -12px;
+}
+
+.sense-bus-stem.right .sense-stem-vertical {
+  border-right: 2px solid #059669;
+  border-bottom: 2px solid #059669;
+  border-bottom-right-radius: 3px;
+  margin-top: -12px;
+}
+
+.sense-bus-stem.open .sense-stem-vertical {
+  border-color: #DC2626 !important;
+}
+
+.sense-bus-stem.gray_zone .sense-stem-vertical {
+  border-color: #6B7280 !important;
+  border-style: dashed;
+}
+
+.sense-bus-stem.no_signal .sense-stem-vertical {
+  border-color: #374151 !important;
+}
+
+.sense-stem-tag {
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #93C5FD;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
-.terminal-node-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #3FB950;
-  box-shadow: 0 0 6px rgba(63, 185, 80, 0.6);
-}
-
-.ground-bus-wire-lead {
+.sense-bus-wire {
   flex: 1;
   height: 2px;
-  background: #3FB950;
+  background: #059669;
   transition: all 0.2s ease;
+  min-width: 12px;
 }
 
-.ground-bus-wire-lead.open {
-  background: #F85149;
-  box-shadow: 0 0 4px rgba(248, 81, 73, 0.8);
+.sense-bus-wire.open {
+  background: #DC2626;
+  animation: wire-open-pulse 1.2s infinite ease-in-out;
 }
 
-.ground-bus-wire-lead.gray_zone {
-  background: repeating-linear-gradient(90deg, #6E7681 0, #6E7681 4px, transparent 4px, transparent 8px);
+.sense-bus-wire.gray_zone {
+  background: repeating-linear-gradient(90deg, #6B7280 0, #6B7280 4px, transparent 4px, transparent 8px);
 }
 
-.ground-bus-wire-lead.no_signal {
-  background: #30363D;
+.sense-bus-wire.no_signal {
+  background: #374151;
 }
 
-.ground-switch-center {
+.sense-bus-switch-unit {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 120px;
+  padding: 0 8px;
+  flex-shrink: 0;
 }
 
-/* Animations from specification */
-@keyframes spark-pulse {
-  0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px #f85149); }
-  50% { opacity: 0.3; filter: drop-shadow(0 0 1px #f85149); }
+/* Steady clean alert pulses (no blurred neon glows) */
+@keyframes wire-open-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .wire-open-arm {
-  animation: spark-pulse 1s infinite;
-}
-
-@keyframes gray-blink {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 0.25; }
+  animation: wire-open-pulse 1.2s infinite ease-in-out;
 }
 
 .wire-gray-arm {
-  animation: gray-blink 1.2s infinite;
+  opacity: 0.5;
 }
 
-/* Scenario button bar */
-.scenario-btn {
-  transition: all 0.15s ease-in-out;
-}
-.scenario-btn:hover {
-  transform: translateY(-1px);
-}
-.scenario-btn.active-scenario {
-  outline: 2px solid #3B82F6;
-  outline-offset: 1px;
-}
+/* ==========================================================================
+   SCHEMATIC VIEW LAYOUT MODES
+   ========================================================================== */
 
-/* ─────────────────────────────────────────────────────────────
-   MOBILE & CAPACITOR TOUCH ADAPTATIONS
-   ───────────────────────────────────────────────────────────── */
-/* Floating View Mode Dropdown Tab (Hover / Float on Laptop, Click on Mobile & Laptop) */
-.schematic-popover-tab {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Float on View (Hover on PC/Laptop) */
-@media (hover: hover) and (pointer: fine) {
-  #schematic-view-dropdown-wrap:hover .schematic-popover-tab {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
-  #schematic-view-dropdown-wrap:hover #schematic-view-chevron {
-    transform: rotate(180deg);
-  }
-}
-
-/* Clicked / Active toggle on Mobile & Laptop */
-#schematic-view-dropdown-wrap.menu-open .schematic-popover-tab {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transform: translateY(0) !important;
-}
-
-#schematic-view-dropdown-wrap.menu-open #schematic-view-chevron {
-  transform: rotate(180deg);
-}
-
-/* ─────────────────────────────────────────────────────────────
-   SCHEMATIC VIEW LAYOUT MODES (FIT SCREEN vs ZOOMED PC VIEW)
-   Works on both Laptop/Desktop and Mobile/Capacitor!
-   ───────────────────────────────────────────────────────────── */
-
-/* 1. Fit Screen Mode (All nodes scaled to fit screen width without overflow) */
+/* Fit Screen Mode */
 .string-array-row.schematic-fit-mode {
   display: flex !important;
   flex-direction: column !important;
@@ -727,8 +762,8 @@ input, button, select, textarea {
   justify-content: flex-start !important;
   align-items: stretch !important;
   overflow-x: hidden !important;
-  padding: 0.6rem 0.25rem !important;
-  gap: 8px !important;
+  padding: 0.5rem 0.2rem !important;
+  gap: 6px !important;
 }
 
 .string-array-row.schematic-fit-mode .schematic-cards-flex {
@@ -737,28 +772,20 @@ input, button, select, textarea {
   justify-content: space-between !important;
   align-items: center !important;
   overflow-x: hidden !important;
-  gap: 3px !important;
+  gap: 2px !important;
 }
 
 .string-array-row.schematic-fit-mode .iot-cell {
   width: auto !important;
   flex: 1 1 0 !important;
-  max-width: 22% !important;
+  max-width: 23% !important;
   min-width: 0 !important;
-  min-height: 112px !important;
-  padding: 0.5rem 0.25rem !important;
-  border-radius: 0.65rem !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  min-height: 108px !important;
+  padding: 0.45rem 0.25rem !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
   cursor: pointer;
   user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.string-array-row.schematic-fit-mode .iot-cell.cell-pressed {
-  transform: scale(0.92) !important;
-  opacity: 0.85 !important;
 }
 
 .string-array-row.schematic-fit-mode .cell-title-full {
@@ -767,21 +794,21 @@ input, button, select, textarea {
 
 .string-array-row.schematic-fit-mode .cell-title-compact {
   display: block !important;
-  font-size: 0.78rem !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.02em !important;
-  margin: 0 0 0.2rem 0 !important;
-  color: #F0F6FC !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  margin: 0 0 0.15rem 0 !important;
+  color: #F9FAFB !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
 .string-array-row.schematic-fit-mode .iot-badge {
-  font-size: 0.52rem !important;
-  padding: 0.12rem 0.2rem !important;
+  font-size: 0.55rem !important;
+  padding: 0.1rem 0.2rem !important;
   letter-spacing: 0 !important;
-  border-radius: 0.25rem !important;
+  border-radius: 2px !important;
   font-weight: 700 !important;
   width: 100% !important;
   text-align: center !important;
@@ -795,15 +822,15 @@ input, button, select, textarea {
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  margin-top: 0.35rem !important;
-  padding: 0.25rem 0.15rem !important;
-  background: rgba(0, 0, 0, 0.35) !important;
-  border-radius: 0.35rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  margin-top: 0.3rem !important;
+  padding: 0.2rem 0.15rem !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-radius: 2px !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
 
 .string-array-row.schematic-fit-mode .compact-volt {
-  font-size: 0.82rem !important;
+  font-size: 0.775rem !important;
   font-weight: 700 !important;
   color: #60A5FA !important;
   font-family: var(--font-mono) !important;
@@ -823,21 +850,20 @@ input, button, select, textarea {
 }
 
 .string-array-row.schematic-fit-mode .wire-box {
-  flex: 0 0 clamp(16px, 3.5vw, 36px) !important;
-  width: clamp(16px, 3.5vw, 36px) !important;
-  min-width: 14px !important;
+  flex: 0 0 clamp(14px, 3.2vw, 32px) !important;
+  width: clamp(14px, 3.2vw, 32px) !important;
+  min-width: 12px !important;
   padding: 0 !important;
 }
 
 .string-array-row.schematic-fit-mode .wire-junction-column,
 .string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-junction-column {
-  flex: 0 0 clamp(20px, 4vw, 48px) !important;
-  width: clamp(20px, 4vw, 48px) !important;
-  gap: 3px !important;
+  flex: 0 0 clamp(18px, 3.8vw, 44px) !important;
+  width: clamp(18px, 3.8vw, 44px) !important;
+  gap: 2px !important;
   padding: 0 !important;
 }
 
-/* Hide wire role labels (Power +, String +, Sense GND, Sense In) in Fit Screen mode */
 .string-array-row.schematic-fit-mode .wire-role-label,
 .string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-role-label {
   display: none !important;
@@ -847,7 +873,7 @@ input, button, select, textarea {
 .string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .wire-svg {
   width: 100% !important;
   height: auto !important;
-  max-height: 18px !important;
+  max-height: 16px !important;
 }
 
 .string-array-row.schematic-fit-mode .wire-status-text,
@@ -855,44 +881,77 @@ input, button, select, textarea {
   display: none !important;
 }
 
-/* Hide Direct Ground Return Bus box in Fit Screen mode */
-.string-array-row.schematic-fit-mode .ground-return-bus-wrap,
-.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .ground-return-bus-wrap {
+.string-array-row.schematic-fit-mode .cell-terminal-tag,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .cell-terminal-tag {
   display: none !important;
 }
 
-/* 2. Zoomed PC View Mode (Full size panels with metrics directly inside) */
+.string-array-row.schematic-fit-mode .sense-stem-tag,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-stem-tag {
+  display: none !important;
+}
+
+.string-array-row.schematic-fit-mode .schematic-sense-bus,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .schematic-sense-bus {
+  margin-top: 4px !important;
+  padding: 0 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-switch-unit .wire-role-label,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-switch-unit .wire-role-label {
+  display: inline-block !important;
+  font-size: 0.55rem !important;
+  padding: 0 3px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-switch-unit .wire-status-text,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-switch-unit .wire-status-text {
+  display: none !important;
+}
+
+/* Zoomed PC View Mode */
 .string-array-row.schematic-zoom-mode {
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
   justify-content: flex-start !important;
   align-items: stretch !important;
-  padding: 1.25rem 0.5rem !important;
-  gap: 12px !important;
+  padding: 1rem 0.5rem !important;
+  gap: 10px !important;
+  overflow-x: auto !important;
+}
+
+.string-array-row.schematic-zoom-mode .schematic-circuit-flow {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  min-width: max-content !important;
+  width: 100% !important;
 }
 
 .string-array-row.schematic-zoom-mode .schematic-cards-flex {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch;
   padding: 0.5rem 0.25rem !important;
-  gap: 8px !important;
+  gap: 6px !important;
 }
 
 @media (min-width: 1100px) {
   .string-array-row.schematic-zoom-mode .schematic-cards-flex {
     justify-content: center !important;
   }
+  .string-array-row.schematic-zoom-mode .schematic-sense-bus {
+    max-width: 1100px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
 }
 
 .string-array-row.schematic-zoom-mode .iot-cell {
   width: 215px !important;
-  min-height: 230px !important;
+  min-height: 220px !important;
   flex: 0 0 215px !important;
-  padding: 1.1rem 0.95rem !important;
+  padding: 1rem 0.9rem !important;
 }
 
 .string-array-row.schematic-zoom-mode .cell-title-full {
@@ -908,8 +967,8 @@ input, button, select, textarea {
 }
 
 .string-array-row.schematic-zoom-mode .iot-badge {
-  font-size: 0.7rem !important;
-  padding: 0.25rem 0.65rem !important;
+  font-size: 0.65rem !important;
+  padding: 0.2rem 0.55rem !important;
 }
 
 .string-array-row.schematic-zoom-mode .iot-vals {
@@ -921,14 +980,14 @@ input, button, select, textarea {
 }
 
 .string-array-row.schematic-zoom-mode .wire-box {
-  width: 68px !important;
-  flex: 0 0 68px !important;
+  width: 64px !important;
+  flex: 0 0 64px !important;
 }
 
 .string-array-row.schematic-zoom-mode .wire-junction-column {
-  width: 76px !important;
-  flex: 0 0 76px !important;
-  gap: 8px !important;
+  width: 72px !important;
+  flex: 0 0 72px !important;
+  gap: 6px !important;
 }
 
 .string-array-row.schematic-zoom-mode .wire-role-label {
@@ -940,13 +999,46 @@ input, button, select, textarea {
 }
 
 .string-array-row.schematic-zoom-mode .wire-svg {
-  width: 72px !important;
-  height: 24px !important;
+  width: 68px !important;
+  height: 22px !important;
 }
 
 .string-array-row.schematic-zoom-mode .wire-status-text {
   display: block !important;
 }
+
+/* Dropdown popover */
+.schematic-popover-tab {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(2px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #schematic-view-dropdown-wrap:hover .schematic-popover-tab {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  #schematic-view-dropdown-wrap:hover #schematic-view-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+#schematic-view-dropdown-wrap.menu-open .schematic-popover-tab {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0) !important;
+}
+
+#schematic-view-dropdown-wrap.menu-open #schematic-view-chevron {
+  transform: rotate(180deg);
+}
+
+/* ==========================================================================
+   MOBILE BOTTOM DOCK NAVIGATION
+   ========================================================================== */
 
 @media (max-width: 768px) {
   #mobile-bottom-nav {
@@ -961,10 +1053,5 @@ input, button, select, textarea {
 }
 
 .mobile-nav-btn.active-mobile-tab {
-  color: #10B981 !important;
+  color: #34D399 !important;
 }
-
-.mobile-nav-btn.active-mobile-tab i {
-  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.5));
-}
-
