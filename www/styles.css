@@ -667,73 +667,188 @@ html.dark .view-tab-btn.active-tab {
   background: #3B82F6;
 }
 
-/* Continuous Sense Line (Left of Panel 1 to String Monitor) */
-.schematic-sense-bus {
+/* ==========================================================================
+   Continuous Master Sense Bus (Left of Panel 1 to Left of String Monitor)
+   ========================================================================== */
+
+/* P1 Left Origin Column */
+.p1-origin-col {
   display: flex;
-  align-items: center;
-  width: 100%;
-  margin-top: 6px;
-  padding: 0 8px;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
   position: relative;
   user-select: none;
 }
 
-.sense-bus-stem {
+.p1-origin-badge-wrap {
+  position: absolute;
+  top: 10px;
+  right: -4px;
+  z-index: 10;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.p1-origin-badge {
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(37, 99, 235, 0.2);
+  color: #93C5FD;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  white-space: nowrap;
+}
+
+html:not(.dark) .p1-origin-badge {
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border-color: #93C5FD !important;
+}
+
+.p1-origin-wire-lead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.p1-origin-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Junction 3-String (Leading into Left of String Monitor) */
+.junction-3-string {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  position: relative;
+}
+
+.junction-3-string .sense-in-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.sense-in-wire-svg {
+  width: 100%;
+  height: 36px;
+  overflow: visible;
+}
+
+/* Sense Wire Strokes and Terminal Nodes */
+.sense-wire-stroke {
+  stroke: #059669;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.2s ease;
+}
+
+.sense-wire-stroke.broken,
+.sense-wire-stroke.open {
+  stroke: #DC2626 !important;
+  animation: wire-open-pulse 1.2s infinite ease-in-out;
+}
+
+.sense-wire-stroke.gray_zone {
+  stroke: #6B7280 !important;
+  stroke-dasharray: 4,4;
+}
+
+.sense-wire-stroke.no_signal {
+  stroke: #374151 !important;
+  stroke-dasharray: 3,3;
+}
+
+.sense-node-fill {
+  fill: #059669;
+  transition: fill 0.2s ease;
+}
+
+.sense-node-fill.broken,
+.sense-node-fill.open {
+  fill: #DC2626 !important;
+  animation: wire-open-pulse 1.2s infinite ease-in-out;
+}
+
+.sense-node-fill.gray_zone {
+  fill: #6B7280 !important;
+}
+
+.sense-node-fill.no_signal {
+  fill: #374151 !important;
+}
+
+/* Sense Bus Under-Track */
+.schematic-sense-bus-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  position: relative;
+  user-select: none;
+}
+
+.sense-bus-active-track {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+}
+
+.sense-bus-string-spacer {
+  flex-shrink: 0;
+}
+
+.sense-bus-corner {
+  width: 24px;
+  height: 14px;
   position: relative;
   flex-shrink: 0;
 }
 
-.sense-bus-stem.left {
-  justify-content: flex-start;
+.sense-bus-corner.left {
+  border-left: 2.5px solid #059669;
+  border-bottom: 2.5px solid #059669;
+  border-bottom-left-radius: 4px;
+  margin-left: 20px;
 }
 
-.sense-bus-stem.right {
-  justify-content: flex-end;
+.sense-bus-corner.right {
+  border-right: 2.5px solid #059669;
+  border-bottom: 2.5px solid #059669;
+  border-bottom-right-radius: 4px;
+  margin-right: 20px;
 }
 
-.sense-stem-vertical {
-  width: 12px;
-  height: 18px;
-  position: relative;
-}
-
-.sense-bus-stem.left .sense-stem-vertical {
-  border-left: 2px solid #059669;
-  border-bottom: 2px solid #059669;
-  border-bottom-left-radius: 3px;
-  margin-top: -12px;
-}
-
-.sense-bus-stem.right .sense-stem-vertical {
-  border-right: 2px solid #059669;
-  border-bottom: 2px solid #059669;
-  border-bottom-right-radius: 3px;
-  margin-top: -12px;
-}
-
-.sense-bus-stem.open .sense-stem-vertical {
+.sense-bus-corner.open,
+.sense-bus-corner.broken {
   border-color: #DC2626 !important;
+  animation: wire-open-pulse 1.2s infinite ease-in-out;
 }
 
-.sense-bus-stem.gray_zone .sense-stem-vertical {
+.sense-bus-corner.gray_zone {
   border-color: #6B7280 !important;
   border-style: dashed;
 }
 
-.sense-bus-stem.no_signal .sense-stem-vertical {
+.sense-bus-corner.no_signal {
   border-color: #374151 !important;
-}
-
-.sense-stem-tag {
-  font-size: 0.625rem;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  color: #93C5FD;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
 }
 
 .sense-bus-wire {
@@ -744,17 +859,18 @@ html.dark .view-tab-btn.active-tab {
   min-width: 12px;
 }
 
-.sense-bus-wire.open {
-  background: #DC2626;
+.sense-bus-wire.open,
+.sense-bus-wire.broken {
+  background: #DC2626 !important;
   animation: wire-open-pulse 1.2s infinite ease-in-out;
 }
 
 .sense-bus-wire.gray_zone {
-  background: repeating-linear-gradient(90deg, #6B7280 0, #6B7280 4px, transparent 4px, transparent 8px);
+  background: repeating-linear-gradient(90deg, #6B7280 0, #6B7280 4px, transparent 4px, transparent 8px) !important;
 }
 
 .sense-bus-wire.no_signal {
-  background: #374151;
+  background: #374151 !important;
 }
 
 .sense-bus-switch-unit {
@@ -916,15 +1032,61 @@ html.dark .view-tab-btn.active-tab {
   display: none !important;
 }
 
-.string-array-row.schematic-fit-mode .sense-stem-tag,
-.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-stem-tag {
-  display: none !important;
+.string-array-row.schematic-fit-mode .p1-origin-col,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .p1-origin-col {
+  flex: 0 0 clamp(24px, 4vw, 40px) !important;
+  width: clamp(24px, 4vw, 40px) !important;
+  height: 108px !important;
 }
 
-.string-array-row.schematic-fit-mode .schematic-sense-bus,
-.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .schematic-sense-bus {
+.string-array-row.schematic-fit-mode .p1-origin-badge,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .p1-origin-badge {
+  font-size: 0.5rem !important;
+  padding: 0 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .junction-3-string,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .junction-3-string {
+  flex: 0 0 clamp(18px, 3.8vw, 44px) !important;
+  width: clamp(18px, 3.8vw, 44px) !important;
+  gap: 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .junction-3-string .wire-role-label,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .junction-3-string .wire-role-label {
+  display: inline-block !important;
+  font-size: 0.5rem !important;
+  padding: 0 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-in-wire-svg,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-in-wire-svg {
+  height: 24px !important;
+}
+
+.string-array-row.schematic-fit-mode .schematic-sense-bus-row,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .schematic-sense-bus-row {
   margin-top: 4px !important;
   padding: 0 2px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-string-spacer,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-string-spacer {
+  flex: 1 1 0 !important;
+  max-width: 23% !important;
+  min-width: 0 !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-corner.left,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-corner.left {
+  width: 14px !important;
+  margin-left: 10px !important;
+}
+
+.string-array-row.schematic-fit-mode .sense-bus-corner.right,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .sense-bus-corner.right {
+  width: 14px !important;
+  margin-right: 8px !important;
 }
 
 .string-array-row.schematic-fit-mode .sense-bus-switch-unit .wire-role-label,
@@ -970,11 +1132,43 @@ html.dark .view-tab-btn.active-tab {
   .string-array-row.schematic-zoom-mode .schematic-cards-flex {
     justify-content: center !important;
   }
-  .string-array-row.schematic-zoom-mode .schematic-sense-bus {
-    max-width: 1100px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-  }
+}
+
+.string-array-row.schematic-zoom-mode .p1-origin-col {
+  width: 56px !important;
+  flex: 0 0 56px !important;
+  height: 220px !important;
+}
+
+.string-array-row.schematic-zoom-mode .junction-3-string {
+  width: 72px !important;
+  flex: 0 0 72px !important;
+  gap: 6px !important;
+}
+
+.string-array-row.schematic-zoom-mode .junction-3-string .wire-role-label {
+  display: inline-block !important;
+  font-size: 0.6rem !important;
+}
+
+.string-array-row.schematic-zoom-mode .sense-in-wire-svg {
+  height: 38px !important;
+}
+
+.string-array-row.schematic-zoom-mode .sense-bus-string-spacer {
+  width: 215px !important;
+  flex: 0 0 215px !important;
+  margin-left: 6px !important;
+}
+
+.string-array-row.schematic-zoom-mode .sense-bus-corner.left {
+  width: 24px !important;
+  margin-left: 20px !important;
+}
+
+.string-array-row.schematic-zoom-mode .sense-bus-corner.right {
+  width: 24px !important;
+  margin-right: 20px !important;
 }
 
 .string-array-row.schematic-zoom-mode .iot-cell {

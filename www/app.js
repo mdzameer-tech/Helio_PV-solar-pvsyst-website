@@ -2894,6 +2894,7 @@ function renderIoTMonitor(data) {
     const str = data.cells.find(c => c.id === 4) || data.cells[3];
 
     const senseState = getWireState(wires, 'W_P1_STR_SENSE');
+    const p3StrPwrState = getWireState(wires, 'W_P3_STR_PWR');
 
     function renderCellHtml(c) {
       if (!c) return '';
@@ -2927,6 +2928,19 @@ function renderIoTMonitor(data) {
     const html = `
       <div class="schematic-circuit-flow">
         <div class="schematic-cards-flex">
+          <!-- P1 Left Origin Lead (Connecting into Left Side of Panel 1) -->
+          <div class="p1-origin-col ${senseState}" title="P1 Continuity Origin: Connected into Left Side of Panel 1">
+            <div class="p1-origin-badge-wrap">
+              <span class="p1-origin-badge">P1 (Left Origin)</span>
+            </div>
+            <div class="p1-origin-wire-lead ${senseState}">
+              <svg class="p1-origin-svg" viewBox="0 0 52 140" preserveAspectRatio="none">
+                <path d="M 22 140 L 22 70 L 52 70" class="sense-wire-stroke ${senseState}" fill="none" stroke-width="2.5" />
+                <circle cx="50" cy="70" r="3.5" class="sense-node-fill ${senseState}" />
+              </svg>
+            </div>
+          </div>
+
           ${renderCellHtml(p1)}
 
           <!-- Inter-Panel Wire Junction 1-2 -->
@@ -2957,34 +2971,48 @@ function renderIoTMonitor(data) {
 
           ${renderCellHtml(p3)}
 
-          <!-- Inter-Panel Wire Junction 3-String (Main Power (+) Line Only) -->
-          <div class="wire-junction-column" title="Panel 3 to String Module Junction">
-            <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
+          <!-- Inter-Panel Wire Junction 3-String (Leading into LEFT of String Monitor) -->
+          <div class="wire-junction-column junction-3-string" title="Panel 3 & Master Sense Line into Left of String Monitor">
+            <!-- Top Wire: Power (+) Line from Panel 3 into String Monitor -->
+            <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line into String Monitor">
               <span class="wire-role-label power">String +</span>
-              ${renderSwitchSvg(getWireState(wires, 'W_P3_STR_PWR'))}
+              ${renderSwitchSvg(p3StrPwrState)}
+            </div>
+
+            <!-- Bottom Wire: String Sense In entering Left of String Monitor -->
+            <div class="wire-junction-item sense-in-item" title="W_P1_STR_SENSE: Master Continuity Sense Return Input into Left of String Monitor">
+              <span class="wire-role-label sense">String Sense In</span>
+              <svg class="sense-in-wire-svg" viewBox="0 0 72 44" preserveAspectRatio="none">
+                <path d="M 22 44 L 22 18 L 72 18" class="sense-wire-stroke ${senseState}" fill="none" stroke-width="2.5" />
+                <circle cx="70" cy="18" r="3.5" class="sense-node-fill ${senseState}" />
+              </svg>
+              <div class="wire-status-text ${senseState}">${senseState === 'ok' ? 'CLOSED' : (senseState === 'broken' ? '⚠️ OPEN' : senseState)}</div>
             </div>
           </div>
 
           ${renderCellHtml(str)}
         </div>
 
-        <!-- Continuous Sense Line: Left side of Panel 1 to String Monitor -->
-        <div class="schematic-sense-bus" title="Continuous Sense Line: Connecting Left of Panel 1 to String Monitor">
-          <div class="sense-bus-stem left ${senseState}" title="Sense lead origin on left side of Panel 1">
-            <span class="sense-stem-vertical"></span>
-            <span class="sense-stem-tag">P1 (Left Origin)</span>
+        <!-- Continuous Sense Bus: Connecting Left Origin of P1 across to String Sense In on Left of String Monitor -->
+        <div class="schematic-sense-bus-row" title="Master Continuity Bus: Connecting Left of Panel 1 to Left of String Monitor">
+          <div class="sense-bus-active-track">
+            <!-- Left Corner meeting vertical wire of P1 Left Origin -->
+            <div class="sense-bus-corner left ${senseState}"></div>
+            <div class="sense-bus-wire ${senseState}"></div>
+
+            <!-- Master Continuity Sense Switch -->
+            <div class="sense-bus-switch-unit" title="W_P1_STR_SENSE: Master Continuity Sense Line">
+              <span class="wire-role-label sense">Sense Line (P1 ➔ String)</span>
+              ${renderSwitchSvg(senseState)}
+              <span class="wire-status-text ${senseState}">${senseState}</span>
+            </div>
+
+            <div class="sense-bus-wire ${senseState}"></div>
+            <!-- Right Corner meeting vertical wire of String Sense In at Left of String Monitor -->
+            <div class="sense-bus-corner right ${senseState}"></div>
           </div>
-          <div class="sense-bus-wire ${senseState}"></div>
-          <div class="sense-bus-switch-unit" title="W_P1_STR_SENSE: Master Continuity Sense Line">
-            <span class="wire-role-label sense">Sense Line (P1 ➔ String)</span>
-            ${renderSwitchSvg(senseState)}
-            <span class="wire-status-text ${senseState}">${senseState}</span>
-          </div>
-          <div class="sense-bus-wire ${senseState}"></div>
-          <div class="sense-bus-stem right ${senseState}" title="Sense return input into String Monitor">
-            <span class="sense-stem-tag">String Sense In</span>
-            <span class="sense-stem-vertical"></span>
-          </div>
+          <!-- Spacer matching String Monitor width so track terminates precisely at Left of String Monitor -->
+          <div class="sense-bus-string-spacer"></div>
         </div>
       </div>
     `;
