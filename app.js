@@ -3775,6 +3775,15 @@ function updateModalTelemetryValues(cell) {
   if (currEl) currEl.textContent = currStr;
   if (pwrEl) pwrEl.textContent = pwrStr;
 
+  const tempWrap = document.getElementById('panel-modal-temp-wrap');
+  if (tempWrap) {
+    if (!isString) {
+      tempWrap.classList.add('hidden');
+    } else {
+      tempWrap.classList.remove('hidden');
+    }
+  }
+
   const stateLabel = IOT_LABELS[cell.state] || cell.state;
   if (statusText) statusText.textContent = stateLabel;
 

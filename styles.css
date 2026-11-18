@@ -1908,16 +1908,14 @@ html:not(.dark) .compact-volt {
 /* Real-Time Metrics Cards in Light Mode */
 html:not(.dark) div[class*="border-t-blue-500"],
 html:not(.dark) div[class*="border-t-emerald-500"],
-html:not(.dark) div[class*="border-t-amber-500"],
-html:not(.dark) div[class*="border-t-rose-500"] {
+html:not(.dark) div[class*="border-t-amber-500"] {
   background-color: #FFFFFF !important;
   border-color: #E2E8F0 !important;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
 }
 html:not(.dark) #metric-string-voltage,
 html:not(.dark) #metric-string-current,
-html:not(.dark) #metric-string-power,
-html:not(.dark) #metric-string-temp {
+html:not(.dark) #metric-string-power {
   color: #0F172A !important;
 }
 
