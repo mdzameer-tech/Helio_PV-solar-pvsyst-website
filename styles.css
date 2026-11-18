@@ -26,6 +26,15 @@
   --scada-text: #0F172A;
   --scada-text-muted: #64748B;
 
+  /* Real Solar Panel Design Tokens */
+  --panel-glass-top: #2A5CB8;
+  --panel-glass-bottom: #0F2A5F;
+  --panel-glass-base: #1E4A9B;
+  --panel-grid: rgba(157, 181, 222, 0.55);
+  --panel-busbar: rgba(200, 214, 238, 0.30);
+  --panel-frame: #B8C0CC;
+  --panel-sheen: rgba(255, 255, 255, 0.12);
+
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -431,11 +440,160 @@ html.dark .view-tab-btn.active-tab {
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   Real Solar Panel Visual Component & States
+   ========================================================================== */
+
+/* No-signal Desaturated Solar Panel State */
+[data-status="no-signal"],
+.solar-panel-backdrop[data-status="no-signal"],
+.iot-cell.panel.no_signal .solar-panel-backdrop,
+.iot-cell.panel[data-status="no-signal"] .solar-panel-backdrop {
+  --panel-glass-top: #475569;
+  --panel-glass-bottom: #334155;
+  --panel-glass-base: #475569;
+  --panel-grid: rgba(148, 163, 184, 0.6);
+  --panel-busbar: rgba(203, 213, 225, 0.25);
+  --panel-frame: #94A3B8;
+  --panel-sheen: rgba(255, 255, 255, 0.06);
+}
+
+/* Solar Panel Backdrop with Frame, Glass Gradient & Sheen */
+.solar-panel-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 0;
+  background: linear-gradient(180deg, var(--panel-glass-top) 0%, var(--panel-glass-bottom) 100%);
+  border: 2px solid var(--panel-frame);
+  box-sizing: border-box;
+  transition: background 200ms ease, border-color 200ms ease, opacity 200ms ease;
+}
+
+/* Glass Sheen: faint diagonal highlight over top-left */
+.solar-panel-backdrop::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--panel-sheen) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 2;
+  transition: background 200ms ease, opacity 200ms ease;
+}
+
+.solar-panel-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.solar-panel-busbars line {
+  stroke: var(--panel-busbar);
+  stroke-width: 0.75px;
+  transition: stroke 200ms ease;
+}
+
+.solar-panel-grid line {
+  stroke: var(--panel-grid);
+  stroke-width: 1px;
+  transition: stroke 200ms ease;
+}
+
+/* High-DPI screens: 0.5px grid lines */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .solar-panel-grid line {
+    stroke-width: 0.5px;
+  }
+}
+
 .iot-cell.panel {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 18px 18px;
+  background: var(--panel-glass-base);
+  border: 2px solid var(--panel-frame);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: border-color 200ms ease, background-color 200ms ease, opacity 200ms ease, box-shadow 200ms ease;
+}
+
+/* Elevate card content above the solar panel backdrop */
+.iot-cell.panel > *:not(.solar-panel-backdrop):not(.terminal-dot) {
+  position: relative;
+  z-index: 3;
+}
+
+/* Solar Panel Card States */
+.iot-cell.panel.ok {
+  border-color: #059669 !important;
+  background-color: var(--panel-glass-base) !important;
+  box-shadow: 0 0 0 1px #059669, 0 4px 12px rgba(5, 150, 105, 0.25);
+}
+
+.iot-cell.panel.broken {
+  border-color: #DC2626 !important;
+  background-color: var(--panel-glass-base) !important;
+  box-shadow: 0 0 0 1px #DC2626, 0 4px 14px rgba(220, 38, 38, 0.35);
+}
+
+.iot-cell.panel.low_voltage {
+  border-color: #D97706 !important;
+  background-color: var(--panel-glass-base) !important;
+  box-shadow: 0 0 0 1px #D97706, 0 4px 12px rgba(217, 119, 6, 0.25);
+}
+
+.iot-cell.panel.gray_zone {
+  border-color: #64748B !important;
+  background-color: var(--panel-glass-base) !important;
+}
+
+.iot-cell.panel.no_signal {
+  border-color: #94A3B8 !important;
+  background-color: var(--panel-glass-base) !important;
+  opacity: 0.9;
+}
+
+/* Readability on solar panel cards in both dark & light mode */
+.iot-cell.panel h3,
+html:not(.dark) .iot-cell.panel h3,
+html.dark .iot-cell.panel h3 {
+  color: #FFFFFF !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+.iot-cell.panel .cell-title-compact,
+html:not(.dark) .iot-cell.panel .cell-title-compact,
+html.dark .iot-cell.panel .cell-title-compact {
+  color: #FFFFFF !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+.iot-cell.panel .iot-vals {
+  background: rgba(10, 18, 32, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #F1F5F9 !important;
+  backdrop-filter: blur(4px);
+}
+
+html:not(.dark) .iot-cell.panel .iot-vals {
+  background: rgba(15, 23, 42, 0.76) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #F8FAFC !important;
+}
+
+html:not(.dark) .iot-cell.panel .iot-vals .val-highlight {
+  color: #93C5FD !important;
+}
+
+.iot-cell.panel .iot-note {
+  color: #E2E8F0 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .iot-cell.string-node {
@@ -1696,34 +1854,34 @@ html:not(.dark) #schematic-view-popover button:hover {
 }
 
 /* IoT Schematic Cells in Light Mode */
-html:not(.dark) .iot-cell {
+html:not(.dark) .iot-cell:not(.panel) {
   background-color: #FFFFFF !important;
   border-color: #CBD5E1 !important;
 }
 html:not(.dark) .iot-cell.panel {
-  background-image:
-    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px) !important;
+  background-color: var(--panel-glass-base) !important;
+  background-image: none !important;
+  border-color: var(--panel-frame) !important;
 }
 html:not(.dark) .iot-cell.string-node {
   background-color: #FFFFFF !important;
 }
-html:not(.dark) .iot-cell h3 {
+html:not(.dark) .iot-cell:not(.panel) h3 {
   color: #0F172A !important;
 }
-html:not(.dark) .iot-cell.ok {
+html:not(.dark) .iot-cell.string-node.ok {
   border-color: #059669 !important;
   background-color: #F0FDF4 !important;
 }
-html:not(.dark) .iot-cell.broken {
+html:not(.dark) .iot-cell.string-node.broken {
   border-color: #DC2626 !important;
   background-color: #FEF2F2 !important;
 }
-html:not(.dark) .iot-cell.gray_zone {
+html:not(.dark) .iot-cell.string-node.gray_zone {
   border-color: #94A3B8 !important;
   background-color: #F8FAFC !important;
 }
-html:not(.dark) .iot-cell.no_signal {
+html:not(.dark) .iot-cell.string-node.no_signal {
   border-color: #CBD5E1 !important;
   background-color: #F1F5F9 !important;
   opacity: 0.8;

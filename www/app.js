@@ -2973,6 +2973,43 @@ function renderIoTMonitor(data) {
       return '—';
     }
 
+    function renderSolarPanelSvg(nodeId, status, ariaLabel) {
+      return `
+        <div class="solar-panel-backdrop" data-status="${status}">
+          <svg class="solar-panel-svg" viewBox="0 0 180 120" preserveAspectRatio="none" role="img" aria-label="${ariaLabel}">
+            <!-- Busbars: 2 thin vertical lines per cell across 6 cells (12 lines total, 0.75px) -->
+            <g class="solar-panel-busbars" stroke="var(--panel-busbar)" stroke-width="0.75" vector-effect="non-scaling-stroke">
+              <line x1="10" y1="0" x2="10" y2="120" />
+              <line x1="20" y1="0" x2="20" y2="120" />
+              <line x1="40" y1="0" x2="40" y2="120" />
+              <line x1="50" y1="0" x2="50" y2="120" />
+              <line x1="70" y1="0" x2="70" y2="120" />
+              <line x1="80" y1="0" x2="80" y2="120" />
+              <line x1="100" y1="0" x2="100" y2="120" />
+              <line x1="110" y1="0" x2="110" y2="120" />
+              <line x1="130" y1="0" x2="130" y2="120" />
+              <line x1="140" y1="0" x2="140" y2="120" />
+              <line x1="160" y1="0" x2="160" y2="120" />
+              <line x1="170" y1="0" x2="170" y2="120" />
+            </g>
+            <!-- Cell Grid: 6 columns x 4 rows (1px lines, 0.5px on high-DPI) -->
+            <g class="solar-panel-grid" stroke="var(--panel-grid)" stroke-width="1" vector-effect="non-scaling-stroke">
+              <!-- 5 Vertical dividers for 6 columns -->
+              <line x1="30" y1="0" x2="30" y2="120" />
+              <line x1="60" y1="0" x2="60" y2="120" />
+              <line x1="90" y1="0" x2="90" y2="120" />
+              <line x1="120" y1="0" x2="120" y2="120" />
+              <line x1="150" y1="0" x2="150" y2="120" />
+              <!-- 3 Horizontal dividers for 4 rows -->
+              <line x1="0" y1="30" x2="180" y2="30" />
+              <line x1="0" y1="60" x2="180" y2="60" />
+              <line x1="0" y1="90" x2="180" y2="90" />
+            </g>
+          </svg>
+        </div>
+      `;
+    }
+
     function renderCellHtml(c, isOrigin = false, isInput = false, dotId = '', tagId = '', gndState = 'closed') {
       if (!c) return '';
       const isString = (c.type === 'string');
@@ -2988,9 +3025,13 @@ function renderIoTMonitor(data) {
         shortLabel = `P${c.id}`;
       }
       const cardClass = isString ? 'string-node' : 'panel';
+      const isLive = effectiveGatewayOnline && c.state !== 'no_signal';
+      const panelStatus = isLive ? 'live' : 'no-signal';
+      const panelAria = isLive ? 'Solar panel, live' : 'Solar panel, no signal';
 
       return `
-        <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" title="${label}: tap for telemetry">
+        <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" data-status="${panelStatus}" title="${label}: tap for telemetry">
+          ${!isString ? renderSolarPanelSvg(c.id, panelStatus, panelAria) : ''}
           <!-- Desktop Full View Title -->
           <h3 class="cell-title-full">${label}</h3>
           <!-- Mobile Fit View Compact Title -->
@@ -3708,7 +3749,19 @@ function updateModalTelemetryValues(cell) {
 
   const isString = (cell.type === 'string');
   if (title) title.textContent = isString ? 'String Monitor 4' : `Solar Panel ${cell.id}`;
-  if (iconWrap) iconWrap.textContent = isString ? 'STR' : `P${cell.id}`;
+  if (iconWrap) {
+    iconWrap.textContent = isString ? 'STR' : `P${cell.id}`;
+    if (!isString) {
+      const isLive = cell.state !== 'no_signal';
+      iconWrap.style.background = isLive ? 'linear-gradient(180deg, var(--panel-glass-top), var(--panel-glass-bottom))' : '#475569';
+      iconWrap.style.borderColor = isLive ? 'var(--panel-frame)' : '#94A3B8';
+      iconWrap.style.color = '#FFFFFF';
+    } else {
+      iconWrap.style.background = '';
+      iconWrap.style.borderColor = '';
+      iconWrap.style.color = '';
+    }
+  }
   if (typeText) {
     typeText.textContent = isString
       ? 'Master String Monitor (DFRobot Beetle ESP32-C6)'
