@@ -3456,15 +3456,12 @@ function renderCellBody(c) {
     const volt = typeof c.voltage === 'number' ? c.voltage.toFixed(2) + ' V' : '—';
     const cur  = typeof c.current === 'number' ? c.current.toFixed(3) + ' A' : '—';
     const pwr  = typeof c.power === 'number' ? c.power.toFixed(2) + ' W' : '—';
-    const ldr  = c.ldr !== undefined ? c.ldr : '—';
     return `Volt: <span class="val-highlight">${volt}</span><br>` +
            `Curr: <span class="val-highlight">${cur}</span><br>` +
-           `Power: <span class="val-highlight" style="color:#F59E0B;">${pwr}</span><br>` +
-           `LDR: <span class="val-highlight">${ldr}</span>`;
+           `Power: <span class="val-highlight" style="color:#F59E0B;">${pwr}</span>`;
   }
-  const temp = typeof c.temp === 'number' ? c.temp.toFixed(1) + ' °C' : 'Sensor absent';
   const volt = typeof c.voltage === 'number' ? c.voltage.toFixed(2) + ' V' : '—';
-  return `Temp: <span class="val-highlight">${temp}</span><br>Volt: <span class="val-highlight">${volt}</span>`;
+  return `Volt: <span class="val-highlight">${volt}</span>`;
 }
 
 function renderSwitchSvg(state) {
