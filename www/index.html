@@ -164,11 +164,11 @@
       <!-- Monitor Header with Live Indicator & IP Target -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-[#222733]">
         <div>
-          <div class="flex items-center gap-2.5">
-            <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Solar String Fault Detection System</h2>
-            <span class="bg-zinc-900 text-zinc-300 text-[11px] px-2 py-0.5 rounded font-mono border border-zinc-800 font-medium">ESP32-C6 &bull; CH32V003</span>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">Solar 3S2P Array Fault Detection System</h2>
+            <span class="bg-zinc-900 text-zinc-300 text-[11px] px-2 py-0.5 rounded font-mono border border-zinc-800 font-medium">ESP32-C6 &bull; 3S2P Array &bull; 8 Nodes</span>
           </div>
-          <p class="text-xs text-zinc-400 mt-0.5">Multi-Point Series Continuity, Per-Cell Voltage/Temp &amp; String Power Monitoring</p>
+          <p class="text-xs text-zinc-400 mt-0.5">2 Strings &times; 3 Panels = 6 Panels + 2 String Monitors + 1 Combiner Box &bull; Independent String Fault Isolation</p>
         </div>
         <div class="flex items-center flex-wrap gap-2">
           <div id="iot-gateway-status" class="inline-flex items-center gap-2 px-3 py-1 rounded text-xs font-mono font-medium border border-zinc-800 bg-zinc-950 text-zinc-300">
@@ -183,16 +183,58 @@
 
       <!-- Dynamic Alert Banner (Danger / Warning / Success) -->
       <div id="iot-alert-box" class="monitor-alert-box success">
-        <div class="alert-title font-mono text-xs uppercase tracking-wider">&#10003; Solar PV String Normal &amp; Continuous</div>
-        <div class="text-xs">All series connections intact. Listening for gateway telemetry on <code>/api/status</code>.</div>
+        <div class="alert-title font-mono text-xs uppercase tracking-wider">&#10003; Solar PV 3S2P Array Normal &amp; Continuous</div>
+        <div class="text-xs">All series strings &amp; parallel combiner connections intact. Listening on <code>/api/status</code>.</div>
       </div>
 
-      <!-- Visual Schematic Array with SVG Circuit Switches -->
+      <!-- Interactive 3S2P Simulation & Truth Table Testing Bar -->
+      <div class="bg-[#11141A] rounded p-2.5 border border-[#222733] flex flex-col md:flex-row items-start md:items-center justify-between gap-2.5 font-mono text-xs">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-zinc-400 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+            <i data-lucide="flask-conical" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Truth Table Test Scenarios:</span>
+          </span>
+          <span id="active-scenario-badge" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-950/60 text-blue-300 border border-blue-600/40">
+            Mode: Waiting for Hardware
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
+          <select id="scenario-selector" class="bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs rounded px-2.5 py-1 focus:outline-none focus:border-amber-400 cursor-pointer max-w-full">
+            <option value="live_hardware">⚡ Mode: Live ESP32 Hardware</option>
+            <option value="normal" selected>✅ Normal 3S2P Operation (All 8 Nodes OK)</option>
+            <optgroup label="String 1 Fault Rules (Truth Table)">
+              <option value="s1_fault_p1_p2_pwr">Rule 1: S1 P1-P2 Power (+) Wire Broken (C2=0, C3=1)</option>
+              <option value="s1_fault_p1_p2_gnd">Rule 2: S1 P1-P2 Sense GND Broken (C2=0, C3=0 -> Gray Zone)</option>
+              <option value="s1_fault_p2_p3_pwr">Rule 3: S1 P2-P3 Power (+) Wire Broken (C2=1, C3=0, C4=1)</option>
+              <option value="s1_fault_p2_p3_gnd">Rule 4: S1 P2-P3 Sense GND Broken (C2=1, C3=0, C4=0 -> Gray Zone)</option>
+              <option value="s1_fault_p3_str">Rule 5: S1 Terminal Break P3-Str1 (C2=1, C3=1, C4=0)</option>
+            </optgroup>
+            <optgroup label="String 2 Fault Rules (Truth Table)">
+              <option value="s2_fault_p4_p5_pwr">Rule 1: S2 P4-P5 Power (+) Wire Broken (C6=0, C7=1)</option>
+              <option value="s2_fault_p4_p5_gnd">Rule 2: S2 P4-P5 Sense GND Broken (C6=0, C7=0 -> Gray Zone)</option>
+              <option value="s2_fault_p5_p6_pwr">Rule 3: S2 P5-P6 Power (+) Wire Broken (C6=1, C7=0, C8=1)</option>
+              <option value="s2_fault_p5_p6_gnd">Rule 4: S2 P5-P6 Sense GND Broken (C6=1, C7=0, C8=0 -> Gray Zone)</option>
+              <option value="s2_fault_p6_str">Rule 5: S2 Terminal Break P6-Str2 (C6=1, C7=1, C8=0)</option>
+            </optgroup>
+            <optgroup label="Other Diagnostic Scenarios">
+              <option value="low_voltage">⛅ Low Voltage / Partial Shading on Panel 2</option>
+              <option value="gateway_offline">🔴 Gateway Offline Simulation</option>
+            </optgroup>
+          </select>
+          <button id="btn-apply-scenario" type="button" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded text-xs transition cursor-pointer flex items-center gap-1">
+            <i data-lucide="play" class="w-3 h-3"></i>
+            <span>Inject</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Visual Schematic Array with SVG Circuit Switches & Combiner Box -->
       <div class="bg-black/40 rounded p-3 border border-[#222733]" id="schematic-wrapper">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
           <div class="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="circuit-board" class="w-3.5 h-3.5 text-zinc-400"></i>
-            <span>Schematic String View (Series Circuit with Inter-Node Switch Isolation)</span>
+            <span>3S2P Array Schematic (2 Strings &times; 3 Panels + Dedicated STRING GND Buses + Combiner Box)</span>
           </div>
 
           <!-- Floating View Mode Toggle Tab -->
@@ -235,15 +277,15 @@
         </div>
         
         <div class="string-array-row mobile-fit-screen" id="iot-string-row">
-          <!-- Dynamically populated by app.js -->
-          <div class="text-zinc-400 text-xs py-6 font-mono">Loading solar string nodes and circuit switches...</div>
+          <!-- Dynamically populated by app.js (3S2P Array: String 1 + String 2 + Combiner Box) -->
+          <div class="text-zinc-400 text-xs py-6 font-mono">Loading 3S2P solar array schematic and circuit switches...</div>
         </div>
 
         <!-- Mobile Quick Hint -->
         <div class="sm:hidden text-center text-[10px] text-zinc-400 pt-1 pb-0.5" id="mobile-schematic-hint">
           <span class="inline-flex items-center gap-1 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 font-mono">
             <i data-lucide="touchpad" class="w-3 h-3 text-amber-400"></i>
-            <span>Tap node for telemetry &bull; Zoom for expanded view</span>
+            <span>Tap any node for live telemetry &bull; Switch mode for zoomed view</span>
           </span>
         </div>
 
@@ -253,10 +295,10 @@
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Closed &amp; Intact
           </span>
           <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#200D0F] border border-[#DC2626] text-rose-400 font-medium">
-            <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Open Break (Root Cause)
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Open Break (Root Fault)
           </span>
           <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#171B22] border border-[#4B5563] text-zinc-400 font-medium">
-            <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span> Gray Zone (Downstream)
+            <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span> Gray Zone (Indeterminate)
           </span>
           <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#20170A] border border-[#D97706] text-amber-400 font-medium">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Low Voltage / Shading
@@ -264,42 +306,42 @@
         </div>
       </div>
 
-      <!-- Real-Time Metrics (High-Density Industrial Cards) -->
+      <!-- Real-Time Metrics (High-Density Industrial Cards - 3S2P System) -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
         <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-blue-500 rounded p-3">
           <div class="flex justify-between items-center mb-1">
-            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Live String Voltage</span>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Array Parallel Voltage</span>
             <span class="text-[9px] font-mono text-zinc-500">DC VOLTS</span>
           </div>
           <div id="metric-string-voltage" class="text-2xl font-bold text-white font-mono tracking-tight">-- V</div>
-          <span class="text-[10px] text-zinc-500 block mt-1">Series sum of active cells</span>
+          <span class="text-[10px] text-zinc-500 block mt-1" id="metric-voltage-sub">Average parallel bus (S1 &amp; S2)</span>
         </div>
 
         <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-emerald-500 rounded p-3">
           <div class="flex justify-between items-center mb-1">
-            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Live String Current</span>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Array Total Current</span>
             <span class="text-[9px] font-mono text-zinc-500">AMPERES</span>
           </div>
           <div id="metric-string-current" class="text-2xl font-bold text-white font-mono tracking-tight">-- A</div>
-          <span class="text-[10px] text-zinc-500 block mt-1">Measured at String Node 4</span>
+          <span class="text-[10px] text-zinc-500 block mt-1" id="metric-current-sub">I<sub>total</sub> = I<sub>S1</sub> + I<sub>S2</sub></span>
         </div>
 
         <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-amber-500 rounded p-3">
           <div class="flex justify-between items-center mb-1">
-            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Instantaneous Power</span>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Total Array Power</span>
             <span class="text-[9px] font-mono text-zinc-500">WATTS</span>
           </div>
           <div id="metric-string-power" class="text-2xl font-bold text-white font-mono tracking-tight">-- W</div>
-          <span class="text-[10px] text-zinc-500 block mt-1">P = V &times; I calculation</span>
+          <span class="text-[10px] text-zinc-500 block mt-1" id="metric-power-sub">P = V<sub>array</sub> &times; I<sub>total</sub></span>
         </div>
 
         <div class="bg-[#11141A] border border-[#222733] border-t-2 border-t-rose-500 rounded p-3">
           <div class="flex justify-between items-center mb-1">
-            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Array Temperature</span>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Array Avg Temperature</span>
             <span class="text-[9px] font-mono text-zinc-500">CELSIUS</span>
           </div>
           <div id="metric-string-temp" class="text-2xl font-bold text-white font-mono tracking-tight">-- &deg;C</div>
-          <span class="text-[10px] text-zinc-500 block mt-1">Panel string average</span>
+          <span class="text-[10px] text-zinc-500 block mt-1">6-panel array average</span>
         </div>
       </div>
 
@@ -315,7 +357,7 @@
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
           <span class="font-medium text-zinc-700">Connected Array Status:</span>
-          <span id="estimation-iot-status-badge" class="font-mono text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">All 4 Nodes Connected</span>
+          <span id="estimation-iot-status-badge" class="font-mono text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">All 8 Nodes Connected (3S2P Array)</span>
         </div>
         <button id="btn-goto-monitor" class="flex items-center gap-1.5 font-semibold text-[#0F2547] hover:text-blue-700 transition">
           <i data-lucide="radio" class="w-3.5 h-3.5 text-blue-700"></i>

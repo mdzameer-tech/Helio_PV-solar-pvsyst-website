@@ -980,96 +980,303 @@ app.post("/api/push-fault", async (req, res) => {
 });
 
 // Helper: Compute fault state consistently across endpoints
-let lastFaultState = null;
+let lastFaultKey = null;
+
+function getNodeLabel(id) {
+  switch (id) {
+    case 1:  return "STRING 1 - PANEL 1";
+    case 2:  return "STRING 1 - PANEL 2";
+    case 3:  return "STRING 1 - PANEL 3";
+    case 4:  return "STRING 1 - MASTER";
+    case 5:  return "STRING 2 - PANEL 1";
+    case 6:  return "STRING 2 - PANEL 2";
+    case 7:  return "STRING 2 - PANEL 3";
+    case 8:  return "STRING 2 - MASTER";
+    default: return `NODE ${id}`;
+  }
+}
+
+function isNodeBroken(id, gatewayAge) {
+  if (latest.isSimulated) {
+    const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
+    if (!n) return false;
+    const age = (n.ageMs || 0) + gatewayAge;
+    if (age > NODE_TIMEOUT_MS) return false;
+    return (n.continuity === false || n.continuity === "false" || n.continuity === 0);
+  }
+
+  if (packetHistory.length >= 2) {
+    const prevPacket = packetHistory[packetHistory.length - 2];
+    const currPacket = packetHistory[packetHistory.length - 1];
+
+    const prevNode = prevPacket.find((x) => (x.id === id || x.node_id === id));
+    const currNode = currPacket.find((x) => (x.id === id || x.node_id === id));
+
+    if (prevNode && currNode) {
+      const prevBroken = (prevNode.continuity === false || prevNode.continuity === "false" || prevNode.continuity === 0);
+      const currBroken = (currNode.continuity === false || currNode.continuity === "false" || currNode.continuity === 0);
+      return prevBroken && currBroken;
+    }
+  } else if (packetHistory.length === 1) {
+    const currNode = packetHistory[0].find((x) => (x.id === id || x.node_id === id));
+    if (currNode) {
+      return (currNode.continuity === false || currNode.continuity === "false" || currNode.continuity === 0);
+    }
+  }
+  return false;
+}
+
+// Evaluate diagnostic truth table for a 3-panel + string-monitor branch
+function evaluateStringDiagnostic(stringNum, cAId, cBId, cCId, gatewayAge) {
+  const pA = (stringNum === 1) ? "Panel 1" : "Panel 4";
+  const pB = (stringNum === 1) ? "Panel 2" : "Panel 5";
+  const pC = (stringNum === 1) ? "Panel 3" : "Panel 6";
+  const strName = (stringNum === 1) ? "String Monitor 1" : "String Monitor 2";
+  const strLabel = `String ${stringNum}`;
+
+  const cABroken = isNodeBroken(cAId, gatewayAge);
+  const cBBroken = isNodeBroken(cBId, gatewayAge);
+  const cCBroken = isNodeBroken(cCId, gatewayAge);
+
+  const wP1P2Pwr   = (stringNum === 1) ? "W_S1_P1_P2_PWR"   : "W_S2_P4_P5_PWR";
+  const wP1P2Sense = (stringNum === 1) ? "W_S1_P1_P2_SENSE" : "W_S2_P4_P5_SENSE";
+  const wP2P3Pwr   = (stringNum === 1) ? "W_S1_P2_P3_PWR"   : "W_S2_P5_P6_PWR";
+  const wP2P3Sense = (stringNum === 1) ? "W_S1_P2_P3_SENSE" : "W_S2_P5_P6_SENSE";
+  const wP3StrPwr  = (stringNum === 1) ? "W_S1_P3_STR_PWR"  : "W_S2_P6_STR_PWR";
+  const wStrGnd    = (stringNum === 1) ? "W_S1_STRING_GND"  : "W_S2_STRING_GND";
+
+  // Case 1: Ca = Broken, but Cb = OK -> Power (+) wire broken between Panel 1 & 2
+  if (cABroken && !cBBroken) {
+    return {
+      hasFault: true,
+      faultNodeId: cAId,
+      rootFaultNodeId: cAId,
+      faultType: "power",
+      brokenWireId: wP1P2Pwr,
+      description: `${strLabel}: Power (+) wire broken between ${pA} and ${pB}`,
+      wireStates: {
+        [wP1P2Pwr]: "open",
+        [wP1P2Sense]: "closed",
+        [wP2P3Pwr]: "closed",
+        [wP2P3Sense]: "closed",
+        [wP3StrPwr]: cCBroken ? "open" : "closed",
+        [wStrGnd]: "closed"
+      },
+      cellStates: {
+        [cAId - 1]: "ok",
+        [cAId]: "broken",
+        [cBId]: "ok",
+        [cCId]: cCBroken ? "broken" : "ok"
+      }
+    };
+  }
+
+  // Case 2: Ca = Broken AND Cb = Broken -> Sense GND broken between Panel 1 & 2
+  if (cABroken && cBBroken) {
+    return {
+      hasFault: true,
+      faultNodeId: cAId,
+      rootFaultNodeId: cAId,
+      faultType: "sense_gnd",
+      brokenWireId: wP1P2Sense,
+      description: `${strLabel}: Sense GND broken between ${pA} and ${pB}`,
+      wireStates: {
+        [wP1P2Pwr]: "closed",
+        [wP1P2Sense]: "open",
+        [wP2P3Pwr]: "gray_zone",
+        [wP2P3Sense]: "gray_zone",
+        [wP3StrPwr]: "gray_zone",
+        [wStrGnd]: "gray_zone"
+      },
+      cellStates: {
+        [cAId - 1]: "ok",
+        [cAId]: "broken",
+        [cBId]: "gray_zone",
+        [cCId]: "gray_zone"
+      }
+    };
+  }
+
+  // Case 3: Ca = OK, Cb = Broken, but Cc = OK -> Power (+) wire broken between Panel 2 & 3
+  if (!cABroken && cBBroken && !cCBroken) {
+    return {
+      hasFault: true,
+      faultNodeId: cBId,
+      rootFaultNodeId: cBId,
+      faultType: "power",
+      brokenWireId: wP2P3Pwr,
+      description: `${strLabel}: Power (+) wire broken between ${pB} and ${pC}`,
+      wireStates: {
+        [wP1P2Pwr]: "closed",
+        [wP1P2Sense]: "closed",
+        [wP2P3Pwr]: "open",
+        [wP2P3Sense]: "closed",
+        [wP3StrPwr]: "closed",
+        [wStrGnd]: "closed"
+      },
+      cellStates: {
+        [cAId - 1]: "ok",
+        [cAId]: "ok",
+        [cBId]: "broken",
+        [cCId]: "ok"
+      }
+    };
+  }
+
+  // Case 4: Ca = OK, Cb = Broken, AND Cc = Broken -> Sense GND broken between Panel 2 & 3
+  if (!cABroken && cBBroken && cCBroken) {
+    return {
+      hasFault: true,
+      faultNodeId: cBId,
+      rootFaultNodeId: cBId,
+      faultType: "sense_gnd",
+      brokenWireId: wP2P3Sense,
+      description: `${strLabel}: Sense GND broken between ${pB} and ${pC}`,
+      wireStates: {
+        [wP1P2Pwr]: "closed",
+        [wP1P2Sense]: "closed",
+        [wP2P3Pwr]: "closed",
+        [wP2P3Sense]: "open",
+        [wP3StrPwr]: "gray_zone",
+        [wStrGnd]: "gray_zone"
+      },
+      cellStates: {
+        [cAId - 1]: "ok",
+        [cAId]: "ok",
+        [cBId]: "broken",
+        [cCId]: "gray_zone"
+      }
+    };
+  }
+
+  // Case 5: Ca = OK, Cb = OK, but Cc = Broken -> Terminal break between Panel 3 & String Monitor
+  if (!cABroken && !cBBroken && cCBroken) {
+    return {
+      hasFault: true,
+      faultNodeId: cCId,
+      rootFaultNodeId: cCId,
+      faultType: "terminal",
+      brokenWireId: `${wP3StrPwr}, ${wStrGnd}`,
+      description: `${strLabel}: Terminal break between ${pC} and ${strName} (BOTH Power (+) and STRING GND disconnected)`,
+      wireStates: {
+        [wP1P2Pwr]: "closed",
+        [wP1P2Sense]: "closed",
+        [wP2P3Pwr]: "closed",
+        [wP2P3Sense]: "closed",
+        [wP3StrPwr]: "open",
+        [wStrGnd]: "open"
+      },
+      cellStates: {
+        [cAId - 1]: "ok",
+        [cAId]: "ok",
+        [cBId]: "ok",
+        [cCId]: "broken"
+      }
+    };
+  }
+
+  // Case 6: All intact
+  return {
+    hasFault: false,
+    faultNodeId: null,
+    rootFaultNodeId: null,
+    faultType: "none",
+    brokenWireId: null,
+    description: null,
+    wireStates: {
+      [wP1P2Pwr]: "closed",
+      [wP1P2Sense]: "closed",
+      [wP2P3Pwr]: "closed",
+      [wP2P3Sense]: "closed",
+      [wP3StrPwr]: "closed",
+      [wStrGnd]: "closed"
+    },
+    cellStates: {
+      [cAId - 1]: "ok",
+      [cAId]: "ok",
+      [cBId]: "ok",
+      [cCId]: "ok"
+    }
+  };
+}
 
 function computeFaultState() {
   const gatewayAge = Date.now() - latest.receivedAt;
   const gatewayOnline = latest.receivedAt !== 0 && gatewayAge < GATEWAY_TIMEOUT_MS;
 
-  let faultNodeId = null;
-  let faultDescription = null;
-
-  if (gatewayOnline) {
-    for (let id = 2; id <= 4; id++) {
-      let isConfirmedBroken = false;
-
-      if (latest.isSimulated) {
-        // In simulation mode, evaluate mock nodes directly
-        const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
-        if (n) {
-          const age = (n.ageMs || 0) + gatewayAge;
-          const isContinuityBroken = (n.continuity === false || n.continuity === "false" || n.continuity === 0);
-          if (age <= NODE_TIMEOUT_MS && isContinuityBroken) {
-            isConfirmedBroken = true;
-          }
-        }
-      } else {
-        // LIVE HARDWARE: Require previous TWO polled values from ESP32 to BOTH show the same disconnection
-        // This eliminates single-packet transient glitches/noise.
-        if (packetHistory.length >= 2) {
-          const prevPacket = packetHistory[packetHistory.length - 2];
-          const currPacket = packetHistory[packetHistory.length - 1];
-
-          const prevNode = prevPacket.find((x) => (x.id === id || x.node_id === id));
-          const currNode = currPacket.find((x) => (x.id === id || x.node_id === id));
-
-          if (prevNode && currNode) {
-            const prevBroken = (prevNode.continuity === false || prevNode.continuity === "false" || prevNode.continuity === 0);
-            const currBroken = (currNode.continuity === false || currNode.continuity === "false" || currNode.continuity === 0);
-
-            // Both consecutive polled values must report disconnection
-            if (prevBroken && currBroken) {
-              isConfirmedBroken = true;
-            }
-          }
-        }
-      }
-
-      if (isConfirmedBroken) {
-        faultNodeId = id;
-        if (id === 2) {
-          faultDescription = "Disconnection detected between Panel 1 and Panel 2";
-        } else if (id === 3) {
-          faultDescription = "Disconnection detected between Panel 2 and Panel 3";
-        } else if (id === 4) {
-          faultDescription = "Disconnection detected between Panel 3 and String Node";
-        }
-        break; // Stop at LOWEST numbered node
-      }
-    }
+  if (!gatewayOnline) {
+    return {
+      gatewayAge,
+      gatewayOnline: false,
+      faultNodeId: null,
+      faultDescription: null,
+      brokenWireId: null,
+      faultType: "none",
+      string1Fault: { hasFault: false },
+      string2Fault: { hasFault: false },
+      faults: []
+    };
   }
 
-  return { gatewayAge, gatewayOnline, faultNodeId, faultDescription };
+  const s1Diag = evaluateStringDiagnostic(1, 2, 3, 4, gatewayAge);
+  const s2Diag = evaluateStringDiagnostic(2, 6, 7, 8, gatewayAge);
+
+  const faults = [];
+  if (s1Diag.hasFault) faults.push(s1Diag);
+  if (s2Diag.hasFault) faults.push(s2Diag);
+
+  let faultNodeId = null;
+  let faultDescription = null;
+  let brokenWireId = null;
+  let faultType = "none";
+
+  if (faults.length > 0) {
+    faultNodeId = faults[0].rootFaultNodeId;
+    brokenWireId = faults.map(f => f.brokenWireId).filter(Boolean).join("; ");
+    faultType = faults[0].faultType;
+    faultDescription = faults.map(f => f.description).join(" | ");
+  }
+
+  return {
+    gatewayAge,
+    gatewayOnline,
+    faultNodeId,
+    faultDescription,
+    brokenWireId,
+    faultType,
+    string1Fault: s1Diag,
+    string2Fault: s2Diag,
+    faults
+  };
 }
 
 function checkFaultAndNotify() {
   const { gatewayOnline, faultNodeId, faultDescription } = computeFaultState();
+  const currentFaultKey = faultDescription || null;
 
-  if (faultNodeId !== null && faultNodeId !== lastFaultState) {
-    // A NEW or CHANGED fault occurred!
-    console.log(`[ALERT] 🚨 Solar String Fault at Node ${faultNodeId}! Triggering Native Push...`);
+  if (currentFaultKey && currentFaultKey !== lastFaultKey) {
+    console.log(`[ALERT] 🚨 Solar 3S2P Array Fault at Node ${faultNodeId}! Triggering Native Push...`);
     sendPushNotification({
-      title: "🚨 Solar String Fault Detected!",
-      body: `CRITICAL ALERT: Wire break at Node ${faultNodeId}! ${faultDescription}`,
+      title: "🚨 Solar 3S2P Array Fault Detected!",
+      body: `CRITICAL ALERT: ${faultDescription}`,
       icon: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
       badge: "https://cdn-icons-png.flaticon.com/512/564/564619.png",
       vibrate: [300, 150, 300, 150, 300],
       url: "/?view=monitor"
     });
-    lastFaultState = faultNodeId;
-  } else if (faultNodeId === null && lastFaultState !== null) {
-    // System recovered
+    lastFaultKey = currentFaultKey;
+  } else if (!currentFaultKey && lastFaultKey !== null) {
     if (gatewayOnline) {
-      console.log(`[ALERT] ✅ Solar String Fault Cleared! Triggering Recovery Push...`);
+      console.log(`[ALERT] ✅ Solar Array Fault Cleared! Triggering Recovery Push...`);
       sendPushNotification({
-        title: "✅ Solar String Restored",
-        body: "All panel connections are back to normal.",
+        title: "✅ Solar 3S2P Array Restored",
+        body: "All series strings and panel connections are intact.",
         icon: "https://cdn-icons-png.flaticon.com/512/190/190411.png",
         badge: "https://cdn-icons-png.flaticon.com/512/190/190411.png",
         vibrate: [100, 50, 100],
         url: "/?view=monitor"
       });
-      lastFaultState = null;
+      lastFaultKey = null;
     }
   }
 }
@@ -1156,7 +1363,32 @@ app.get("/api/ml/predict", async (req, res) => {
   }
 });
 
-// ESP32 posts telemetry packets here
+// Helper to generate 8-node 3S2P mock telemetry
+function generate3S2PMockNodes({
+  s1_c2 = true, s1_c3 = true, s1_c4 = true,
+  s2_c6 = true, s2_c7 = true, s2_c8 = true,
+  p2_low_v = false,
+  s1_dead = false, s2_dead = false
+} = {}) {
+  const s1_current = (s1_dead || !s1_c4) ? 0 : 350;
+  const s2_current = (s2_dead || !s2_c8) ? 0 : 345;
+
+  return [
+    // STRING 1 (Nodes 1-4)
+    { id: 1, node_id: 1, string_id: 1, panel_id: 1, label: "STRING 1 - PANEL 1", node_type: 0, continuity: true, temp_c10: 295, temp_c: 29.5, voltage_mV: 2450, current_mA: 0, ldr_raw: 0, ageMs: 80 },
+    { id: 2, node_id: 2, string_id: 1, panel_id: 2, label: "STRING 1 - PANEL 2", node_type: 1, continuity: s1_c2, temp_c10: 310, temp_c: 31.0, voltage_mV: p2_low_v ? 350 : 2420, current_mA: 0, ldr_raw: 0, ageMs: 90 },
+    { id: 3, node_id: 3, string_id: 1, panel_id: 3, label: "STRING 1 - PANEL 3", node_type: 1, continuity: s1_c3, temp_c10: 305, temp_c: 30.5, voltage_mV: 2410, current_mA: 0, ldr_raw: 0, ageMs: 70 },
+    { id: 4, node_id: 4, string_id: 1, panel_id: 0, label: "STRING 1 - MASTER",  node_type: 2, continuity: s1_c4, temp_c10: -999, temp_c: null, voltage_mV: s1_dead ? 0 : 7280, current_mA: s1_current, ldr_raw: 890, ageMs: 60 },
+
+    // STRING 2 (Nodes 5-8)
+    { id: 5, node_id: 5, string_id: 2, panel_id: 1, label: "STRING 2 - PANEL 1", node_type: 0, continuity: true, temp_c10: 298, temp_c: 29.8, voltage_mV: 2440, current_mA: 0, ldr_raw: 0, ageMs: 85 },
+    { id: 6, node_id: 6, string_id: 2, panel_id: 2, label: "STRING 2 - PANEL 2", node_type: 1, continuity: s2_c6, temp_c10: 312, temp_c: 31.2, voltage_mV: 2430, current_mA: 0, ldr_raw: 0, ageMs: 95 },
+    { id: 7, node_id: 7, string_id: 2, panel_id: 3, label: "STRING 2 - PANEL 3", node_type: 1, continuity: s2_c7, temp_c10: 302, temp_c: 30.2, voltage_mV: 2410, current_mA: 0, ldr_raw: 0, ageMs: 75 },
+    { id: 8, node_id: 8, string_id: 2, panel_id: 0, label: "STRING 2 - MASTER",  node_type: 2, continuity: s2_c8, temp_c10: -999, temp_c: null, voltage_mV: s2_dead ? 0 : 7280, current_mA: s2_current, ldr_raw: 885, ageMs: 65 }
+  ];
+}
+
+// ESP32 posts telemetry packets here (all 8 nodes of 3S2P array)
 app.post("/api/data", (req, res) => {
   const rawNodes = (req.body && req.body.nodes) || [];
   const normalizedNodes = rawNodes.map((raw) => {
@@ -1169,8 +1401,12 @@ app.post("/api/data", (req, res) => {
       else if (raw.node_type === "panel_full") node_type = 1;
       else node_type = 0;
     } else {
-      node_type = id === 4 ? 2 : (id === 1 ? 0 : 1);
+      node_type = (id === 4 || id === 8) ? 2 : ((id === 1 || id === 5) ? 0 : 1);
     }
+
+    const string_id = raw.string_id !== undefined ? Number(raw.string_id) : (id <= 4 ? 1 : 2);
+    const panel_id  = raw.panel_id !== undefined ? Number(raw.panel_id) : (node_type === 2 ? 0 : (id <= 4 ? id : id - 4));
+    const label     = raw.label || getNodeLabel(id);
 
     let continuity = true;
     if (raw.continuity === false || raw.continuity === "false" || raw.continuity === 0) {
@@ -1188,6 +1424,9 @@ app.post("/api/data", (req, res) => {
     return {
       id,
       node_id: id,
+      string_id,
+      panel_id,
+      label,
       node_type,
       continuity,
       temp_c10,
@@ -1214,7 +1453,7 @@ app.post("/api/data", (req, res) => {
 
   if (Date.now() - lastLog > 2000) {
     lastLog = Date.now();
-    console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${normalizedNodes.length} active node(s) (History depth: ${packetHistory.length})`);
+    console.log(`[${new Date().toLocaleTimeString()}] ESP32 Live Packet Received: ${normalizedNodes.length} active node(s) across 3S2P array (History depth: ${packetHistory.length})`);
   }
 
   // Trigger alert if open circuit fault was detected
@@ -1222,7 +1461,7 @@ app.post("/api/data", (req, res) => {
   res.sendStatus(200);
 });
 
-// Simulation endpoint for client demos & testing
+// Simulation endpoint for client demos & testing 3S2P diagnostic truth table
 app.post("/api/simulate", (req, res) => {
   const scenario = (req.body && req.body.scenario) || "normal";
 
@@ -1239,59 +1478,88 @@ app.post("/api/simulate", (req, res) => {
     return res.json({ success: true, message: "Switched to Live Hardware Mode", scenario: "live_hardware" });
   }
 
-  // Generate simulated nodes based on scenario
-  let mockNodes = [];
   const now = Date.now();
+  let mockNodes = [];
 
-  if (scenario === "normal") {
-    // All 4 nodes connected and healthy
-    mockNodes = [
-      { id: 1, node_type: 0, continuity: true, temp_c10: 295, voltage_mV: 18450, current_mA: 0, ldr_raw: 0, ageMs: 120 },
-      { id: 2, node_type: 1, continuity: true, temp_c10: 310, voltage_mV: 18200, current_mA: 0, ldr_raw: 0, ageMs: 150 },
-      { id: 3, node_type: 1, continuity: true, temp_c10: 305, voltage_mV: 18350, current_mA: 0, ldr_raw: 0, ageMs: 110 },
-      { id: 4, node_type: 2, continuity: true, temp_c10: -999, voltage_mV: 55000, current_mA: 5400, ldr_raw: 890, ageMs: 90 }
-    ];
-  } else if (scenario === "fault_p1_p2") {
-    // Broken connection between Panel 1 and Panel 2 (reported by Node 2)
-    mockNodes = [
-      { id: 1, node_type: 0, continuity: true, temp_c10: 295, voltage_mV: 18450, current_mA: 0, ldr_raw: 0, ageMs: 120 },
-      { id: 2, node_type: 1, continuity: false, temp_c10: 310, voltage_mV: 18200, current_mA: 0, ldr_raw: 0, ageMs: 150 },
-      { id: 3, node_type: 1, continuity: false, temp_c10: 305, voltage_mV: 18350, current_mA: 0, ldr_raw: 0, ageMs: 110 },
-      { id: 4, node_type: 2, continuity: false, temp_c10: -999, voltage_mV: 0, current_mA: 0, ldr_raw: 890, ageMs: 90 }
-    ];
-  } else if (scenario === "fault_p2_p3") {
-    // Broken connection between Panel 2 and Panel 3 (reported by Node 3)
-    mockNodes = [
-      { id: 1, node_type: 0, continuity: true, temp_c10: 295, voltage_mV: 18450, current_mA: 0, ldr_raw: 0, ageMs: 120 },
-      { id: 2, node_type: 1, continuity: true, temp_c10: 310, voltage_mV: 18200, current_mA: 0, ldr_raw: 0, ageMs: 150 },
-      { id: 3, node_type: 1, continuity: false, temp_c10: 305, voltage_mV: 18350, current_mA: 0, ldr_raw: 0, ageMs: 110 },
-      { id: 4, node_type: 2, continuity: false, temp_c10: -999, voltage_mV: 0, current_mA: 0, ldr_raw: 890, ageMs: 90 }
-    ];
-  } else if (scenario === "fault_p3_string") {
-    // Broken connection between Panel 3 and String node (reported by Node 4)
-    mockNodes = [
-      { id: 1, node_type: 0, continuity: true, temp_c10: 295, voltage_mV: 18450, current_mA: 0, ldr_raw: 0, ageMs: 120 },
-      { id: 2, node_type: 1, continuity: true, temp_c10: 310, voltage_mV: 18200, current_mA: 0, ldr_raw: 0, ageMs: 150 },
-      { id: 3, node_type: 1, continuity: true, temp_c10: 305, voltage_mV: 18350, current_mA: 0, ldr_raw: 0, ageMs: 110 },
-      { id: 4, node_type: 2, continuity: false, temp_c10: -999, voltage_mV: 0, current_mA: 0, ldr_raw: 890, ageMs: 90 }
-    ];
-  } else if (scenario === "low_voltage") {
-    // Shading on Panel 2 causing low voltage drop
-    mockNodes = [
-      { id: 1, node_type: 0, continuity: true, temp_c10: 295, voltage_mV: 18450, current_mA: 0, ldr_raw: 0, ageMs: 120 },
-      { id: 2, node_type: 1, continuity: true, temp_c10: 380, voltage_mV: 350, current_mA: 0, ldr_raw: 0, ageMs: 150 },
-      { id: 3, node_type: 1, continuity: true, temp_c10: 305, voltage_mV: 18350, current_mA: 0, ldr_raw: 0, ageMs: 110 },
-      { id: 4, node_type: 2, continuity: true, temp_c10: -999, voltage_mV: 37150, current_mA: 2100, ldr_raw: 410, ageMs: 90 }
-    ];
-  } else if (scenario === "gateway_offline") {
-    latest = {
-      nodes: [],
-      receivedAt: 0,
-      isSimulated: true,
-      simulationScenario: "gateway_offline"
-    };
-    checkFaultAndNotify();
-    return res.json({ success: true, message: "Simulating Gateway Offline", scenario: "gateway_offline" });
+  switch (scenario) {
+    case "normal":
+      // All 8 nodes healthy
+      mockNodes = generate3S2PMockNodes();
+      break;
+
+    // String 1 Scenarios
+    case "s1_fault_p1_p2_pwr":
+    case "fault_p1_p2": // backward compat alias
+      // Case 1: C2 = Broken, but C3 = OK -> Power (+) wire broken between Panel 1 & 2
+      mockNodes = generate3S2PMockNodes({ s1_c2: false, s1_c3: true, s1_c4: true });
+      break;
+
+    case "s1_fault_p1_p2_gnd":
+      // Case 2: C2 = Broken AND C3 = Broken -> Sense GND broken between Panel 1 & 2
+      mockNodes = generate3S2PMockNodes({ s1_c2: false, s1_c3: false, s1_c4: false, s1_dead: true });
+      break;
+
+    case "s1_fault_p2_p3_pwr":
+    case "fault_p2_p3": // backward compat alias
+      // Case 3: C2 = OK, C3 = Broken, but C4 = OK -> Power (+) wire broken between Panel 2 & 3
+      mockNodes = generate3S2PMockNodes({ s1_c2: true, s1_c3: false, s1_c4: true });
+      break;
+
+    case "s1_fault_p2_p3_gnd":
+      // Case 4: C2 = OK, C3 = Broken, AND C4 = Broken -> Sense GND broken between Panel 2 & 3
+      mockNodes = generate3S2PMockNodes({ s1_c2: true, s1_c3: false, s1_c4: false, s1_dead: true });
+      break;
+
+    case "s1_fault_p3_str":
+    case "fault_p3_string": // backward compat alias
+      // Case 5: C2 = OK, C3 = OK, but C4 = Broken -> Terminal break between Panel 3 & String 1
+      mockNodes = generate3S2PMockNodes({ s1_c2: true, s1_c3: true, s1_c4: false, s1_dead: true });
+      break;
+
+    // String 2 Scenarios
+    case "s2_fault_p4_p5_pwr":
+      // Case 1 on S2: C6 = Broken, but C7 = OK -> Power (+) wire broken between Panel 4 & 5
+      mockNodes = generate3S2PMockNodes({ s2_c6: false, s2_c7: true, s2_c8: true });
+      break;
+
+    case "s2_fault_p4_p5_gnd":
+      // Case 2 on S2: C6 = Broken AND C7 = Broken -> Sense GND broken between Panel 4 & 5
+      mockNodes = generate3S2PMockNodes({ s2_c6: false, s2_c7: false, s2_c8: false, s2_dead: true });
+      break;
+
+    case "s2_fault_p5_p6_pwr":
+      // Case 3 on S2: C6 = OK, C7 = Broken, but C8 = OK -> Power (+) wire broken between Panel 5 & 6
+      mockNodes = generate3S2PMockNodes({ s2_c6: true, s2_c7: false, s2_c8: true });
+      break;
+
+    case "s2_fault_p5_p6_gnd":
+      // Case 4 on S2: C6 = OK, C7 = Broken, AND C8 = Broken -> Sense GND broken between Panel 5 & 6
+      mockNodes = generate3S2PMockNodes({ s2_c6: true, s2_c7: false, s2_c8: false, s2_dead: true });
+      break;
+
+    case "s2_fault_p6_str":
+      // Case 5 on S2: C6 = OK, C7 = OK, but C8 = Broken -> Terminal break between Panel 6 & String 2
+      mockNodes = generate3S2PMockNodes({ s2_c6: true, s2_c7: true, s2_c8: false, s2_dead: true });
+      break;
+
+    case "low_voltage":
+      // Partial shading on Panel 2
+      mockNodes = generate3S2PMockNodes({ p2_low_v: true });
+      break;
+
+    case "gateway_offline":
+      latest = {
+        nodes: [],
+        receivedAt: 0,
+        isSimulated: true,
+        simulationScenario: "gateway_offline"
+      };
+      checkFaultAndNotify();
+      return res.json({ success: true, message: "Simulating Gateway Offline", scenario: "gateway_offline" });
+
+    default:
+      mockNodes = generate3S2PMockNodes();
+      break;
   }
 
   latest = {
@@ -1302,19 +1570,28 @@ app.post("/api/simulate", (req, res) => {
   };
   packetHistory = [mockNodes, mockNodes];
 
-  console.log(`[${new Date().toLocaleTimeString()}] Simulation Scenario Active: ${scenario}`);
+  console.log(`[${new Date().toLocaleTimeString()}] 3S2P Simulation Scenario Active: ${scenario}`);
   checkFaultAndNotify();
   res.json({ success: true, message: `Active scenario: ${scenario}`, scenario });
 });
 
-// Status endpoint polled by frontend UI
+// Status endpoint polled by frontend UI (Comprehensive 3S2P Topology + Combiner Box)
 app.get("/api/status", (req, res) => {
-  const { gatewayAge, gatewayOnline, faultNodeId, faultDescription } = computeFaultState();
+  const {
+    gatewayAge,
+    gatewayOnline,
+    faultNodeId,
+    faultDescription,
+    brokenWireId,
+    faultType,
+    string1Fault,
+    string2Fault
+  } = computeFaultState();
 
-  // 2. Build cell statuses with cascade / gray zone support
-  const cells = [1, 2, 3, 4].map((id) => {
+  // 1. Build all 8 cell statuses with truth table diagnostic states
+  const cells = [1, 2, 3, 4, 5, 6, 7, 8].map((id) => {
     const n = latest.nodes.find((x) => (x.id === id || x.node_id === id));
-    let nodeType = n ? n.node_type : (id <= 3 ? (id === 1 ? 0 : 1) : 2);
+    let nodeType = n ? n.node_type : ((id === 4 || id === 8) ? 2 : ((id === 1 || id === 5) ? 0 : 1));
     if (typeof nodeType === "string") {
       if (nodeType === "string") nodeType = 2;
       else if (nodeType === "panel_full") nodeType = 1;
@@ -1322,24 +1599,22 @@ app.get("/api/status", (req, res) => {
     }
     const typeName = NODE_TYPE_NAME[nodeType] || "unknown";
 
+    const string_id = (id <= 4) ? 1 : 2;
+    const panel_id  = (nodeType === 2) ? 0 : (id <= 4 ? id : id - 4);
+    const label     = n ? (n.label || getNodeLabel(id)) : getNodeLabel(id);
+
     if (!n || !gatewayOnline) {
-      return { id, type: typeName, state: "no_signal" };
+      return { id, node_id: id, string_id, panel_id, label, type: typeName, state: "no_signal" };
     }
 
     const age = (n.ageMs || 0) + gatewayAge;
     if (age > NODE_TIMEOUT_MS) {
-      return { id, type: typeName, state: "no_signal" };
+      return { id, node_id: id, string_id, panel_id, label, type: typeName, state: "no_signal" };
     }
 
-    // Determine state based on fault isolation
-    let state = "ok";
-    if (faultNodeId !== null) {
-      if (id === faultNodeId) {
-        state = "broken"; // The actual break point!
-      } else if (id > faultNodeId) {
-        state = "gray_zone"; // Downstream: indeterminate until upstream wire fixed
-      }
-    }
+    // Determine state based on truth table evaluation for this node's string
+    const stringDiag = (string_id === 1) ? string1Fault : string2Fault;
+    let state = (stringDiag && stringDiag.cellStates && stringDiag.cellStates[id]) ? stringDiag.cellStates[id] : "ok";
 
     if (typeName === "panel_basic" || typeName === "panel_full") {
       const voltage = (n.voltage_mV || 0) / 1000;
@@ -1350,17 +1625,17 @@ app.get("/api/status", (req, res) => {
         temp = (n.temp_c10 <= -900) ? null : n.temp_c10 / 10;
       }
       if (state === "ok" && (n.voltage_mV || 0) < LOW_VOLTAGE_MV) state = "low_voltage";
-      return { id, type: typeName, state, temp, voltage };
+      return { id, node_id: id, string_id, panel_id, label, type: typeName, state, temp, voltage, continuity: n.continuity };
     }
 
-    // String node: continuity + current + LDR + string voltage + power
+    // String monitor node (id 4 or 8)
     const current = (n.current_mA || 0) / 1000;
-
     let stringVoltage = 0;
     if (n.voltage_mV && n.voltage_mV > 0) {
       stringVoltage = n.voltage_mV / 1000;
     } else {
-      for (let pId = 1; pId <= 3; pId++) {
+      const startP = (string_id === 1) ? 1 : 5;
+      for (let pId = startP; pId < startP + 3; pId++) {
         const pNode = latest.nodes.find((x) => (x.id === pId || x.node_id === pId));
         if (pNode && pNode.voltage_mV > 0) {
           stringVoltage += pNode.voltage_mV / 1000;
@@ -1371,73 +1646,69 @@ app.get("/api/status", (req, res) => {
 
     return {
       id,
+      node_id: id,
+      string_id,
+      panel_id,
+      label,
       type: typeName,
       state,
       voltage: Number(stringVoltage.toFixed(2)),
       current: Number(current.toFixed(3)),
       power: Number(power.toFixed(2)),
+      continuity: n.continuity,
       ldr: n.ldr_raw || 0
     };
   });
 
-  // 3. Compute 7 distinct physical wires across the array
-  const stringNodeData = latest.nodes.find((x) => (x.id === 4 || x.node_id === 4));
-  const stringCurrent_mA = stringNodeData ? (stringNodeData.current_mA || 0) : 0;
-  const isPowerFlowing = stringCurrent_mA > 15;
+  // 2. Compute String 1, String 2, and 3S2P Array Combiner Box Metrics
+  const s1WireStates = (string1Fault && string1Fault.wireStates) || {};
+  const s2WireStates = (string2Fault && string2Fault.wireStates) || {};
 
-  let brokenWireId = null;
-  let faultType = "none";
+  const s1Node = latest.nodes.find((x) => (x.id === 4 || x.node_id === 4));
+  const s2Node = latest.nodes.find((x) => (x.id === 8 || x.node_id === 8));
 
-  if (faultNodeId === 2) {
-    brokenWireId = "W_P1_P2_PWR";
-    faultType = "power";
-  } else if (faultNodeId === 3) {
-    brokenWireId = "W_P2_P3_PWR";
-    faultType = "power";
-  } else if (faultNodeId === 4) {
-    brokenWireId = "W_P3_STR_PWR";
-    faultType = "power";
-  }
+  const s1Current_mA = (s1Node && gatewayOnline) ? (s1Node.current_mA || 0) : 0;
+  const s2Current_mA = (s2Node && gatewayOnline) ? (s2Node.current_mA || 0) : 0;
+  const totalCurrent_mA = s1Current_mA + s2Current_mA;
 
-  const rawWires = [
-    { id: "W_P1_P2_PWR",    from: 1, to: 2, role: "power" },
-    { id: "W_P1_P2_SENSE",  from: 1, to: 2, role: "sensing_gnd" },
-    { id: "W_P1_STR_SENSE", from: 1, to: 4, role: "sensing_wire" },
-    { id: "W_P2_P3_PWR",    from: 2, to: 3, role: "power" },
-    { id: "W_P2_P3_SENSE",  from: 2, to: 3, role: "sensing_gnd" },
-    { id: "W_P3_STR_PWR",   from: 3, to: 4, role: "power" }
+  const s1Volt_mV = (s1Node && gatewayOnline) ? (s1Node.voltage_mV || 0) : 0;
+  const s2Volt_mV = (s2Node && gatewayOnline) ? (s2Node.voltage_mV || 0) : 0;
+  const avgVolt_mV = (s1Volt_mV > 0 && s2Volt_mV > 0) ? Math.round((s1Volt_mV + s2Volt_mV) / 2) : Math.max(s1Volt_mV, s2Volt_mV);
+
+  const arrayVolt_V    = Number((avgVolt_mV / 1000).toFixed(2));
+  const arrayCurrent_A = Number((totalCurrent_mA / 1000).toFixed(3));
+  const arrayPower_W   = Number((arrayVolt_V * arrayCurrent_A).toFixed(2));
+
+  // Determine wire states for Combiner Box inputs and outputs
+  let combS1State = !gatewayOnline ? "no_signal" : (string1Fault && string1Fault.hasFault ? "open" : "closed");
+  let combS2State = !gatewayOnline ? "no_signal" : (string2Fault && string2Fault.hasFault ? "open" : "closed");
+  let combOutState = !gatewayOnline ? "no_signal" : (totalCurrent_mA > 15 ? "closed" : ((string1Fault && string1Fault.hasFault) && (string2Fault && string2Fault.hasFault) ? "open" : "closed"));
+
+  const wires = [
+    // String 1 wires
+    { id: "W_S1_P1_P2_PWR",   string_id: 1, from: 1, to: 2, role: "power",        state: !gatewayOnline ? "no_signal" : (s1WireStates["W_S1_P1_P2_PWR"] || "closed") },
+    { id: "W_S1_P1_P2_SENSE", string_id: 1, from: 1, to: 2, role: "sensing_gnd",   state: !gatewayOnline ? "no_signal" : (s1WireStates["W_S1_P1_P2_SENSE"] || "closed") },
+    { id: "W_S1_STRING_GND",  string_id: 1, from: 1, to: 4, role: "string_gnd",    state: !gatewayOnline ? "no_signal" : (s1WireStates["W_S1_STRING_GND"] || "closed") },
+    { id: "W_S1_P2_P3_PWR",   string_id: 1, from: 2, to: 3, role: "power",        state: !gatewayOnline ? "no_signal" : (s1WireStates["W_S1_P2_P3_PWR"] || "closed") },
+    { id: "W_S1_P2_P3_SENSE", string_id: 1, from: 2, to: 3, role: "sensing_gnd",   state: !gatewayOnline ? "no_signal" : (s1WireStates["W_S1_P2_P3_SENSE"] || "closed") },
+    { id: "W_S1_P3_STR_PWR",  string_id: 1, from: 3, to: 4, role: "power",        state: !gatewayOnline ? "no_signal" : (s1WireStates["W_S1_P3_STR_PWR"] || "closed") },
+
+    // String 2 wires
+    { id: "W_S2_P4_P5_PWR",   string_id: 2, from: 5, to: 6, role: "power",        state: !gatewayOnline ? "no_signal" : (s2WireStates["W_S2_P4_P5_PWR"] || "closed") },
+    { id: "W_S2_P4_P5_SENSE", string_id: 2, from: 5, to: 6, role: "sensing_gnd",   state: !gatewayOnline ? "no_signal" : (s2WireStates["W_S2_P4_P5_SENSE"] || "closed") },
+    { id: "W_S2_STRING_GND",  string_id: 2, from: 5, to: 8, role: "string_gnd",    state: !gatewayOnline ? "no_signal" : (s2WireStates["W_S2_STRING_GND"] || "closed") },
+    { id: "W_S2_P5_P6_PWR",   string_id: 2, from: 6, to: 7, role: "power",        state: !gatewayOnline ? "no_signal" : (s2WireStates["W_S2_P5_P6_PWR"] || "closed") },
+    { id: "W_S2_P5_P6_SENSE", string_id: 2, from: 6, to: 7, role: "sensing_gnd",   state: !gatewayOnline ? "no_signal" : (s2WireStates["W_S2_P5_P6_SENSE"] || "closed") },
+    { id: "W_S2_P6_STR_PWR",  string_id: 2, from: 7, to: 8, role: "power",        state: !gatewayOnline ? "no_signal" : (s2WireStates["W_S2_P6_STR_PWR"] || "closed") },
+
+    // Combiner Box input and output wires
+    { id: "W_COMB_S1_POS", string_id: 1, from: 4, to: "combiner", role: "combiner_in_pos", state: combS1State },
+    { id: "W_COMB_S1_NEG", string_id: 1, from: 4, to: "combiner", role: "combiner_in_neg", state: combS1State },
+    { id: "W_COMB_S2_POS", string_id: 2, from: 8, to: "combiner", role: "combiner_in_pos", state: combS2State },
+    { id: "W_COMB_S2_NEG", string_id: 2, from: 8, to: "combiner", role: "combiner_in_neg", state: combS2State },
+    { id: "W_ARRAY_OUT_POS", from: "combiner", to: "load", role: "array_out_pos", state: combOutState },
+    { id: "W_ARRAY_OUT_NEG", from: "combiner", to: "load", role: "array_out_neg", state: combOutState }
   ];
-
-  const wires = rawWires.map((w) => {
-    if (!gatewayOnline) return { ...w, state: "no_signal" };
-
-    if (faultNodeId === null) {
-      return { ...w, state: "closed" };
-    }
-
-    if (faultNodeId === 2) {
-      if (w.id === "W_P1_P2_PWR") return { ...w, state: "open" };
-      if (w.id === "W_P1_P2_SENSE" || w.id === "W_P1_STR_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
-      return { ...w, state: "gray_zone" };
-    }
-
-    if (faultNodeId === 3) {
-      if (w.from === 1 && w.to === 2) return { ...w, state: "closed" };
-      if (w.id === "W_P1_STR_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
-      if (w.id === "W_P2_P3_PWR") return { ...w, state: "open" };
-      if (w.id === "W_P2_P3_SENSE") return { ...w, state: "closed" };
-      return { ...w, state: "gray_zone" };
-    }
-
-    if (faultNodeId === 4) {
-      if (w.from < 3) return { ...w, state: "closed" };
-      if (w.id === "W_P1_STR_SENSE" || w.id === "W_P1_STR_RET") return { ...w, state: "closed" };
-      if (w.id === "W_P3_STR_PWR") return { ...w, state: "open" };
-      return { ...w, state: "gray_zone" };
-    }
-
-    return { ...w, state: "closed" };
-  });
 
   let activeAlert = null;
   if (pendingTestAlert && (Date.now() - pendingTestAlert.timestamp < 45000)) {
@@ -1456,8 +1727,40 @@ app.get("/api/status", (req, res) => {
     brokenWireId,
     faultType,
     faultDescription,
-    isPowerFlowing,
-    stringCurrent_mA,
+    string1Fault,
+    string2Fault,
+    string1: {
+      voltage: Number((s1Volt_mV / 1000).toFixed(2)),
+      current: Number((s1Current_mA / 1000).toFixed(3)),
+      power: Number(((s1Volt_mV / 1000) * (s1Current_mA / 1000)).toFixed(2)),
+      fault: string1Fault
+    },
+    string2: {
+      voltage: Number((s2Volt_mV / 1000).toFixed(2)),
+      current: Number((s2Current_mA / 1000).toFixed(3)),
+      power: Number(((s2Volt_mV / 1000) * (s2Current_mA / 1000)).toFixed(2)),
+      fault: string2Fault
+    },
+    combiner: {
+      voltage: arrayVolt_V,
+      current: arrayCurrent_A,
+      power: arrayPower_W,
+      current_mA: totalCurrent_mA,
+      voltage_mV: avgVolt_mV,
+      power_W: arrayPower_W,
+      s1Current_mA,
+      s2Current_mA,
+      status: (!gatewayOnline ? "no_signal" : ((string1Fault && string1Fault.hasFault) && (string2Fault && string2Fault.hasFault) ? "fault" : ((string1Fault && string1Fault.hasFault) || (string2Fault && string2Fault.hasFault) ? "degraded" : "normal")))
+    },
+    arrayTotals: {
+      voltage_V: arrayVolt_V,
+      current_A: arrayCurrent_A,
+      power_W: arrayPower_W,
+      totalCurrent_mA,
+      avgVoltage_mV: avgVolt_mV
+    },
+    isPowerFlowing: totalCurrent_mA > 15,
+    stringCurrent_mA: totalCurrent_mA,
     serverTime: Date.now(),
     cells,
     wires,
