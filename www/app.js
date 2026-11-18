@@ -3946,16 +3946,16 @@ function generate3S2PClientMockNodes({
 
   return [
     // STRING 1 (Nodes 1-4)
-    { id: 1, node_id: 1, string_id: 1, panel_id: 1, label: "STRING 1 - PANEL 1", node_type: 0, continuity: true, temp_c10: 295, temp_c: 29.5, voltage_mV: 2450, current_mA: 0, ldr_raw: 0, ageMs: 80 },
-    { id: 2, node_id: 2, string_id: 1, panel_id: 2, label: "STRING 1 - PANEL 2", node_type: 1, continuity: s1_c2, temp_c10: 310, temp_c: 31.0, voltage_mV: p2_low_v ? 350 : 2420, current_mA: 0, ldr_raw: 0, ageMs: 90 },
-    { id: 3, node_id: 3, string_id: 1, panel_id: 3, label: "STRING 1 - PANEL 3", node_type: 1, continuity: s1_c3, temp_c10: 305, temp_c: 30.5, voltage_mV: 2410, current_mA: 0, ldr_raw: 0, ageMs: 70 },
-    { id: 4, node_id: 4, string_id: 1, panel_id: 0, label: "STRING 1 - MASTER",  node_type: 2, continuity: s1_c4, temp_c10: -999, temp_c: null, voltage_mV: s1_dead ? 0 : 7280, current_mA: s1_current, ldr_raw: 890, ageMs: 60 },
+    { id: 1, node_id: 1, string_id: 1, panel_id: 1, label: "STRING 1 - PANEL 1", node_type: 0, continuity: true, temp_c10: 295, temp_c: 29.5, voltage_mV: 2450, current_mA: 0, ageMs: 80 },
+    { id: 2, node_id: 2, string_id: 1, panel_id: 2, label: "STRING 1 - PANEL 2", node_type: 1, continuity: s1_c2, temp_c10: 310, temp_c: 31.0, voltage_mV: p2_low_v ? 350 : 2420, current_mA: 0, ageMs: 90 },
+    { id: 3, node_id: 3, string_id: 1, panel_id: 3, label: "STRING 1 - PANEL 3", node_type: 1, continuity: s1_c3, temp_c10: 305, temp_c: 30.5, voltage_mV: 2410, current_mA: 0, ageMs: 70 },
+    { id: 4, node_id: 4, string_id: 1, panel_id: 0, label: "STRING 1 - MASTER",  node_type: 2, continuity: s1_c4, temp_c10: -999, temp_c: null, voltage_mV: s1_dead ? 0 : 7280, current_mA: s1_current, ageMs: 60 },
 
     // STRING 2 (Nodes 5-8)
-    { id: 5, node_id: 5, string_id: 2, panel_id: 1, label: "STRING 2 - PANEL 1", node_type: 0, continuity: true, temp_c10: 298, temp_c: 29.8, voltage_mV: 2440, current_mA: 0, ldr_raw: 0, ageMs: 85 },
-    { id: 6, node_id: 6, string_id: 2, panel_id: 2, label: "STRING 2 - PANEL 2", node_type: 1, continuity: s2_c6, temp_c10: 312, temp_c: 31.2, voltage_mV: 2430, current_mA: 0, ldr_raw: 0, ageMs: 95 },
-    { id: 7, node_id: 7, string_id: 2, panel_id: 3, label: "STRING 2 - PANEL 3", node_type: 1, continuity: s2_c7, temp_c10: 302, temp_c: 30.2, voltage_mV: 2410, current_mA: 0, ldr_raw: 0, ageMs: 75 },
-    { id: 8, node_id: 8, string_id: 2, panel_id: 0, label: "STRING 2 - MASTER",  node_type: 2, continuity: s2_c8, temp_c10: -999, temp_c: null, voltage_mV: s2_dead ? 0 : 7280, current_mA: s2_current, ldr_raw: 885, ageMs: 65 }
+    { id: 5, node_id: 5, string_id: 2, panel_id: 1, label: "STRING 2 - PANEL 1", node_type: 0, continuity: true, temp_c10: 298, temp_c: 29.8, voltage_mV: 2440, current_mA: 0, ageMs: 85 },
+    { id: 6, node_id: 6, string_id: 2, panel_id: 2, label: "STRING 2 - PANEL 2", node_type: 1, continuity: s2_c6, temp_c10: 312, temp_c: 31.2, voltage_mV: 2430, current_mA: 0, ageMs: 95 },
+    { id: 7, node_id: 7, string_id: 2, panel_id: 3, label: "STRING 2 - PANEL 3", node_type: 1, continuity: s2_c7, temp_c10: 302, temp_c: 30.2, voltage_mV: 2410, current_mA: 0, ageMs: 75 },
+    { id: 8, node_id: 8, string_id: 2, panel_id: 0, label: "STRING 2 - MASTER",  node_type: 2, continuity: s2_c8, temp_c10: -999, temp_c: null, voltage_mV: s2_dead ? 0 : 7280, current_mA: s2_current, ageMs: 65 }
   ];
 }
 
@@ -4271,8 +4271,7 @@ function runClientSideSimulation(scenario) {
       voltage: volt,
       current: cur,
       power: Number((volt * cur).toFixed(2)),
-      continuity: n.continuity,
-      ldr: n.ldr_raw
+      continuity: n.continuity
     };
   });
 
