@@ -2915,8 +2915,8 @@ function renderIoTMonitor(data) {
 
           <div class="iot-badge ${c.state}">${IOT_LABELS[c.state] || c.state}</div>
 
-          ${c.id === 1 ? `<div class="cell-terminal-tag origin ${senseState}" id="p1-terminal-origin" title="Sense Loop Origin Lead"><span class="terminal-dot" id="p1-sense-dot"></span><span>Sense Lead</span></div>` : ''}
-          ${isString ? `<div class="cell-terminal-tag input ${senseState}" id="str-terminal-input" title="Sense Return Input Terminal"><span class="terminal-dot" id="str-sense-dot"></span><span>Sense In</span></div>` : ''}
+          ${c.id === 1 ? `<span class="terminal-dot ${senseState}" id="p1-sense-dot"></span><div class="cell-terminal-tag origin ${senseState}" id="p1-terminal-origin" title="Sense Loop Origin Lead"><span>Sense Lead</span></div>` : ''}
+          ${isString ? `<span class="terminal-dot ${senseState}" id="str-sense-dot"></span><div class="cell-terminal-tag input ${senseState}" id="str-terminal-input" title="Sense Return Input Terminal"><span>Sense In</span></div>` : ''}
 
           <!-- Primary Metric for Mobile Fit View -->
           <div class="cell-compact-metric">
@@ -3134,44 +3134,68 @@ function updateSchematicSenseWire() {
   const wirePath = document.getElementById('sense-wire-path');
   const dot1 = document.getElementById('p1-sense-dot');
   const dotStr = document.getElementById('str-sense-dot');
+  const p1Tag = document.getElementById('p1-terminal-origin');
+  const strTag = document.getElementById('str-terminal-input');
   const p1Card = document.querySelector('.iot-cell.panel[data-node-id="1"]');
   const p3Card = document.querySelector('.iot-cell.panel[data-node-id="3"]');
   const strCard = document.querySelector('.iot-cell.string-node');
   const badge = document.getElementById('sense-rail-badge');
 
-  if (!flowEl || !wirePath || !dot1 || !dotStr || !p1Card || !p3Card || !strCard || !badge) {
+  if (!flowEl || !wirePath || !dot1 || !dotStr || !p1Tag || !strTag || !p1Card || !p3Card || !strCard || !badge) {
     return;
   }
 
   const flowRect = flowEl.getBoundingClientRect();
   if (flowRect.width <= 0 || flowRect.height <= 0) return;
 
-  const dot1Rect = dot1.getBoundingClientRect();
-  const dotStrRect = dotStr.getBoundingClientRect();
   const p1CardRect = p1Card.getBoundingClientRect();
   const p3CardRect = p3Card.getBoundingClientRect();
   const strCardRect = strCard.getBoundingClientRect();
+  const p1TagRect = p1Tag.getBoundingClientRect();
+  const strTagRect = strTag.getBoundingClientRect();
   const badgeRect = badge.getBoundingClientRect();
 
-  // 1. Center of P1 Sense Lead dot
-  const startX = Math.round(dot1Rect.left - flowRect.left + dot1Rect.width / 2);
-  const startY = Math.round(dot1Rect.top - flowRect.top + dot1Rect.height / 2);
+  // 1. P1 start point: x = Panel 1 card's LEFT border edge, y = vertical center of the "SENSE LEAD" tag row
+  const startX = Math.round(p1CardRect.left - flowRect.left);
+  const startY = Math.round(p1TagRect.top - flowRect.top + p1TagRect.height / 2);
 
-  // 2. Vertical channel left of Panel 1 (~18px left of dot, outside Panel 1 card)
-  const p1Left = Math.round(p1CardRect.left - flowRect.left);
-  const channelLeftX = Math.round(Math.min(startX - 18, p1Left - 14));
+  // Position #p1-sense-dot centered ON Panel 1 card's left border at the sense-lead y
+  const p1DotTop = Math.round(p1TagRect.top - p1CardRect.top + p1TagRect.height / 2);
+  dot1.style.top = `${p1DotTop}px`;
+
+  // 2. Vertical channel left of Panel 1 (~18px left of P1 card left edge)
+  const channelLeftX = Math.round(startX - 18);
 
   // 3. Rail Y: vertically centered on the "Sense line (P1 -> string)" label
   const railY = Math.round(badgeRect.top - flowRect.top + badgeRect.height / 2);
 
-  // 4. Vertical channel in the gap between Panel 3 and String Monitor
-  const p3Right = Math.round(p3CardRect.right - flowRect.left);
+  // 4. Vertical channel hugging String Monitor card (left edge - 8px)
   const strLeft = Math.round(strCardRect.left - flowRect.left);
-  const channelRightX = Math.round((p3Right + strLeft) / 2);
+  const channelRightX = Math.round(strLeft - 8);
 
-  // 5 & 6. String Sense In dot center
-  const endX = Math.round(dotStrRect.left - flowRect.left + dotStrRect.width / 2);
-  const endY = Math.round(dotStrRect.top - flowRect.top + dotStrRect.height / 2);
+  // 5 & 6. String Monitor end point: x = String Monitor card's LEFT border edge, y = vertical center of the "SENSE IN" tag row
+  const endX = Math.round(strLeft);
+  const endY = Math.round(strTagRect.top - flowRect.top + strTagRect.height / 2);
+
+  // Position #str-sense-dot centered ON String Monitor card's left border at the sense-in y
+  const strDotTop = Math.round(strTagRect.top - strCardRect.top + strTagRect.height / 2);
+  dotStr.style.top = `${strDotTop}px`;
+
+  // Ensure clearance from "STRING +" tag and its wire (clearance >= 12px from channelRightX)
+  const strPwrTag = document.querySelector('.junction-3-string .wire-role-label.power');
+  const strPwrItem = document.querySelector('.junction-3-string .wire-junction-item');
+  if (strPwrItem) {
+    strPwrItem.style.transform = '';
+    const itemRect = strPwrItem.getBoundingClientRect();
+    const tagRect = strPwrTag ? strPwrTag.getBoundingClientRect() : itemRect;
+    const maxRight = Math.max(itemRect.right, tagRect.right);
+    const rightInFlow = Math.round(maxRight - flowRect.left);
+    const clearance = channelRightX - rightInFlow;
+    if (clearance < 12) {
+      const shiftLeft = 12 - clearance;
+      strPwrItem.style.transform = `translateX(-${shiftLeft}px)`;
+    }
+  }
 
   // Label horizontal edges on the rail (line stops at label left, resumes at label right)
   const labelLeft = Math.round(badgeRect.left - flowRect.left - 2);

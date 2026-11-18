@@ -660,11 +660,15 @@ html.dark .view-tab-btn.active-tab {
   border: 1px solid rgba(37, 99, 235, 0.4);
 }
 
-.cell-terminal-tag .terminal-dot {
-  width: 5px;
-  height: 5px;
+.cell-terminal-tag .terminal-dot,
+.terminal-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #3B82F6;
+  flex-shrink: 0;
+  transition: background 0.25s ease;
+  pointer-events: none;
 }
 
 /* ==========================================================================
@@ -802,23 +806,52 @@ html:not(.dark) .sense-rail-status.no_signal {
   z-index: 15;
 }
 
-.cell-terminal-tag .terminal-dot {
+.cell-terminal-tag .terminal-dot,
+.terminal-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #3B82F6;
   flex-shrink: 0;
   transition: background 0.25s ease;
+  pointer-events: none;
 }
 
+#p1-sense-dot,
+#str-sense-dot {
+  position: absolute;
+  left: 0;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+}
+
+.terminal-dot.closed,
+.terminal-dot.ok,
 .cell-terminal-tag.closed .terminal-dot,
 .cell-terminal-tag.ok .terminal-dot {
   background: #10B981 !important;
 }
 
+.terminal-dot.open,
+.terminal-dot.broken,
 .cell-terminal-tag.open .terminal-dot,
 .cell-terminal-tag.broken .terminal-dot {
   background: #DC2626 !important;
+}
+
+.terminal-dot.gray_zone,
+.cell-terminal-tag.gray_zone .terminal-dot {
+  background: #6B7280 !important;
+}
+
+.terminal-dot.no_signal,
+.cell-terminal-tag.no_signal .terminal-dot {
+  background: #3B82F6 !important;
+}
+
+html:not(.dark) .terminal-dot.no_signal,
+html:not(.dark) .cell-terminal-tag.no_signal .terminal-dot {
+  background: #2563EB !important;
 }
 
 /* Steady clean alert pulses (no blurred neon glows) */
@@ -991,7 +1024,13 @@ html:not(.dark) .sense-rail-status.no_signal {
   width: clamp(18px, 3.8vw, 44px) !important;
   gap: 2px !important;
   justify-content: flex-start !important;
+  align-items: flex-start !important;
   padding-top: 14px !important;
+}
+
+.string-array-row.schematic-fit-mode .junction-3-string .wire-junction-item,
+.string-array-row.mobile-fit-screen:not(.schematic-zoom-mode) .junction-3-string .wire-junction-item {
+  align-items: flex-start !important;
 }
 
 .string-array-row.schematic-fit-mode .junction-3-string .wire-role-label,
@@ -1039,7 +1078,17 @@ html:not(.dark) .sense-rail-status.no_signal {
   flex: 0 0 72px !important;
   gap: 6px !important;
   justify-content: flex-start !important;
+  align-items: flex-start !important;
   padding-top: 18px !important;
+  padding-left: 2px !important;
+}
+
+.string-array-row.schematic-zoom-mode .junction-3-string .wire-junction-item {
+  align-items: flex-start !important;
+}
+
+.string-array-row.schematic-zoom-mode .junction-3-string .wire-svg {
+  width: 50px !important;
 }
 
 .string-array-row.schematic-zoom-mode .junction-3-string .wire-role-label {
