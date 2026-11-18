@@ -7,27 +7,42 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap');
 
 :root {
-  /* Grounded Technical Palette (No neon AI glows, no purple SaaS hues) */
+  /* Grounded Technical Palette */
   --epc-blue: #0F2547;
   --epc-blue-dark: #0A1931;
   --epc-blue-light: #F0F4F8;
   --epc-accent: #D97706; /* Industrial Solar Cadmium / Amber */
   --epc-green: #059669; /* Precision Silicon Emerald */
-  --epc-text: #111827; /* Deep Carbon */
-  --epc-text-muted: #6B7280;
-  --epc-border: #E5E7EB;
+  --epc-text: #0F172A; /* Deep Slate */
+  --epc-text-muted: #64748B;
+  --epc-border: #E2E8F0;
   --epc-card-bg: #FFFFFF;
-  --epc-page-bg: #F9FAFB;
+  --epc-page-bg: #F8FAFC;
 
-  /* SCADA / Hardware Deck Theme */
-  --scada-bg: #0C0E12;
-  --scada-surface: #13171F;
-  --scada-border: #222733;
-  --scada-text: #F3F4F6;
-  --scada-text-muted: #9CA3AF;
+  /* SCADA / Hardware Deck Theme (Light Mode Default) */
+  --scada-bg: #FFFFFF;
+  --scada-surface: #FFFFFF;
+  --scada-border: #E2E8F0;
+  --scada-text: #0F172A;
+  --scada-text-muted: #64748B;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* SCADA Deck Theme (Dark Mode) */
+html.dark {
+  --epc-card-bg: #121620;
+  --epc-page-bg: #0B0E14;
+  --epc-text: #F8FAFC;
+  --epc-text-muted: #94A3B8;
+  --epc-border: #1F2636;
+
+  --scada-bg: #11151F;
+  --scada-surface: #131722;
+  --scada-border: #1F2636;
+  --scada-text: #F8FAFC;
+  --scada-text-muted: #94A3B8;
 }
 
 /* Base Document Setup */
@@ -42,8 +57,8 @@ html {
 
 body {
   font-family: var(--font-sans);
-  color: var(--epc-text);
-  background-color: var(--epc-page-bg);
+  color: var(--epc-text) !important;
+  background-color: var(--epc-page-bg) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.012em;
@@ -283,10 +298,10 @@ input, button, select, textarea {
   font-size: 0.8125rem;
   font-weight: 500;
   border-radius: 4px;
-  color: #9CA3AF !important;
-  background-color: transparent !important;
-  border: 1px solid transparent !important;
-  box-shadow: none !important;
+  color: #64748B;
+  background-color: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
   transition: all 0.15s ease;
   cursor: pointer;
   user-select: none;
@@ -302,15 +317,30 @@ input, button, select, textarea {
 }
 
 .view-tab-btn:hover {
-  color: #F3F4F6 !important;
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #0F172A;
+  background-color: #F1F5F9;
 }
 
 .view-tab-btn.active-tab {
-  background-color: #1F2430 !important;
+  background-color: #0F2547 !important;
   color: #FFFFFF !important;
-  border-color: #2F3646 !important;
+  border-color: #0F2547 !important;
   font-weight: 600 !important;
+}
+
+html.dark .view-tab-btn {
+  color: #94A3B8;
+}
+
+html.dark .view-tab-btn:hover {
+  color: #F8FAFC;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+html.dark .view-tab-btn.active-tab {
+  background-color: #1E3A8A !important;
+  color: #FFFFFF !important;
+  border-color: #3B82F6 !important;
 }
 
 /* ==========================================================================
@@ -1054,4 +1084,456 @@ input, button, select, textarea {
 
 .mobile-nav-btn.active-mobile-tab {
   color: #34D399 !important;
+}
+
+/* ==========================================================================
+   DUAL-PALETTE THEME OVERRIDES (LIGHT & DARK MODES)
+   ========================================================================== */
+
+/* Universal Theme Transitions */
+header, footer, nav, aside, div.rounded, section, main, table, tr, th, td, input, select, button {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+
+/* --------------------------------------------------------------------------
+   LIGHT MODE RULES (When <html> does NOT have .dark)
+   -------------------------------------------------------------------------- */
+html:not(.dark) header.sticky {
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+}
+html:not(.dark) header.sticky .site-logo-text {
+  color: #0F172A !important;
+}
+html:not(.dark) header.sticky .version-badge {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #475569 !important;
+}
+html:not(.dark) header.sticky .divider-theme {
+  background-color: #E2E8F0 !important;
+}
+html:not(.dark) #auth-header-logged-out #btn-open-auth-modal {
+  background-color: #0F2547 !important;
+  color: #FFFFFF !important;
+}
+html:not(.dark) #btn-toggle-user-drawer-guest,
+html:not(.dark) #btn-toggle-user-drawer {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #1E293B !important;
+}
+html:not(.dark) #btn-toggle-user-drawer-guest:hover,
+html:not(.dark) #btn-toggle-user-drawer:hover {
+  background-color: #F1F5F9 !important;
+}
+html:not(.dark) #header-user-name {
+  color: #1E293B !important;
+}
+
+/* IoT Monitor Shell in Light Mode */
+html:not(.dark) .iot-monitor-shell {
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+html:not(.dark) .iot-monitor-shell h2 {
+  color: #0F172A !important;
+}
+html:not(.dark) .iot-monitor-shell p {
+  color: #64748B !important;
+}
+html:not(.dark) .iot-monitor-shell .border-b {
+  border-color: #E2E8F0 !important;
+}
+html:not(.dark) #iot-gateway-status {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #334155 !important;
+}
+html:not(.dark) #btn-poll-refresh {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #64748B !important;
+}
+html:not(.dark) #btn-poll-refresh:hover {
+  color: #0F172A !important;
+  background-color: #F1F5F9 !important;
+}
+html:not(.dark) #schematic-wrapper {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+}
+html:not(.dark) #btn-toggle-schematic-view-menu {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #1E293B !important;
+}
+html:not(.dark) #schematic-view-popover {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+html:not(.dark) #schematic-view-popover button {
+  color: #334155 !important;
+}
+html:not(.dark) #schematic-view-popover button:hover {
+  background-color: #F1F5F9 !important;
+}
+
+/* IoT Schematic Cells in Light Mode */
+html:not(.dark) .iot-cell {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+}
+html:not(.dark) .iot-cell.panel {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px) !important;
+}
+html:not(.dark) .iot-cell.string-node {
+  background-color: #FFFFFF !important;
+}
+html:not(.dark) .iot-cell h3 {
+  color: #0F172A !important;
+}
+html:not(.dark) .iot-cell.ok {
+  border-color: #059669 !important;
+  background-color: #F0FDF4 !important;
+}
+html:not(.dark) .iot-cell.broken {
+  border-color: #DC2626 !important;
+  background-color: #FEF2F2 !important;
+}
+html:not(.dark) .iot-cell.gray_zone {
+  border-color: #94A3B8 !important;
+  background-color: #F8FAFC !important;
+}
+html:not(.dark) .iot-cell.no_signal {
+  border-color: #CBD5E1 !important;
+  background-color: #F1F5F9 !important;
+  opacity: 0.8;
+}
+html:not(.dark) .iot-vals {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+html:not(.dark) .iot-vals .val-highlight {
+  color: #1D4ED8 !important;
+}
+html:not(.dark) .iot-note {
+  color: #64748B !important;
+}
+html:not(.dark) .cell-compact-metric {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+}
+html:not(.dark) .compact-volt {
+  color: #1D4ED8 !important;
+}
+
+/* Real-Time Metrics Cards in Light Mode */
+html:not(.dark) div[class*="border-t-blue-500"],
+html:not(.dark) div[class*="border-t-emerald-500"],
+html:not(.dark) div[class*="border-t-amber-500"],
+html:not(.dark) div[class*="border-t-rose-500"] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+html:not(.dark) #metric-string-voltage,
+html:not(.dark) #metric-string-current,
+html:not(.dark) #metric-string-power,
+html:not(.dark) #metric-string-temp {
+  color: #0F172A !important;
+}
+
+/* Alert box in Light Mode */
+html:not(.dark) .monitor-alert-box.success {
+  background-color: #ECFDF5 !important;
+  border-color: #10B981 !important;
+  color: #065F46 !important;
+}
+html:not(.dark) .monitor-alert-box.danger {
+  background-color: #FEF2F2 !important;
+  border-color: #EF4444 !important;
+  color: #991B1B !important;
+}
+html:not(.dark) .monitor-alert-box.warning {
+  background-color: #FFFBEB !important;
+  border-color: #F59E0B !important;
+  color: #92400E !important;
+}
+
+/* Footer & Mobile Nav in Light Mode */
+html:not(.dark) footer {
+  background-color: #FFFFFF !important;
+  border-top: 1px solid #E2E8F0 !important;
+  color: #64748B !important;
+}
+html:not(.dark) footer p.text-white {
+  color: #0F172A !important;
+}
+html:not(.dark) #mobile-bottom-nav {
+  background-color: #FFFFFF !important;
+  border-top: 1px solid #E2E8F0 !important;
+}
+
+/* User Drawer in Light Mode */
+html:not(.dark) #drawer-user-profile {
+  background-color: #FFFFFF !important;
+  border-left: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
+}
+html:not(.dark) #drawer-user-profile .bg-zinc-950,
+html:not(.dark) #drawer-user-profile .bg-zinc-900 {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+}
+html:not(.dark) #drawer-user-profile span.text-white {
+  color: #0F172A !important;
+}
+html:not(.dark) #drawer-user-profile .border-b,
+html:not(.dark) #drawer-user-profile .border-t {
+  border-color: #E2E8F0 !important;
+}
+
+/* Modals in Light Mode */
+html:not(.dark) #modal-site-location > div,
+html:not(.dark) #modal-hardware-info > div,
+html:not(.dark) #modal-panel-detail > div,
+html:not(.dark) #modal-auth > div,
+html:not(.dark) #modal-settings > div,
+html:not(.dark) #modal-hw-info > div {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+html:not(.dark) .bg-\[\#0C0E12\] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+html:not(.dark) .bg-\[\#0E1117\] {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   DARK MODE RULES (When <html> HAS .dark)
+   -------------------------------------------------------------------------- */
+html.dark body {
+  background-color: #0B0E14 !important;
+  color: #F8FAFC !important;
+}
+
+/* Header in Dark Mode */
+html.dark header.sticky {
+  background-color: #0C0F17 !important;
+  border-bottom: 1px solid #1F2636 !important;
+  color: #F8FAFC !important;
+}
+html.dark header.sticky .site-logo-text {
+  color: #FFFFFF !important;
+}
+html.dark header.sticky .version-badge {
+  background-color: #161B26 !important;
+  border-color: #1F2636 !important;
+  color: #94A3B8 !important;
+}
+html.dark header.sticky .divider-theme {
+  background-color: #1F2636 !important;
+}
+
+/* Cards in Solar Estimation View */
+html.dark .bg-white {
+  background-color: #121620 !important;
+  border-color: #1F2636 !important;
+  color: #F8FAFC !important;
+}
+html.dark .bg-zinc-50,
+html.dark .bg-zinc-100,
+html.dark .bg-\[\#FAFAFA\],
+html.dark .bg-\[\#F9FAFB\] {
+  background-color: #161B26 !important;
+  border-color: #1F2636 !important;
+}
+html.dark .border-zinc-200,
+html.dark .border-zinc-300 {
+  border-color: #1F2636 !important;
+}
+html.dark .divide-zinc-200 {
+  border-color: #1F2636 !important;
+}
+
+/* Text Overrides */
+html.dark .text-zinc-900,
+html.dark .text-zinc-800,
+html.dark .text-zinc-700 {
+  color: #F8FAFC !important;
+}
+html.dark .text-zinc-600,
+html.dark .text-zinc-500 {
+  color: #94A3B8 !important;
+}
+html.dark .text-zinc-400 {
+  color: #CBD5E1 !important;
+}
+html.dark .text-\[\#0F2547\] {
+  color: #60A5FA !important;
+}
+
+/* Form Inputs & Sliders */
+html.dark input[type="number"],
+html.dark input[type="text"],
+html.dark select,
+html.dark textarea {
+  background-color: #0B0E14 !important;
+  border-color: #1F2636 !important;
+  color: #F8FAFC !important;
+}
+html.dark input[type="number"]:focus,
+html.dark input[type="text"]:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 1px #3B82F6 !important;
+}
+
+/* Quick Presets Chips */
+html.dark .cap-chip {
+  background-color: #161B26 !important;
+  color: #CBD5E1 !important;
+  border-color: #1F2636 !important;
+}
+html.dark .cap-chip:hover {
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
+  border-color: #3B82F6 !important;
+}
+
+/* KPI Summary Strip */
+html.dark #kpi-capacity { color: #60A5FA !important; }
+html.dark #kpi-generation { color: #34D399 !important; }
+html.dark #kpi-yield { color: #FBBF24 !important; }
+html.dark #kpi-bill-offset { color: #60A5FA !important; }
+html.dark #kpi-payback { color: #F8FAFC !important; }
+html.dark #kpi-net-benefit { color: #34D399 !important; }
+
+/* Presentation Tabs */
+html.dark .tab-btn {
+  color: #94A3B8 !important;
+}
+html.dark .tab-btn:hover {
+  color: #F8FAFC !important;
+}
+html.dark .tab-btn.text-\[\#0F2547\] {
+  color: #60A5FA !important;
+  border-bottom-color: #60A5FA !important;
+}
+
+/* Forecast Day Switcher */
+html.dark #hourly-selected-day-label {
+  color: #60A5FA !important;
+  border-color: #1F2636 !important;
+}
+html.dark #btn-hourly-prev {
+  background-color: #161B26 !important;
+  color: #CBD5E1 !important;
+}
+html.dark #btn-hourly-next {
+  background-color: #1E3A8A !important;
+  color: #FFFFFF !important;
+}
+html.dark #forecast-remaining-today-badge {
+  background-color: rgba(217, 119, 6, 0.15) !important;
+  color: #FBBF24 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+html.dark #forecast-ml-badge,
+html.dark #forecast-current-time-badge {
+  background-color: #161B26 !important;
+  color: #CBD5E1 !important;
+  border-color: #1F2636 !important;
+}
+html.dark #forecast-7day-total-badge {
+  background-color: rgba(5, 150, 105, 0.15) !important;
+  color: #34D399 !important;
+  border-color: rgba(5, 150, 105, 0.35) !important;
+}
+
+/* Tables in Dark Mode */
+html.dark .epc-report-table {
+  background-color: #121620 !important;
+  border-color: #1F2636 !important;
+}
+html.dark .epc-report-table thead th {
+  background-color: #0F2547 !important;
+  color: #FFFFFF !important;
+  border-color: #1F2636 !important;
+}
+html.dark .epc-report-table tbody td {
+  border-color: #1F2636 !important;
+  color: #CBD5E1 !important;
+}
+html.dark .epc-report-table tbody tr:nth-child(even) {
+  background-color: #161B26 !important;
+}
+html.dark .epc-report-table tbody tr:hover {
+  background-color: #1C2333 !important;
+}
+html.dark .epc-report-table tfoot tr,
+html.dark .epc-report-table tr.total-row {
+  background-color: #161B26 !important;
+  border-top-color: #2563EB !important;
+  border-bottom-color: #2563EB !important;
+}
+html.dark .epc-report-table tfoot td,
+html.dark .epc-report-table tr.total-row td {
+  color: #60A5FA !important;
+}
+
+html.dark .roi-table {
+  background-color: #121620 !important;
+  border-color: #1F2636 !important;
+}
+html.dark .roi-table thead th {
+  background-color: #0F2547 !important;
+  color: #FFFFFF !important;
+  border-color: #1F2636 !important;
+}
+html.dark .roi-table tbody td {
+  border-color: #1F2636 !important;
+  color: #CBD5E1 !important;
+}
+html.dark .roi-table tbody tr:hover {
+  background-color: #161B26 !important;
+}
+
+/* Footer & Mobile Nav in Dark Mode */
+html.dark footer {
+  background-color: #0C0F17 !important;
+  border-top: 1px solid #1F2636 !important;
+  color: #94A3B8 !important;
+}
+html.dark footer p.text-white {
+  color: #F8FAFC !important;
+}
+html.dark #mobile-bottom-nav {
+  background-color: #0C0F17 !important;
+  border-top: 1px solid #1F2636 !important;
+}
+
+/* Custom Scrollbar in Dark Mode */
+html.dark ::-webkit-scrollbar-track {
+  background: #0B0E14;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1F2636;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #2D3748;
 }

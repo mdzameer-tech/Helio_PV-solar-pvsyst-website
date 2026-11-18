@@ -67,8 +67,160 @@ window.onGoogleMapsAuthFailed = function () {
   initLeafletMap(AppState.project.lat, AppState.project.lon);
 };
 
+// ==========================================================================
+// Theme Management (Dual-Mode: SCADA Dark & High-Precision Swiss Light)
+// ==========================================================================
+function getChartThemeColors() {
+  const isDark = document.documentElement.classList.contains('dark');
+  return {
+    isDark,
+    gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+    tickColor: isDark ? '#94A3B8' : '#64748B',
+    titleColor: isDark ? '#E2E8F0' : '#1E293B',
+    legendColor: isDark ? '#CBD5E1' : '#334155'
+  };
+}
+
+function updateThemeUI(isDark) {
+  const sunIcon = document.getElementById('theme-icon-sun');
+  const moonIcon = document.getElementById('theme-icon-moon');
+  const toggleText = document.getElementById('theme-toggle-text');
+  const drawerBadge = document.getElementById('drawer-theme-badge');
+  const drawerDesc = document.getElementById('drawer-theme-desc');
+
+  if (isDark) {
+    if (sunIcon) sunIcon.classList.remove('hidden');
+    if (moonIcon) moonIcon.classList.add('hidden');
+    if (toggleText) toggleText.textContent = 'Light';
+    if (drawerBadge) {
+      drawerBadge.textContent = 'Dark';
+      drawerBadge.className = 'text-[9px] bg-blue-950/60 text-blue-400 border border-blue-500/30 px-1.5 py-0.2 rounded font-mono';
+    }
+    if (drawerDesc) drawerDesc.textContent = 'Active SCADA dark mission theme';
+  } else {
+    if (sunIcon) sunIcon.classList.add('hidden');
+    if (moonIcon) moonIcon.classList.remove('hidden');
+    if (toggleText) toggleText.textContent = 'Dark';
+    if (drawerBadge) {
+      drawerBadge.textContent = 'Light';
+      drawerBadge.className = 'text-[9px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded font-mono';
+    }
+    if (drawerDesc) drawerDesc.textContent = 'Active clean engineering ledger theme';
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('heliopv_theme');
+  const isDark = (saved === null) ? true : (saved === 'dark');
+  document.documentElement.classList.toggle('dark', isDark);
+  updateThemeUI(isDark);
+}
+
+function toggleTheme() {
+  const isCurrentlyDark = document.documentElement.classList.contains('dark');
+  const newDark = !isCurrentlyDark;
+  document.documentElement.classList.toggle('dark', newDark);
+  localStorage.setItem('heliopv_theme', newDark ? 'dark' : 'light');
+  updateThemeUI(newDark);
+  updateChartsTheme(newDark);
+}
+
+function updateChartsTheme(isDark) {
+  const colors = getChartThemeColors();
+
+  // 1. Monthly Generation Chart
+  if (AppState.charts.monthlyGen) {
+    const c = AppState.charts.monthlyGen;
+    if (c.options.scales?.y) {
+      c.options.scales.y.grid = c.options.scales.y.grid || {};
+      c.options.scales.y.grid.color = colors.gridColor;
+      c.options.scales.y.ticks = c.options.scales.y.ticks || {};
+      c.options.scales.y.ticks.color = colors.tickColor;
+      if (c.options.scales.y.title) c.options.scales.y.title.color = colors.titleColor;
+    }
+    if (c.options.scales?.y1) {
+      c.options.scales.y1.ticks = c.options.scales.y1.ticks || {};
+      c.options.scales.y1.ticks.color = colors.tickColor;
+      if (c.options.scales.y1.title) c.options.scales.y1.title.color = colors.titleColor;
+    }
+    if (c.options.scales?.x) {
+      c.options.scales.x.grid = c.options.scales.x.grid || {};
+      c.options.scales.x.grid.color = colors.gridColor;
+      c.options.scales.x.ticks = c.options.scales.x.ticks || {};
+      c.options.scales.x.ticks.color = colors.tickColor;
+    }
+    if (c.options.plugins?.legend?.labels) {
+      c.options.plugins.legend.labels.color = colors.legendColor;
+    }
+    c.update();
+  }
+
+  // 2. Cumulative Cashflow Chart
+  if (AppState.charts.cashflow) {
+    const c = AppState.charts.cashflow;
+    if (c.options.scales?.y) {
+      c.options.scales.y.grid = c.options.scales.y.grid || {};
+      c.options.scales.y.grid.color = colors.gridColor;
+      c.options.scales.y.ticks = c.options.scales.y.ticks || {};
+      c.options.scales.y.ticks.color = colors.tickColor;
+    }
+    if (c.options.scales?.x) {
+      c.options.scales.x.grid = c.options.scales.x.grid || {};
+      c.options.scales.x.grid.color = colors.gridColor;
+      c.options.scales.x.ticks = c.options.scales.x.ticks || {};
+      c.options.scales.x.ticks.color = colors.tickColor;
+    }
+    c.update();
+  }
+
+  // 3. Hourly Forecast Chart
+  if (AppState.charts.hourlyForecast) {
+    const c = AppState.charts.hourlyForecast;
+    if (c.options.scales?.y) {
+      c.options.scales.y.grid = c.options.scales.y.grid || {};
+      c.options.scales.y.grid.color = colors.gridColor;
+      c.options.scales.y.ticks = c.options.scales.y.ticks || {};
+      c.options.scales.y.ticks.color = colors.tickColor;
+      if (c.options.scales.y.title) c.options.scales.y.title.color = colors.titleColor;
+    }
+    if (c.options.scales?.x) {
+      c.options.scales.x.grid = c.options.scales.x.grid || {};
+      c.options.scales.x.grid.color = colors.gridColor;
+      c.options.scales.x.ticks = c.options.scales.x.ticks || {};
+      c.options.scales.x.ticks.color = colors.tickColor;
+    }
+    if (c.options.plugins?.legend?.labels) {
+      c.options.plugins.legend.labels.color = colors.legendColor;
+    }
+    c.update();
+  }
+
+  // 4. Daily Forecast Chart
+  if (AppState.charts.dailyForecast) {
+    const c = AppState.charts.dailyForecast;
+    if (c.options.scales?.y) {
+      c.options.scales.y.grid = c.options.scales.y.grid || {};
+      c.options.scales.y.grid.color = colors.gridColor;
+      c.options.scales.y.ticks = c.options.scales.y.ticks || {};
+      c.options.scales.y.ticks.color = colors.tickColor;
+      if (c.options.scales.y.title) c.options.scales.y.title.color = colors.titleColor;
+    }
+    if (c.options.scales?.x) {
+      c.options.scales.x.grid = c.options.scales.x.grid || {};
+      c.options.scales.x.grid.color = colors.gridColor;
+      c.options.scales.x.ticks = c.options.scales.x.ticks || {};
+      c.options.scales.x.ticks.color = colors.tickColor;
+    }
+    c.update();
+  }
+}
+
 // Initialize Application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Dual-Mode Theme (Dark SCADA vs Swiss Light)
+  initTheme();
   if (window.lucide) {
     lucide.createIcons();
   }
@@ -733,6 +885,7 @@ function renderDashboard(res) {
  * Render Interactive Charts using Chart.js
  */
 function renderCharts(monthlyReport, cashflow) {
+  const chartColors = getChartThemeColors();
   const ctxGen = document.getElementById('chart-monthly-generation');
   if (ctxGen) {
     if (AppState.charts.monthlyGen) {
@@ -774,7 +927,7 @@ function renderCharts(monthlyReport, cashflow) {
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+          legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 }, color: chartColors.legendColor } },
           tooltip: {
             callbacks: {
               label: (ctx) => ctx.dataset.type === 'line'
@@ -787,14 +940,20 @@ function renderCharts(monthlyReport, cashflow) {
           y: {
             type: 'linear',
             position: 'left',
-            title: { display: true, text: 'Energy Generation (kWh)' },
-            grid: { color: '#F1F5F9' }
+            title: { display: true, text: 'Energy Generation (kWh)', color: chartColors.titleColor },
+            grid: { color: chartColors.gridColor },
+            ticks: { color: chartColors.tickColor }
           },
           y1: {
             type: 'linear',
             position: 'right',
-            title: { display: true, text: 'Yield (kWh/kWp)' },
-            grid: { drawOnChartArea: false }
+            title: { display: true, text: 'Yield (kWh/kWp)', color: chartColors.titleColor },
+            grid: { drawOnChartArea: false },
+            ticks: { color: chartColors.tickColor }
+          },
+          x: {
+            grid: { color: chartColors.gridColor },
+            ticks: { color: chartColors.tickColor }
           }
         }
       }
@@ -840,10 +999,15 @@ function renderCharts(monthlyReport, cashflow) {
         },
         scales: {
           y: {
-            grid: { color: '#F1F5F9' },
+            grid: { color: chartColors.gridColor },
             ticks: {
+              color: chartColors.tickColor,
               callback: (val) => `₹${(val / 100000).toFixed(1)} L`
             }
+          },
+          x: {
+            grid: { color: chartColors.gridColor },
+            ticks: { color: chartColors.tickColor }
           }
         }
       }
@@ -855,6 +1019,7 @@ function renderCharts(monthlyReport, cashflow) {
  * Render Hourly (current hour to 12 AM midnight) and Next 7-Day Forecast Tab
  */
 function renderForecastTab(res) {
+  const chartColors = getChartThemeColors();
   const capacityKwp = res?.inputs?.capacityKwp || AppState.pv.capacityKwp || 36.6;
   const tariff = res?.inputs?.tariff || AppState.financials.tariff || 7.5;
   const pr = ((res?.losses?.overallPR || 79) / 100);
@@ -1163,7 +1328,7 @@ function renderForecastTab(res) {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } },
+          legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' }, color: chartColors.legendColor } },
           tooltip: {
             callbacks: {
               label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()} ${ctx.datasetIndex === 0 ? powerUnit : energyUnit}`
@@ -1173,11 +1338,13 @@ function renderForecastTab(res) {
         scales: {
           y: {
             beginAtZero: true,
-            title: { display: true, text: `Power (${powerUnit}) / Yield (${energyUnit})`, font: { size: 10, weight: 'bold' } },
-            ticks: { font: { size: 10 } }
+            title: { display: true, text: `Power (${powerUnit}) / Yield (${energyUnit})`, font: { size: 10, weight: 'bold' }, color: chartColors.titleColor },
+            grid: { color: chartColors.gridColor },
+            ticks: { font: { size: 10 }, color: chartColors.tickColor }
           },
           x: {
-            ticks: { font: { size: 10 } }
+            grid: { color: chartColors.gridColor },
+            ticks: { font: { size: 10 }, color: chartColors.tickColor }
           }
         }
       }
@@ -1338,11 +1505,13 @@ function renderForecastTab(res) {
         scales: {
           y: {
             beginAtZero: true,
-            title: { display: true, text: `Energy (${dailyUnit}/day)`, font: { size: 10, weight: 'bold' } },
-            ticks: { font: { size: 10 } }
+            title: { display: true, text: `Energy (${dailyUnit}/day)`, font: { size: 10, weight: 'bold' }, color: chartColors.titleColor },
+            grid: { color: chartColors.gridColor },
+            ticks: { font: { size: 10 }, color: chartColors.tickColor }
           },
           x: {
-            ticks: { font: { size: 10, weight: 'bold' } }
+            grid: { color: chartColors.gridColor },
+            ticks: { font: { size: 10, weight: 'bold' }, color: chartColors.tickColor }
           }
         }
       }
@@ -1941,6 +2110,14 @@ function setupEventListeners() {
   // Test Background Push Notification Button
   document.getElementById('btn-test-push-alert')?.addEventListener('click', async () => {
     await triggerDirectTestNotification();
+  });
+
+  // Dark / Light Theme Mode Toggle Buttons (Top Nav and Profile Drawer)
+  document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
+    toggleTheme();
+  });
+  document.getElementById('drawer-btn-theme-toggle')?.addEventListener('click', () => {
+    toggleTheme();
   });
 }
 
