@@ -2539,6 +2539,9 @@ function switchView(viewName) {
     try {
       history.replaceState(null, '', '?view=monitor');
     } catch (e) {}
+    setTimeout(() => {
+      updateSchematicSenseWire();
+    }, 50);
   } else {
     monitorView?.classList.add('hidden');
     estimateView?.classList.remove('hidden');
@@ -2905,14 +2908,15 @@ function renderIoTMonitor(data) {
 
       return `
         <div class="iot-cell ${cardClass} ${c.state}" data-node-id="${c.id}" data-node-type="${c.type}" title="${label}: hold or tap for details">
-          ${c.id === 1 ? `<div class="cell-terminal-tag origin" title="Sense Loop Origin Lead"><span class="terminal-dot"></span><span>Sense Lead</span></div>` : ''}
-          ${isString ? `<div class="cell-terminal-tag input" title="Sense Return Input Terminal"><span class="terminal-dot"></span><span>Sense In</span></div>` : ''}
           <!-- Desktop Full View Title -->
           <h3 class="cell-title-full">${label}</h3>
           <!-- Mobile Fit View Compact Title -->
           <h3 class="cell-title-compact">${shortLabel}</h3>
 
           <div class="iot-badge ${c.state}">${IOT_LABELS[c.state] || c.state}</div>
+
+          ${c.id === 1 ? `<div class="cell-terminal-tag origin ${senseState}" id="p1-terminal-origin" title="Sense Loop Origin Lead"><span class="terminal-dot" id="p1-sense-dot"></span><span>Sense Lead</span></div>` : ''}
+          ${isString ? `<div class="cell-terminal-tag input ${senseState}" id="str-terminal-input" title="Sense Return Input Terminal"><span class="terminal-dot" id="str-sense-dot"></span><span>Sense In</span></div>` : ''}
 
           <!-- Primary Metric for Mobile Fit View -->
           <div class="cell-compact-metric">
@@ -2926,21 +2930,13 @@ function renderIoTMonitor(data) {
     }
 
     const html = `
-      <div class="schematic-circuit-flow">
-        <div class="schematic-cards-flex">
-          <!-- P1 Left Origin Lead (Connecting into Left Side of Panel 1) -->
-          <div class="p1-origin-col ${senseState}" title="P1 Continuity Origin: Connected into Left Side of Panel 1">
-            <div class="p1-origin-badge-wrap">
-              <span class="p1-origin-badge">P1 (Left Origin)</span>
-            </div>
-            <div class="p1-origin-wire-lead ${senseState}">
-              <svg class="p1-origin-svg" viewBox="0 0 52 140" preserveAspectRatio="none">
-                <path d="M 22 140 L 22 70 L 52 70" class="sense-wire-stroke ${senseState}" fill="none" stroke-width="2.5" />
-                <circle cx="50" cy="70" r="3.5" class="sense-node-fill ${senseState}" />
-              </svg>
-            </div>
-          </div>
+      <div class="schematic-circuit-flow" id="schematic-circuit-flow">
+        <!-- Live Orthogonal Continuous Sense Wire Overlay (Same coordinate space as panels) -->
+        <svg id="schematic-wire-overlay" class="schematic-wire-overlay" aria-hidden="true">
+          <path id="sense-wire-path" class="sense-wire-path ${senseState}" d="" />
+        </svg>
 
+        <div class="schematic-cards-flex" id="schematic-cards-flex">
           ${renderCellHtml(p1)}
 
           <!-- Inter-Panel Wire Junction 1-2 -->
@@ -2971,54 +2967,34 @@ function renderIoTMonitor(data) {
 
           ${renderCellHtml(p3)}
 
-          <!-- Inter-Panel Wire Junction 3-String (Leading into LEFT of String Monitor) -->
-          <div class="wire-junction-column junction-3-string" title="Panel 3 & Master Sense Line into Left of String Monitor">
-            <!-- Top Wire: Power (+) Line from Panel 3 into String Monitor -->
-            <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line into String Monitor">
+          <!-- Inter-Panel Wire Junction 3-String (Main Power (+) Line Only) -->
+          <div class="wire-junction-column junction-3-string" title="Panel 3 to String Monitor Junction">
+            <div class="wire-junction-item" title="W_P3_STR_PWR: String Power (+) Line">
               <span class="wire-role-label power">String +</span>
               ${renderSwitchSvg(p3StrPwrState)}
-            </div>
-
-            <!-- Bottom Wire: String Sense In entering Left of String Monitor -->
-            <div class="wire-junction-item sense-in-item" title="W_P1_STR_SENSE: Master Continuity Sense Return Input into Left of String Monitor">
-              <span class="wire-role-label sense">String Sense In</span>
-              <svg class="sense-in-wire-svg" viewBox="0 0 72 44" preserveAspectRatio="none">
-                <path d="M 22 44 L 22 18 L 72 18" class="sense-wire-stroke ${senseState}" fill="none" stroke-width="2.5" />
-                <circle cx="70" cy="18" r="3.5" class="sense-node-fill ${senseState}" />
-              </svg>
-              <div class="wire-status-text ${senseState}">${senseState === 'ok' ? 'CLOSED' : (senseState === 'broken' ? '⚠️ OPEN' : senseState)}</div>
             </div>
           </div>
 
           ${renderCellHtml(str)}
         </div>
 
-        <!-- Continuous Sense Bus: Connecting Left Origin of P1 across to String Sense In on Left of String Monitor -->
-        <div class="schematic-sense-bus-row" title="Master Continuity Bus: Connecting Left of Panel 1 to Left of String Monitor">
-          <div class="sense-bus-active-track">
-            <!-- Left Corner meeting vertical wire of P1 Left Origin -->
-            <div class="sense-bus-corner left ${senseState}"></div>
-            <div class="sense-bus-wire ${senseState}"></div>
-
-            <!-- Master Continuity Sense Switch -->
-            <div class="sense-bus-switch-unit" title="W_P1_STR_SENSE: Master Continuity Sense Line">
-              <span class="wire-role-label sense">Sense Line (P1 ➔ String)</span>
-              ${renderSwitchSvg(senseState)}
-              <span class="wire-status-text ${senseState}">${senseState}</span>
-            </div>
-
-            <div class="sense-bus-wire ${senseState}"></div>
-            <!-- Right Corner meeting vertical wire of String Sense In at Left of String Monitor -->
-            <div class="sense-bus-corner right ${senseState}"></div>
+        <!-- Continuous Sense Rail with Centered Label & Status -->
+        <div class="schematic-sense-rail-container" id="schematic-sense-rail-container" title="Continuous Sense Rail: Connecting Left of Panel 1 to String Monitor">
+          <div class="sense-rail-center-unit" id="sense-rail-center-unit">
+            <span class="wire-role-label sense-rail-badge" id="sense-rail-badge">Sense line (P1 ➔ string)</span>
+            <span class="wire-status-text sense-rail-status ${senseState}" id="sense-rail-status">${senseState === 'ok' || senseState === 'closed' ? 'CLOSED' : (senseState === 'broken' || senseState === 'open' ? '⚠️ OPEN CKT' : (senseState === 'gray_zone' ? '? UNVERIFIED' : 'NO_SIGNAL'))}</span>
           </div>
-          <!-- Spacer matching String Monitor width so track terminates precisely at Left of String Monitor -->
-          <div class="sense-bus-string-spacer"></div>
         </div>
       </div>
     `;
 
     container.innerHTML = html;
     setupCellTouchEvents();
+
+    requestAnimationFrame(() => {
+      updateSchematicSenseWire();
+      setTimeout(updateSchematicSenseWire, 60);
+    });
 
     // If panel detail modal is open on mobile, update its real-time values
     if (currentModalNodeId !== null) {
@@ -3151,6 +3127,75 @@ function renderSwitchSvg(state) {
 }
 
 // ==========================================================================
+// Orthogonal Schematic Sense Wire Router (Single Continuous Path with 90° Turns)
+// ==========================================================================
+function updateSchematicSenseWire() {
+  const flowEl = document.getElementById('schematic-circuit-flow');
+  const wirePath = document.getElementById('sense-wire-path');
+  const dot1 = document.getElementById('p1-sense-dot');
+  const dotStr = document.getElementById('str-sense-dot');
+  const p1Card = document.querySelector('.iot-cell.panel[data-node-id="1"]');
+  const p3Card = document.querySelector('.iot-cell.panel[data-node-id="3"]');
+  const strCard = document.querySelector('.iot-cell.string-node');
+  const badge = document.getElementById('sense-rail-badge');
+
+  if (!flowEl || !wirePath || !dot1 || !dotStr || !p1Card || !p3Card || !strCard || !badge) {
+    return;
+  }
+
+  const flowRect = flowEl.getBoundingClientRect();
+  if (flowRect.width <= 0 || flowRect.height <= 0) return;
+
+  const dot1Rect = dot1.getBoundingClientRect();
+  const dotStrRect = dotStr.getBoundingClientRect();
+  const p1CardRect = p1Card.getBoundingClientRect();
+  const p3CardRect = p3Card.getBoundingClientRect();
+  const strCardRect = strCard.getBoundingClientRect();
+  const badgeRect = badge.getBoundingClientRect();
+
+  // 1. Center of P1 Sense Lead dot
+  const startX = Math.round(dot1Rect.left - flowRect.left + dot1Rect.width / 2);
+  const startY = Math.round(dot1Rect.top - flowRect.top + dot1Rect.height / 2);
+
+  // 2. Vertical channel left of Panel 1 (~18px left of dot, outside Panel 1 card)
+  const p1Left = Math.round(p1CardRect.left - flowRect.left);
+  const channelLeftX = Math.round(Math.min(startX - 18, p1Left - 14));
+
+  // 3. Rail Y: vertically centered on the "Sense line (P1 -> string)" label
+  const railY = Math.round(badgeRect.top - flowRect.top + badgeRect.height / 2);
+
+  // 4. Vertical channel in the gap between Panel 3 and String Monitor
+  const p3Right = Math.round(p3CardRect.right - flowRect.left);
+  const strLeft = Math.round(strCardRect.left - flowRect.left);
+  const channelRightX = Math.round((p3Right + strLeft) / 2);
+
+  // 5 & 6. String Sense In dot center
+  const endX = Math.round(dotStrRect.left - flowRect.left + dotStrRect.width / 2);
+  const endY = Math.round(dotStrRect.top - flowRect.top + dotStrRect.height / 2);
+
+  // Label horizontal edges on the rail (line stops at label left, resumes at label right)
+  const labelLeft = Math.round(badgeRect.left - flowRect.left - 2);
+  const labelRight = Math.round(badgeRect.right - flowRect.left + 2);
+
+  let d = '';
+  if (labelLeft > channelLeftX + 10 && labelRight < channelRightX - 10) {
+    // Two clean orthogonal segments meeting label left and right edges
+    d = `M ${startX} ${startY} L ${channelLeftX} ${startY} L ${channelLeftX} ${railY} L ${labelLeft} ${railY} ` +
+        `M ${labelRight} ${railY} L ${channelRightX} ${railY} L ${channelRightX} ${endY} L ${endX} ${endY}`;
+  } else {
+    // Single continuous orthogonal line if badge is narrow or offset
+    d = `M ${startX} ${startY} L ${channelLeftX} ${startY} L ${channelLeftX} ${railY} L ${channelRightX} ${railY} L ${channelRightX} ${endY} L ${endX} ${endY}`;
+  }
+
+  wirePath.setAttribute('d', d);
+}
+
+// Recompute on window resize
+window.addEventListener('resize', () => {
+  updateSchematicSenseWire();
+});
+
+// ==========================================================================
 // Mobile Responsive Schematic Controls, Short-Hold Long Press & Telemetry Popover
 // ==========================================================================
 
@@ -3210,6 +3255,9 @@ function setSchematicMode(mode) {
   // Close dropdown on click selection
   dropdownWrap?.classList.remove('menu-open');
   if (window.lucide) lucide.createIcons();
+
+  // Recompute sense wire routing in new layout mode
+  setTimeout(updateSchematicSenseWire, 60);
 }
 
 function setSchematicMobileMode(mode) {
